@@ -1,8 +1,5 @@
 import {
   COULISSANT_PVC_INDEX,
-  TRAPPE_INDEX,
-  MAB_INDEX,
-  VF_INDEX,
   TOTAL_INDEX,
   computeValue,
   type Settings,
