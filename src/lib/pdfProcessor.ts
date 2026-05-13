@@ -1,6 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import {
-  COLUMN_INDEX,
   COULISSANT_PVC_INDEX,
   TRAPPE_INDEX,
   MAB_INDEX,
