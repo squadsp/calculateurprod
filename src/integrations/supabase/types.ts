@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       formula_settings: {
         Row: {
+          delays: Json
           id: number
           mab_components: Json
           threshold_labels: Json
@@ -25,6 +26,7 @@ export type Database = {
           vf_components: Json
         }
         Insert: {
+          delays?: Json
           id?: number
           mab_components?: Json
           threshold_labels?: Json
@@ -34,6 +36,7 @@ export type Database = {
           vf_components?: Json
         }
         Update: {
+          delays?: Json
           id?: number
           mab_components?: Json
           threshold_labels?: Json
