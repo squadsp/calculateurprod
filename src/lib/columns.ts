@@ -58,6 +58,23 @@ export type Settings = {
   mab_components: Component[];
   vf_components: Component[];
   thresholds: Thresholds;
+  threshold_labels: ThresholdLabels;
+};
+
+export type ThresholdLabels = {
+  trappe: string;
+  mab: string;
+  coulissant_pvc: string;
+  vf: string;
+  peinture: string;
+};
+
+export const DEFAULT_THRESHOLD_LABELS: ThresholdLabels = {
+  trappe: "Ligne Battant (Trappe)",
+  mab: "Ligne Hybride (MAB)",
+  coulissant_pvc: "Coulissant PVC",
+  vf: "VF",
+  peinture: "Ligne Peinture (Total)",
 };
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
@@ -80,6 +97,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ],
   vf_components: [],
   thresholds: DEFAULT_THRESHOLDS,
+  threshold_labels: DEFAULT_THRESHOLD_LABELS,
 };
 
 export const DAY_REGEX = /^(jeudi|vendredi|samedi|dimanche|lundi|mardi|mercredi)\s+le\s+\d+/i;

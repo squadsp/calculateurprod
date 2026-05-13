@@ -7,11 +7,13 @@ import {
   ALL_FIELDS,
   DEFAULT_SETTINGS,
   DEFAULT_THRESHOLDS,
+  DEFAULT_THRESHOLD_LABELS,
   FIELD_LABELS,
   type Component,
   type FieldKey,
   type Settings,
   type Thresholds,
+  type ThresholdLabels,
 } from "@/lib/columns";
 import { ArrowLeft, GripVertical, Loader2, LogOut, Save, Trash2 } from "lucide-react";
 
@@ -124,6 +126,7 @@ function SettingsEditor() {
   const [mab, setMab] = useState<Component[]>(DEFAULT_SETTINGS.mab_components);
   const [vf, setVf] = useState<Component[]>(DEFAULT_SETTINGS.vf_components);
   const [thresholds, setThresholds] = useState<Thresholds>(DEFAULT_THRESHOLDS);
+  const [labels, setLabels] = useState<ThresholdLabels>(DEFAULT_THRESHOLD_LABELS);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -137,6 +140,10 @@ function SettingsEditor() {
         setThresholds({
           ...DEFAULT_THRESHOLDS,
           ...((data as { thresholds?: Partial<Thresholds> }).thresholds ?? {}),
+        });
+        setLabels({
+          ...DEFAULT_THRESHOLD_LABELS,
+          ...((data as { threshold_labels?: Partial<ThresholdLabels> }).threshold_labels ?? {}),
         });
       }
       setLoaded(true);
@@ -167,6 +174,7 @@ function SettingsEditor() {
           mab_components: mab,
           vf_components: vf,
           thresholds,
+          threshold_labels: labels,
         },
       });
       setMsg("Paramètres enregistrés");
@@ -246,16 +254,16 @@ function SettingsEditor() {
           surlignage. Mettre 0 pour désactiver. Si VF est configuré ci-dessus, le seuil VF
           remplace celui de Coulissant PVC pour cette colonne.
         </p>
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {([
-            ["trappe", "Ligne Battant (Trappe)"],
-            ["mab", "Ligne Hybride (MAB)"],
-            ["coulissant_pvc", "Coulissant PVC"],
-            ["vf", "VF"],
-            ["peinture", "Ligne Peinture (Total)"],
-          ] as const).map(([key, label]) => (
-            <label key={key} className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
-              <span className="text-sm">{label}</span>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {(["trappe", "mab", "coulissant_pvc", "vf", "peinture"] as const).map((key) => (
+            <div key={key} className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2">
+              <input
+                type="text"
+                value={labels[key]}
+                onChange={(e) => setLabels((l) => ({ ...l, [key]: e.target.value }))}
+                placeholder={DEFAULT_THRESHOLD_LABELS[key]}
+                className="flex-1 rounded border border-input bg-background px-2 py-1 text-sm"
+              />
               <input
                 type="number"
                 min={0}
@@ -267,7 +275,7 @@ function SettingsEditor() {
                 }}
                 className="w-24 rounded border border-input bg-background px-2 py-1 text-sm text-right"
               />
-            </label>
+            </div>
           ))}
         </div>
       </div>
