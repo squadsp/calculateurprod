@@ -113,6 +113,7 @@ export async function extractWeeks(
 
   const weeks: WeekData[] = [];
   let currentDays: DayData[] = [];
+  let currentColumns = createColumnStats();
   // Cursor starts the day before startDate so first match can be startDate itself.
   const cursor = new Date(startDate);
   cursor.setHours(0, 0, 0, 0);
@@ -171,9 +172,16 @@ export async function extractWeeks(
           const v = dayAvg(key);
           if (v != null) moyenne[key] = v;
         }
+        const peintureCell = findNumericCellByColumn(row, currentColumns, TOTAL_INDEX);
+        if (peintureCell) moyenne.peinture = parseNum(peintureCell.str);
+        if (!computeVf) {
+          const pvcCell = findNumericCellByColumn(row, currentColumns, COULISSANT_PVC_INDEX);
+          if (pvcCell) moyenne.coulissant_pvc = parseNum(pvcCell.str);
+        }
         if (currentDays.length > 0) {
           weeks.push({ days: currentDays, moyenne });
           currentDays = [];
+          currentColumns = createColumnStats();
         }
         continue;
       }
@@ -193,6 +201,7 @@ export async function extractWeeks(
       const numItems = row.slice(cursor2).filter((it) => isNumeric(it.str));
       if (numItems.length < 8) continue;
       const values = numItems.map((it) => parseNum(it.str));
+      numItems.forEach((it, i) => recordColumn(currentColumns, i, it));
 
       const date = advanceToMatchingDate(dayName, dayOfMonth);
       if (!date) continue;
