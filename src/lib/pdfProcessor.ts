@@ -113,22 +113,20 @@ function planEdits(
 
   pages.forEach((page, pageIndex) => {
     for (const row of page.rows) {
-      // Reconstruct day-name cell: combine consecutive items at the start until we have a number.
-      // The "jeudi le 14" might be split into multiple items.
-      // Find first numeric item index.
-      const firstNumIdx = row.findIndex((it) => isNumeric(it.str));
-      if (firstNumIdx < 1) continue;
-
-      const labelStr = row
-        .slice(0, firstNumIdx)
-        .map((it) => it.str)
-        .join(" ")
-        .replace(/\s+/g, " ")
-        .trim();
-
-      if (!DAY_REGEX.test(labelStr)) continue;
-
-      const numItems = row.slice(firstNumIdx).filter((it) => isNumeric(it.str));
+      // Day rows look like: "jeudi" | "le" | "14" | 134.00 | 4,00 | ...
+      // The day name is the first item, then "le", then the day number, then 18 column values.
+      if (!row[0] || !/^(jeudi|vendredi|samedi|dimanche|lundi|mardi|mercredi)$/i.test(row[0].str.trim())) {
+        continue;
+      }
+      // Skip the day label items (day name + "le" + day-of-month number).
+      // Find the first item that is "le" then skip it and the next number.
+      let cursor = 1;
+      while (cursor < row.length && !/^le$/i.test(row[cursor].str.trim())) cursor++;
+      cursor++; // skip "le"
+      // skip the day-of-month number
+      while (cursor < row.length && !isNumeric(row[cursor].str)) cursor++;
+      cursor++; // skip the day-of-month value itself
+      const numItems = row.slice(cursor).filter((it) => isNumeric(it.str));
       if (numItems.length < 8) continue; // not a full day row
 
       const values = numItems.map((it) => parseNum(it.str));
