@@ -113,24 +113,63 @@ function planEdits(
   const computeVf = (settings.vf_components?.length ?? 0) > 0;
 
   pages.forEach((page, pageIndex) => {
-    // Per-page accumulators for the weekly "moyenne" row.
-    const weeklyTrappe: number[] = [];
-    const weeklyMab: number[] = [];
-    const weeklyVf: number[] = [];
-    let moyenneRow: TextItem[] | null = null;
-    // Track column x-centers from day rows so we can align the moyenne row,
-    // which may have blank cells (fewer numeric items than a day row).
-    const colXSum: Record<number, number> = {};
-    const colXCount: Record<number, number> = {};
+    // Accumulators for the current week. A page can contain more than one week,
+    // so flush as soon as the matching "moyenne" row is reached, then reset.
+    const createWeekStats = () => ({
+      trappe: [] as number[],
+      mab: [] as number[],
+      vf: [] as number[],
+      colXSum: {} as Record<number, number>,
+      colXCount: {} as Record<number, number>,
+    });
+    let week = createWeekStats();
+
     const recordCol = (idx: number, cell: TextItem) => {
       const center = cell.x + cell.width / 2;
-      colXSum[idx] = (colXSum[idx] ?? 0) + center;
-      colXCount[idx] = (colXCount[idx] ?? 0) + 1;
+      week.colXSum[idx] = (week.colXSum[idx] ?? 0) + center;
+      week.colXCount[idx] = (week.colXCount[idx] ?? 0) + 1;
+    };
+
+    const flushMoyenneRow = (moyenneRow: TextItem[]) => {
+      const numItems = moyenneRow.filter((it) => isNumeric(it.str));
+      const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+      const findCellByCol = (idx: number): TextItem | null => {
+        if (!week.colXCount[idx]) return null;
+        const targetX = week.colXSum[idx] / week.colXCount[idx];
+        let best: TextItem | null = null;
+        let bestDist = Infinity;
+        for (const it of numItems) {
+          const center = it.x + it.width / 2;
+          const d = Math.abs(center - targetX);
+          if (d < bestDist) {
+            bestDist = d;
+            best = it;
+          }
+        }
+        // Reject if too far (more than ~half a typical column width).
+        return bestDist <= 15 ? best : null;
+      };
+      const pushAvg = (idx: number, value: number) => {
+        const cell = findCellByCol(idx);
+        if (!cell) return;
+        edits.push({
+          pageIndex,
+          x: cell.x,
+          y: cell.y,
+          width: cell.width,
+          height: cell.height,
+          newText: formatNumber(value),
+        });
+      };
+      if (week.trappe.length) pushAvg(TRAPPE_INDEX, avg(week.trappe));
+      if (week.mab.length) pushAvg(MAB_INDEX, avg(week.mab));
+      if (computeVf && week.vf.length) pushAvg(VF_INDEX, avg(week.vf));
+      week = createWeekStats();
     };
 
     for (const row of page.rows) {
       if (row[0] && /^moyenne$/i.test(row[0].str.trim())) {
-        moyenneRow = row;
+        flushMoyenneRow(row);
         continue;
       }
       // Day rows look like: "jeudi" | "le" | "14" | 134.00 | 4,00 | ...
@@ -157,7 +196,7 @@ function planEdits(
       if (numItems[TRAPPE_INDEX]) {
         const cell = numItems[TRAPPE_INDEX];
         const newVal = computeValue(values, settings.trappe_components);
-        weeklyTrappe.push(newVal);
+        week.trappe.push(newVal);
         edits.push({
           pageIndex,
           x: cell.x,
@@ -171,7 +210,7 @@ function planEdits(
       if (numItems[MAB_INDEX]) {
         const cell = numItems[MAB_INDEX];
         const newVal = computeValue(values, settings.mab_components);
-        weeklyMab.push(newVal);
+        week.mab.push(newVal);
         edits.push({
           pageIndex,
           x: cell.x,
@@ -185,7 +224,7 @@ function planEdits(
       if (computeVf && numItems[VF_INDEX]) {
         const cell = numItems[VF_INDEX];
         const newVal = computeValue(values, settings.vf_components);
-        weeklyVf.push(newVal);
+        week.vf.push(newVal);
         edits.push({
           pageIndex,
           x: cell.x,
@@ -195,43 +234,6 @@ function planEdits(
           newText: formatNumber(newVal),
         });
       }
-    }
-
-    // Update moyenne row for this week (page).
-    if (moyenneRow) {
-      const numItems = moyenneRow.filter((it) => isNumeric(it.str));
-      const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
-      const findCellByCol = (idx: number): TextItem | null => {
-        if (!colXCount[idx]) return null;
-        const targetX = colXSum[idx] / colXCount[idx];
-        let best: TextItem | null = null;
-        let bestDist = Infinity;
-        for (const it of numItems) {
-          const center = it.x + it.width / 2;
-          const d = Math.abs(center - targetX);
-          if (d < bestDist) {
-            bestDist = d;
-            best = it;
-          }
-        }
-        // Reject if too far (more than ~half a typical column width).
-        return bestDist <= 15 ? best : null;
-      };
-      const pushAvg = (idx: number, value: number) => {
-        const cell = findCellByCol(idx);
-        if (!cell) return;
-        edits.push({
-          pageIndex,
-          x: cell.x,
-          y: cell.y,
-          width: cell.width,
-          height: cell.height,
-          newText: formatNumber(value),
-        });
-      };
-      if (weeklyTrappe.length) pushAvg(TRAPPE_INDEX, avg(weeklyTrappe));
-      if (weeklyMab.length) pushAvg(MAB_INDEX, avg(weeklyMab));
-      if (computeVf && weeklyVf.length) pushAvg(VF_INDEX, avg(weeklyVf));
     }
   });
 
