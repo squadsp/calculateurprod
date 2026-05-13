@@ -1,10 +1,15 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import {
+  COLUMN_INDEX,
+  COULISSANT_PVC_INDEX,
   TRAPPE_INDEX,
   MAB_INDEX,
   VF_INDEX,
+  TOTAL_INDEX,
   computeValue,
   formatNumber,
+  getHighlight,
+  type Highlight,
   type Settings,
 } from "./columns";
 
@@ -35,7 +40,10 @@ type CellEdit = {
   y: number;
   width: number;
   height: number;
-  newText: string;
+  // When null, the cell is only highlighted (no text rewrite). Otherwise we
+  // overwrite the original text with `newText`.
+  newText: string | null;
+  highlight: Highlight;
 };
 
 function isNumeric(s: string): boolean {
@@ -111,6 +119,7 @@ function planEdits(
   const edits: CellEdit[] = [];
   let daysFound = 0;
   const computeVf = (settings.vf_components?.length ?? 0) > 0;
+  const t = settings.thresholds;
 
   pages.forEach((page, pageIndex) => {
     // Accumulators for the current week. A page can contain more than one week,
@@ -166,7 +175,7 @@ function planEdits(
         // Reject if too far (more than ~half a typical column width).
         return bestDist <= 8 ? best : null;
       };
-      const pushAvg = (idx: number, value: number) => {
+      const pushAvg = (idx: number, value: number, highlight: Highlight) => {
         const cell = findCellByCol(idx);
         if (!cell) return;
         edits.push({
@@ -176,11 +185,48 @@ function planEdits(
           width: cell.width,
           height: cell.height,
           newText: formatNumber(value),
+          highlight,
         });
       };
-      if (week.trappe.length) pushAvg(TRAPPE_INDEX, avg(week.trappe));
-      if (week.mab.length) pushAvg(MAB_INDEX, avg(week.mab));
-      if (computeVf && week.vf.length) pushAvg(VF_INDEX, avg(week.vf));
+      const pushHighlightOnly = (idx: number, highlight: Highlight) => {
+        if (!highlight) return;
+        const cell = findCellByCol(idx);
+        if (!cell) return;
+        edits.push({
+          pageIndex,
+          x: cell.x,
+          y: cell.y,
+          width: cell.width,
+          height: cell.height,
+          newText: null,
+          highlight,
+        });
+      };
+      if (week.trappe.length) {
+        const v = avg(week.trappe);
+        pushAvg(TRAPPE_INDEX, v, getHighlight(v, t.trappe));
+      }
+      if (week.mab.length) {
+        const v = avg(week.mab);
+        pushAvg(MAB_INDEX, v, getHighlight(v, t.mab));
+      }
+      if (computeVf && week.vf.length) {
+        const v = avg(week.vf);
+        pushAvg(VF_INDEX, v, getHighlight(v, t.vf));
+      }
+      // Highlight-only for non-modified columns: read the existing moyenne cell
+      // value and apply the threshold rule.
+      const cellValue = (idx: number): number | null => {
+        const cell = findCellByCol(idx);
+        if (!cell) return null;
+        return parseNum(cell.str);
+      };
+      if (!computeVf) {
+        const v = cellValue(COULISSANT_PVC_INDEX);
+        if (v != null) pushHighlightOnly(COULISSANT_PVC_INDEX, getHighlight(v, t.coulissant_pvc));
+      }
+      const totalV = cellValue(TOTAL_INDEX);
+      if (totalV != null) pushHighlightOnly(TOTAL_INDEX, getHighlight(totalV, t.peinture));
       week = createWeekStats();
     };
 
@@ -221,6 +267,7 @@ function planEdits(
           width: cell.width,
           height: cell.height,
           newText: formatNumber(newVal),
+          highlight: getHighlight(newVal, t.trappe),
         });
       }
       // MAB (index 5)
@@ -235,6 +282,7 @@ function planEdits(
           width: cell.width,
           height: cell.height,
           newText: formatNumber(newVal),
+          highlight: getHighlight(newVal, t.mab),
         });
       }
       // VF (index 8) — only when configured
@@ -249,7 +297,45 @@ function planEdits(
           width: cell.width,
           height: cell.height,
           newText: formatNumber(newVal),
+          highlight: getHighlight(newVal, t.vf),
         });
+      }
+
+      // Highlight-only for unmodified columns.
+      // Coulissant PVC: only when VF is NOT being computed (otherwise the VF
+      // column above already carries the highlight semantics for that line).
+      if (!computeVf && numItems[COULISSANT_PVC_INDEX]) {
+        const cell = numItems[COULISSANT_PVC_INDEX];
+        const v = parseNum(cell.str);
+        const hl = getHighlight(v, t.coulissant_pvc);
+        if (hl) {
+          edits.push({
+            pageIndex,
+            x: cell.x,
+            y: cell.y,
+            width: cell.width,
+            height: cell.height,
+            newText: null,
+            highlight: hl,
+          });
+        }
+      }
+      // Peinture (Total) — last column.
+      if (numItems[TOTAL_INDEX]) {
+        const cell = numItems[TOTAL_INDEX];
+        const v = parseNum(cell.str);
+        const hl = getHighlight(v, t.peinture);
+        if (hl) {
+          edits.push({
+            pageIndex,
+            x: cell.x,
+            y: cell.y,
+            width: cell.width,
+            height: cell.height,
+            newText: null,
+            highlight: hl,
+          });
+        }
       }
     }
   });
@@ -268,20 +354,41 @@ async function applyEdits(
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const pages = pdfDoc.getPages();
 
+  // Highlight palette — light enough to keep dark text legible.
+  const COLOR_RED = rgb(0.98, 0.7, 0.7);
+  const COLOR_YELLOW = rgb(1, 0.93, 0.45);
+
   for (const e of edits) {
     const page = pages[e.pageIndex];
     if (!page) continue;
     const padX = 1;
     const padY = 1;
-    // Cover original text with white rectangle.
+    const bg = e.highlight === "red" ? COLOR_RED : e.highlight === "yellow" ? COLOR_YELLOW : null;
+
+    if (e.newText === null) {
+      // Highlight-only: draw a translucent colored rect over the existing
+      // text so the original number stays visible.
+      if (bg) {
+        page.drawRectangle({
+          x: e.x - padX,
+          y: e.y - padY,
+          width: Math.max(e.width + padX * 2, 24),
+          height: e.height + padY * 2,
+          color: bg,
+          opacity: 0.45,
+        });
+      }
+      continue;
+    }
+
+    // Cover original text with background (white or highlight color).
     page.drawRectangle({
       x: e.x - padX,
       y: e.y - padY,
       width: Math.max(e.width + padX * 2, 24),
       height: e.height + padY * 2,
-      color: rgb(1, 1, 1),
+      color: bg ?? rgb(1, 1, 1),
     });
-    // Draw new value, right-aligned to the original right edge so columns stay aligned.
     const fontSize = Math.max(6, Math.min(e.height, 9));
     const textWidth = font.widthOfTextAtSize(e.newText, fontSize);
     const rightEdge = e.x + e.width;
