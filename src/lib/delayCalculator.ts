@@ -200,6 +200,7 @@ export function findFirstAvailableDate(
   weeks: WeekData[],
   line: LineKey,
   thresholds: Settings["thresholds"],
+  minDate?: Date,
 ): Date | null {
   const max = thresholds[LINE_THRESHOLD[line]];
   if (!max || max <= 0) return null;
@@ -207,6 +208,7 @@ export function findFirstAvailableDate(
     const moy = w.moyenne[line];
     if (moy != null && moy >= max) continue; // whole week full
     for (const d of w.days) {
+      if (minDate && d.date < minDate) continue; // enforce minimum delay
       const v = d.values[line];
       if (v == null) continue;
       if (v < max) return d.date;
@@ -255,8 +257,12 @@ export async function calculateDelays(
   const lines: LineKey[] = ["trappe", "mab", "coulissant_pvc", "peinture"];
   const results = {} as Record<LineKey, { date: Date | null; text: string | null }>;
   const needsMore: LineKey[] = [];
+  // Enforce a 4-week minimum: only look at days at or after today + 4 weeks.
+  const minDate = new Date(today);
+  minDate.setHours(0, 0, 0, 0);
+  minDate.setDate(minDate.getDate() + 4 * 7);
   for (const line of lines) {
-    const date = findFirstAvailableDate(allWeeks, line, settings.thresholds);
+    const date = findFirstAvailableDate(allWeeks, line, settings.thresholds, minDate);
     if (!date) {
       results[line] = { date: null, text: null };
       needsMore.push(line);
