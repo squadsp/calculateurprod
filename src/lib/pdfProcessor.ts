@@ -1,5 +1,3 @@
-import * as pdfjs from "pdfjs-dist";
-import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import {
   DAY_REGEX,
@@ -10,7 +8,18 @@ import {
   type Settings,
 } from "./columns";
 
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
+async function getPdfjs() {
+  if (!pdfjsPromise) {
+    pdfjsPromise = (async () => {
+      const pdfjs = await import("pdfjs-dist");
+      const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+      pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+      return pdfjs;
+    })();
+  }
+  return pdfjsPromise;
+}
 
 type TextItem = {
   str: string;
@@ -44,6 +53,7 @@ function parseNum(s: string): number {
 async function extractRows(buf: ArrayBuffer): Promise<{
   pages: { width: number; height: number; rows: TextItem[][] }[];
 }> {
+  const pdfjs = await getPdfjs();
   const loadingTask = pdfjs.getDocument({ data: buf.slice(0) });
   const pdf = await loadingTask.promise;
   const pages: { width: number; height: number; rows: TextItem[][] }[] = [];
