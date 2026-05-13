@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { processPdf } from "@/lib/pdfProcessor";
-import { DEFAULT_SETTINGS, type Settings } from "@/lib/columns";
+import { DEFAULT_SETTINGS, DEFAULT_THRESHOLDS, type Settings, type Thresholds } from "@/lib/columns";
 import { FileUp, Loader2, Settings as SettingsIcon, AlertCircle, Download, X, Printer } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -18,6 +18,10 @@ async function loadSettings(): Promise<Settings> {
     vf_components:
       (data.vf_components as unknown as Settings["vf_components"]) ??
       DEFAULT_SETTINGS.vf_components,
+    thresholds: {
+      ...DEFAULT_THRESHOLDS,
+      ...((data as { thresholds?: Partial<Thresholds> }).thresholds ?? {}),
+    },
   };
 }
 
