@@ -32,6 +32,7 @@ type ProcessedPdf = {
   days: number;
   edits: number;
   bytes: Uint8Array;
+  original: ArrayBuffer;
 };
 
 function Index() {
@@ -39,6 +40,7 @@ function Index() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<ProcessedPdf[]>([]);
+  const [highlightsEnabled, setHighlightsEnabled] = useState(true);
 
   useEffect(() => {
     return () => {
@@ -60,7 +62,9 @@ function Index() {
       const newResults: ProcessedPdf[] = [];
       for (const file of pdfs) {
         const buf = await file.arrayBuffer();
-        const { bytes, daysFound, edits } = await processPdf(buf, settings);
+        const { bytes, daysFound, edits } = await processPdf(buf, settings, {
+          highlights: highlightsEnabled,
+        });
         const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
         newResults.push({
@@ -70,6 +74,7 @@ function Index() {
           days: daysFound,
           edits,
           bytes,
+          original: buf,
         });
       }
       setResults((prev) => [...prev, ...newResults]);
@@ -79,7 +84,34 @@ function Index() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [highlightsEnabled]);
+
+  const toggleHighlights = useCallback(async (next: boolean) => {
+    setHighlightsEnabled(next);
+    setResults((prev) => prev);
+    const current = results;
+    if (current.length === 0) return;
+    setBusy(true);
+    try {
+      const settings = await loadSettings();
+      const reprocessed: ProcessedPdf[] = [];
+      for (const r of current) {
+        const { bytes, daysFound, edits } = await processPdf(r.original, settings, {
+          highlights: next,
+        });
+        const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        URL.revokeObjectURL(r.url);
+        reprocessed.push({ ...r, bytes, days: daysFound, edits, url });
+      }
+      setResults(reprocessed);
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Erreur lors du retraitement");
+    } finally {
+      setBusy(false);
+    }
+  }, [results]);
 
   const downloadOne = (r: ProcessedPdf) => {
     const a = document.createElement("a");
@@ -139,6 +171,28 @@ function Index() {
           <p className="mt-2 text-muted-foreground">
             Déposez un ou plusieurs PDF de planification : prévisualisez le résultat avant de télécharger.
           </p>
+        </div>
+
+        <div className="mb-4 flex items-center justify-end gap-2 text-sm">
+          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+            <span className="text-muted-foreground">Surlignage</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={highlightsEnabled}
+              onClick={() => toggleHighlights(!highlightsEnabled)}
+              disabled={busy}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                highlightsEnabled ? "bg-primary" : "bg-muted"
+              } ${busy ? "opacity-60 cursor-not-allowed" : ""}`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  highlightsEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </label>
         </div>
 
         <label

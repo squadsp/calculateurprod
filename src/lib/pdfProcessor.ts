@@ -114,11 +114,14 @@ async function extractRows(buf: ArrayBuffer): Promise<{
 function planEdits(
   pages: { width: number; height: number; rows: TextItem[][] }[],
   settings: Settings,
+  options: { highlights: boolean },
 ): { edits: CellEdit[]; daysFound: number } {
   const edits: CellEdit[] = [];
   let daysFound = 0;
   const computeVf = (settings.vf_components?.length ?? 0) > 0;
   const t = settings.thresholds;
+  const hl = (v: number, max: number): Highlight =>
+    options.highlights ? getHighlight(v, max) : null;
 
   pages.forEach((page, pageIndex) => {
     // Accumulators for the current week. A page can contain more than one week,
@@ -203,15 +206,15 @@ function planEdits(
       };
       if (week.trappe.length) {
         const v = avg(week.trappe);
-        pushAvg(TRAPPE_INDEX, v, getHighlight(v, t.trappe));
+        pushAvg(TRAPPE_INDEX, v, hl(v, t.trappe));
       }
       if (week.mab.length) {
         const v = avg(week.mab);
-        pushAvg(MAB_INDEX, v, getHighlight(v, t.mab));
+        pushAvg(MAB_INDEX, v, hl(v, t.mab));
       }
       if (computeVf && week.vf.length) {
         const v = avg(week.vf);
-        pushAvg(VF_INDEX, v, getHighlight(v, t.vf));
+        pushAvg(VF_INDEX, v, hl(v, t.vf));
       }
       // Highlight-only for non-modified columns: read the existing moyenne cell
       // value and apply the threshold rule.
@@ -220,12 +223,14 @@ function planEdits(
         if (!cell) return null;
         return parseNum(cell.str);
       };
-      if (!computeVf) {
+      if (!computeVf && options.highlights) {
         const v = cellValue(COULISSANT_PVC_INDEX);
-        if (v != null) pushHighlightOnly(COULISSANT_PVC_INDEX, getHighlight(v, t.coulissant_pvc));
+        if (v != null) pushHighlightOnly(COULISSANT_PVC_INDEX, hl(v, t.coulissant_pvc));
       }
-      const totalV = cellValue(TOTAL_INDEX);
-      if (totalV != null) pushHighlightOnly(TOTAL_INDEX, getHighlight(totalV, t.peinture));
+      if (options.highlights) {
+        const totalV = cellValue(TOTAL_INDEX);
+        if (totalV != null) pushHighlightOnly(TOTAL_INDEX, hl(totalV, t.peinture));
+      }
       week = createWeekStats();
     };
 
@@ -266,7 +271,7 @@ function planEdits(
           width: cell.width,
           height: cell.height,
           newText: formatNumber(newVal),
-          highlight: getHighlight(newVal, t.trappe),
+          highlight: hl(newVal, t.trappe),
         });
       }
       // MAB (index 5)
@@ -281,7 +286,7 @@ function planEdits(
           width: cell.width,
           height: cell.height,
           newText: formatNumber(newVal),
-          highlight: getHighlight(newVal, t.mab),
+          highlight: hl(newVal, t.mab),
         });
       }
       // VF (index 8) — only when configured
@@ -296,18 +301,18 @@ function planEdits(
           width: cell.width,
           height: cell.height,
           newText: formatNumber(newVal),
-          highlight: getHighlight(newVal, t.vf),
+          highlight: hl(newVal, t.vf),
         });
       }
 
       // Highlight-only for unmodified columns.
       // Coulissant PVC: only when VF is NOT being computed (otherwise the VF
       // column above already carries the highlight semantics for that line).
-      if (!computeVf && numItems[COULISSANT_PVC_INDEX]) {
+      if (options.highlights && !computeVf && numItems[COULISSANT_PVC_INDEX]) {
         const cell = numItems[COULISSANT_PVC_INDEX];
         const v = parseNum(cell.str);
-        const hl = getHighlight(v, t.coulissant_pvc);
-        if (hl) {
+        const h = getHighlight(v, t.coulissant_pvc);
+        if (h) {
           edits.push({
             pageIndex,
             x: cell.x,
@@ -315,16 +320,16 @@ function planEdits(
             width: cell.width,
             height: cell.height,
             newText: null,
-            highlight: hl,
+            highlight: h,
           });
         }
       }
       // Peinture (Total) — last column.
-      if (numItems[TOTAL_INDEX]) {
+      if (options.highlights && numItems[TOTAL_INDEX]) {
         const cell = numItems[TOTAL_INDEX];
         const v = parseNum(cell.str);
-        const hl = getHighlight(v, t.peinture);
-        if (hl) {
+        const h = getHighlight(v, t.peinture);
+        if (h) {
           edits.push({
             pageIndex,
             x: cell.x,
@@ -332,7 +337,7 @@ function planEdits(
             width: cell.width,
             height: cell.height,
             newText: null,
-            highlight: hl,
+            highlight: h,
           });
         }
       }
@@ -412,9 +417,12 @@ async function applyEdits(
 export async function processPdf(
   buf: ArrayBuffer,
   settings: Settings,
+  options: { highlights?: boolean } = {},
 ): Promise<{ bytes: Uint8Array; daysFound: number; edits: number }> {
   const { pages } = await extractRows(buf);
-  const { edits, daysFound } = planEdits(pages, settings);
+  const { edits, daysFound } = planEdits(pages, settings, {
+    highlights: options.highlights ?? true,
+  });
   const bytes = await applyEdits(buf, edits);
   return { bytes, daysFound, edits: edits.length };
 }
