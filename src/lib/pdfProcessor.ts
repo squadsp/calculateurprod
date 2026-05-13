@@ -1,6 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import {
-  DAY_REGEX,
   TRAPPE_INDEX,
   MAB_INDEX,
   computeValue,
