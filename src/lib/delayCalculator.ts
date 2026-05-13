@@ -27,6 +27,63 @@ function parseNum(s: string): number {
   return parseFloat(s.replace(",", "."));
 }
 
+type PdfTextItem = {
+  str: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type ColumnStats = {
+  xSum: Record<number, number>;
+  xCount: Record<number, number>;
+};
+
+function createColumnStats(): ColumnStats {
+  return { xSum: {}, xCount: {} };
+}
+
+function recordColumn(stats: ColumnStats, idx: number, cell: PdfTextItem) {
+  const center = cell.x + cell.width / 2;
+  stats.xSum[idx] = (stats.xSum[idx] ?? 0) + center;
+  stats.xCount[idx] = (stats.xCount[idx] ?? 0) + 1;
+}
+
+function findNumericCellByColumn(row: PdfTextItem[], stats: ColumnStats, idx: number): PdfTextItem | null {
+  const numItems = row.filter((it) => isNumeric(it.str));
+  if (!numItems.length) return null;
+  if (!stats.xCount[idx]) return numItems[idx] ?? null;
+
+  const targetX = stats.xSum[idx] / stats.xCount[idx];
+  const colCenters: { idx: number; x: number }[] = Object.keys(stats.xCount).map((k) => {
+    const i = Number(k);
+    return { idx: i, x: stats.xSum[i] / stats.xCount[i] };
+  });
+
+  let best: PdfTextItem | null = null;
+  let bestDist = Infinity;
+  for (const it of numItems) {
+    const center = it.x + it.width / 2;
+    const d = Math.abs(center - targetX);
+    if (d >= bestDist) continue;
+    let nearestIdx = idx;
+    let nearestDist = d;
+    for (const c of colCenters) {
+      const cd = Math.abs(center - c.x);
+      if (cd < nearestDist) {
+        nearestDist = cd;
+        nearestIdx = c.idx;
+      }
+    }
+    if (nearestIdx !== idx) continue;
+    bestDist = d;
+    best = it;
+  }
+
+  return bestDist <= 8 ? best : (numItems[idx] ?? null);
+}
+
 export type LineKey = "trappe" | "mab" | "coulissant_pvc" | "peinture";
 
 export type DayData = {
