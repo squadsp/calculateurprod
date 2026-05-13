@@ -202,13 +202,23 @@ export function findFirstAvailableWeek(
   line: LineKey,
   thresholds: Settings["thresholds"],
   minWeek = 4,
+  today?: Date,
 ): { weekNumber: number; date: Date | null } | null {
   const max = thresholds[LINE_THRESHOLD[line]];
   if (!max || max <= 0) return null;
+  const ref = today ? new Date(today) : new Date();
+  ref.setHours(0, 0, 0, 0);
   for (let i = 0; i < weeks.length; i++) {
-    const weekNumber = i + 1;
-    if (weekNumber < minWeek) continue;
     const w = weeks[i];
+    if (!w.days.length) continue;
+    // Week number from week's first day (Thursday) relative to today:
+    // floor((firstDay - today) / 7 days). A week starting in <7 days = 0
+    // (too soon to deliver), the following Thursday = 1, etc.
+    const diffDays = Math.floor(
+      (w.days[0].date.getTime() - ref.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    const weekNumber = Math.floor(diffDays / 7);
+    if (weekNumber < minWeek) continue;
     const moy = w.moyenne[line];
     if (moy != null && moy >= max) continue; // week is full on average
     // Pick first day below threshold for the displayed date (fallback: first day).
@@ -262,7 +272,7 @@ export async function calculateDelays(
   const needsMore: LineKey[] = [];
   // Week 1 = first PDF week (typically next Thursday). Minimum 4 weeks.
   for (const line of lines) {
-    const found = findFirstAvailableWeek(allWeeks, line, settings.thresholds, 4);
+    const found = findFirstAvailableWeek(allWeeks, line, settings.thresholds, 4, today);
     if (!found) {
       results[line] = { date: null, text: null };
       needsMore.push(line);
