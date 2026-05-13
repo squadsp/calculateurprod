@@ -84,7 +84,7 @@ function findNumericCellByColumn(row: PdfTextItem[], stats: ColumnStats, idx: nu
   return bestDist <= 8 ? best : (numItems[idx] ?? null);
 }
 
-export type LineKey = "trappe" | "mab" | "coulissant_pvc" | "peinture";
+export type LineKey = "trappe" | "mab" | "coulissant_pvc" | "vf" | "peinture";
 
 export type DayData = {
   date: Date;
@@ -110,6 +110,7 @@ export async function extractWeeks(
   const pdf = await pdfjs.getDocument({ data: buf.slice(0) }).promise;
 
   const computeVf = (settings.vf_components?.length ?? 0) > 0;
+  const pvcInVf = (settings.vf_components ?? []).some((c) => c.field === "coulissant_pvc");
 
   const weeks: WeekData[] = [];
   let currentDays: DayData[] = [];
@@ -168,13 +169,13 @@ export async function extractWeeks(
           if (!vals.length) return undefined;
           return vals.reduce((a, b) => a + b, 0) / vals.length;
         };
-        for (const key of ["trappe", "mab", "coulissant_pvc", "peinture"] as LineKey[]) {
+        for (const key of ["trappe", "mab", "coulissant_pvc", "vf", "peinture"] as LineKey[]) {
           const v = dayAvg(key);
           if (v != null) moyenne[key] = v;
         }
         const peintureCell = findNumericCellByColumn(row, currentColumns, TOTAL_INDEX);
         if (peintureCell) moyenne.peinture = parseNum(peintureCell.str);
-        if (!computeVf) {
+        if (!pvcInVf) {
           const pvcCell = findNumericCellByColumn(row, currentColumns, COULISSANT_PVC_INDEX);
           if (pvcCell) moyenne.coulissant_pvc = parseNum(pvcCell.str);
         }
@@ -211,11 +212,13 @@ export async function extractWeeks(
       // Trappe & MAB use formula
       dayValues.trappe = computeValue(values, settings.trappe_components);
       dayValues.mab = computeValue(values, settings.mab_components);
-      // VF replaces coulissant_pvc highlight column when configured
-      if (computeVf) {
-        dayValues.coulissant_pvc = computeValue(values, settings.vf_components);
-      } else if (values[COULISSANT_PVC_INDEX] != null) {
+      // Coulissant PVC: always read its own column, unless it is consumed by VF.
+      if (!pvcInVf && values[COULISSANT_PVC_INDEX] != null) {
         dayValues.coulissant_pvc = values[COULISSANT_PVC_INDEX];
+      }
+      // VF is a separate line with its own formula and threshold.
+      if (computeVf) {
+        dayValues.vf = computeValue(values, settings.vf_components);
       }
       if (values[TOTAL_INDEX] != null) dayValues.peinture = values[TOTAL_INDEX];
 
