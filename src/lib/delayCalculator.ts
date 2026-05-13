@@ -257,8 +257,9 @@ export function findFirstAvailableWeek(
   thresholds: Settings["thresholds"],
   minWeek = 4,
   today?: Date,
+  thresholdKey?: keyof Settings["thresholds"],
 ): { weekNumber: number; date: Date | null } | null {
-  const max = thresholds[LINE_THRESHOLD[line]];
+  const max = thresholds[thresholdKey ?? LINE_THRESHOLD[line]];
   if (!max || max <= 0) return null;
   const ref = today ? new Date(today) : new Date();
   ref.setHours(0, 0, 0, 0);
@@ -324,9 +325,19 @@ export async function calculateDelays(
   const lines: LineKey[] = ["trappe", "mab", "coulissant_pvc", "peinture"];
   const results = {} as Record<LineKey, { date: Date | null; text: string | null }>;
   const needsMore: LineKey[] = [];
+  const computeVf = (settings.vf_components?.length ?? 0) > 0;
   // Week 1 = first PDF week (typically next Thursday). Minimum 4 weeks.
   for (const line of lines) {
-    const found = findFirstAvailableWeek(allWeeks, line, settings.thresholds, 4, today);
+    const thresholdKey =
+      line === "coulissant_pvc" && computeVf ? "vf" : LINE_THRESHOLD[line];
+    const found = findFirstAvailableWeek(
+      allWeeks,
+      line,
+      settings.thresholds,
+      4,
+      today,
+      thresholdKey,
+    );
     if (!found) {
       results[line] = { date: null, text: null };
       needsMore.push(line);
