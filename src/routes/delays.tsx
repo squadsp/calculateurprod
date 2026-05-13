@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -46,6 +46,30 @@ function DelaysPage() {
   const [needsMore, setNeedsMore] = useState<LineKey[]>([]);
   const [labels, setLabels] = useState<ThresholdLabels>(DEFAULT_THRESHOLD_LABELS);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  // Load previously saved delays so they survive a refresh.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("formula_settings")
+        .select("delays, threshold_labels")
+        .eq("id", 1)
+        .maybeSingle();
+      if (!data) return;
+      const tl = (data.threshold_labels as ThresholdLabels | null) ?? DEFAULT_THRESHOLD_LABELS;
+      setLabels({ ...DEFAULT_THRESHOLD_LABELS, ...tl });
+      const d = (data.delays ?? {}) as Record<string, string>;
+      const has = LINES.some((l) => d[l]);
+      if (!has) return;
+      const fmt: Record<LineKey, { text: string | null; dateLabel: string | null }> = {} as never;
+      for (const line of LINES) fmt[line] = { text: d[line] || null, dateLabel: null };
+      setResults(fmt);
+      if (d.updated_at) {
+        const dt = new Date(d.updated_at);
+        if (!isNaN(dt.getTime())) setSavedAt(dt.toLocaleString("fr-FR"));
+      }
+    })();
+  }, []);
 
   const onPick = useCallback(async (picked: File[]) => {
     setError(null);
