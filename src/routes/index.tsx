@@ -10,7 +10,7 @@ import {
   type Thresholds,
   type ThresholdLabels,
 } from "@/lib/columns";
-import { FileUp, Loader2, Settings as SettingsIcon, AlertCircle, Download, X, Printer } from "lucide-react";
+import { FileUp, Loader2, Settings as SettingsIcon, AlertCircle, Download, X, Printer, CalendarClock } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -166,13 +166,22 @@ function Index() {
       <header className="border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold tracking-tight">Calculateur De Production</h1>
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <SettingsIcon className="h-4 w-4" />
-            Paramètres
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/delays"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <CalendarClock className="h-4 w-4" />
+              Délais
+            </Link>
+            <Link
+              to="/admin"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <SettingsIcon className="h-4 w-4" />
+              Paramètres
+            </Link>
+          </div>
         </div>
       </header>
 
