@@ -120,6 +120,7 @@ function SettingsEditor() {
   const [loaded, setLoaded] = useState(false);
   const [trappe, setTrappe] = useState<Component[]>(DEFAULT_SETTINGS.trappe_components);
   const [mab, setMab] = useState<Component[]>(DEFAULT_SETTINGS.mab_components);
+  const [vf, setVf] = useState<Component[]>(DEFAULT_SETTINGS.vf_components);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -129,16 +130,17 @@ function SettingsEditor() {
       if (data) {
         setTrappe((data.trappe_components as Component[]) ?? DEFAULT_SETTINGS.trappe_components);
         setMab((data.mab_components as Component[]) ?? DEFAULT_SETTINGS.mab_components);
+        setVf((data.vf_components as unknown as Component[]) ?? DEFAULT_SETTINGS.vf_components);
       }
       setLoaded(true);
     })();
   }, []);
 
-  const onDropTo = (target: "trappe" | "mab") => (e: React.DragEvent) => {
+  const onDropTo = (target: "trappe" | "mab" | "vf") => (e: React.DragEvent) => {
     e.preventDefault();
     const field = e.dataTransfer.getData("text/field") as FieldKey;
     if (!field) return;
-    const setter = target === "trappe" ? setTrappe : setMab;
+    const setter = target === "trappe" ? setTrappe : target === "mab" ? setMab : setVf;
     setter((prev) => {
       if (prev.some((c) => c.field === field)) return prev;
       return [...prev, { field, multiplier: 1 }];
@@ -156,6 +158,7 @@ function SettingsEditor() {
           password: "samuelp",
           trappe_components: trappe,
           mab_components: mab,
+          vf_components: vf,
         },
       });
       setMsg("Paramètres enregistrés");
@@ -179,7 +182,7 @@ function SettingsEditor() {
       <div>
         <h2 className="text-xl font-semibold">Constructeur de formules</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Glissez les colonnes sources dans la boîte Trappe ou MAB, puis ajustez le multiplicateur.
+          Glissez les colonnes sources dans la boîte Trappe, MAB ou VF, puis ajustez le multiplicateur.
         </p>
       </div>
 
@@ -202,7 +205,7 @@ function SettingsEditor() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
         <FormulaBox
           title="Trappe"
           description="Valeur calculée pour la colonne Trappe (Battant)"
@@ -216,6 +219,13 @@ function SettingsEditor() {
           components={mab}
           onChange={setMab}
           onDrop={onDropTo("mab")}
+        />
+        <FormulaBox
+          title="VF"
+          description="Optionnel — laissez vide pour ne pas recalculer la colonne VF"
+          components={vf}
+          onChange={setVf}
+          onDrop={onDropTo("vf")}
         />
       </div>
 
