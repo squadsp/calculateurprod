@@ -72,13 +72,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Planification Trappe / MAB" },
-      { name: "description", content: "Recalcule automatiquement les colonnes Trappe et MAB des plannings PDF." },
-      { property: "og:title", content: "Planification Trappe / MAB" },
-      { property: "og:description", content: "Recalcule automatiquement les colonnes Trappe et MAB des plannings PDF." },
+      { title: "Calculateur de production" },
+      { name: "description", content: "Calculateur de production" },
+      { property: "og:title", content: "Calculateur de production" },
+      { property: "og:description", content: "Calculateur de production" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Calculateur de production" },
+      { name: "twitter:description", content: "Calculateur de production" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6528c644-49fb-41fa-b675-9c22ea1b5409/id-preview-370c10b4--f6aa2c1b-3996-4c1a-86b0-41c25d1d4c68.lovable.app-1778669136083.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6528c644-49fb-41fa-b675-9c22ea1b5409/id-preview-370c10b4--f6aa2c1b-3996-4c1a-86b0-41c25d1d4c68.lovable.app-1778669136083.png" },
     ],
     links: [
       {
