@@ -162,22 +162,35 @@ export async function extractWeeks(
       // shown on the production page.
       if (row[0] && /^moyenne$/i.test(row[0].str.trim())) {
         const moyenne: Partial<Record<LineKey, number>> = {};
-        const dayAvg = (key: LineKey): number | undefined => {
-          const vals = currentDays
-            .map((d) => d.values[key])
-            .filter((v): v is number => v != null);
-          if (!vals.length) return undefined;
-          return vals.reduce((a, b) => a + b, 0) / vals.length;
-        };
-        for (const key of ["trappe", "mab", "coulissant_pvc", "vf", "peinture"] as LineKey[]) {
-          const v = dayAvg(key);
-          if (v != null) moyenne[key] = v;
-        }
-        const peintureCell = findNumericCellByColumn(row, currentColumns, TOTAL_INDEX);
-        if (peintureCell) moyenne.peinture = parseNum(peintureCell.str);
-        if (!pvcInVf) {
-          const pvcCell = findNumericCellByColumn(row, currentColumns, COULISSANT_PVC_INDEX);
-          if (pvcCell) moyenne.coulissant_pvc = parseNum(pvcCell.str);
+        // Read the moyenne row's per-column numeric values directly from the
+        // PDF, then apply the formulas — this matches exactly what the PDF
+        // displays as the weekly average for each line.
+        const moyNums = row
+          .filter((it) => isNumeric(it.str))
+          .map((it) => parseNum(it.str));
+        if (moyNums.length >= 8) {
+          moyenne.trappe = computeValue(moyNums, settings.trappe_components);
+          moyenne.mab = computeValue(moyNums, settings.mab_components);
+          if (computeVf) {
+            moyenne.vf = computeValue(moyNums, settings.vf_components);
+          }
+          if (!pvcInVf && moyNums[COULISSANT_PVC_INDEX] != null) {
+            moyenne.coulissant_pvc = moyNums[COULISSANT_PVC_INDEX];
+          }
+          if (moyNums[TOTAL_INDEX] != null) moyenne.peinture = moyNums[TOTAL_INDEX];
+        } else {
+          // Fallback: average the day values if the moyenne row is malformed.
+          const dayAvg = (key: LineKey): number | undefined => {
+            const vals = currentDays
+              .map((d) => d.values[key])
+              .filter((v): v is number => v != null);
+            if (!vals.length) return undefined;
+            return vals.reduce((a, b) => a + b, 0) / vals.length;
+          };
+          for (const key of ["trappe", "mab", "coulissant_pvc", "vf", "peinture"] as LineKey[]) {
+            const v = dayAvg(key);
+            if (v != null) moyenne[key] = v;
+          }
         }
         if (currentDays.length > 0) {
           weeks.push({ days: currentDays, moyenne });
