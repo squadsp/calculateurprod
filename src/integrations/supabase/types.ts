@@ -20,18 +20,21 @@ export type Database = {
           mab_components: Json
           trappe_components: Json
           updated_at: string
+          vf_components: Json
         }
         Insert: {
           id?: number
           mab_components?: Json
           trappe_components?: Json
           updated_at?: string
+          vf_components?: Json
         }
         Update: {
           id?: number
           mab_components?: Json
           trappe_components?: Json
           updated_at?: string
+          vf_components?: Json
         }
         Relationships: []
       }
