@@ -100,20 +100,12 @@ export async function extractWeeks(
     for (const r of rows) r.sort((a, b) => a.x - b.x);
 
     for (const row of rows) {
-      // Moyenne row → close current week
+      // Moyenne row → close current week. Compute the moyenne for every line
+      // from the (formula-applied) day values, exactly like the main
+      // calculator does — this way the delays page uses the same numbers
+      // shown on the production page.
       if (row[0] && /^moyenne$/i.test(row[0].str.trim())) {
-        const numItems = row.filter((it) => isNumeric(it.str));
-        const nums = numItems.map((it) => parseNum(it.str));
         const moyenne: Partial<Record<LineKey, number>> = {};
-        // Best-effort: column positions vary, but the moyenne row typically
-        // omits the day-name cells, so numeric items align with the day-row
-        // numeric columns. Use the same indices.
-        if (nums[TRAPPE_INDEX] != null) moyenne.trappe = nums[TRAPPE_INDEX];
-        if (nums[MAB_INDEX] != null) moyenne.mab = nums[MAB_INDEX];
-        if (nums[COULISSANT_PVC_INDEX] != null) moyenne.coulissant_pvc = nums[COULISSANT_PVC_INDEX];
-        if (nums[TOTAL_INDEX] != null) moyenne.peinture = nums[TOTAL_INDEX];
-
-        // Recompute trappe/mab moyenne from formula-applied day values when available.
         const dayAvg = (key: LineKey): number | undefined => {
           const vals = currentDays
             .map((d) => d.values[key])
@@ -121,17 +113,10 @@ export async function extractWeeks(
           if (!vals.length) return undefined;
           return vals.reduce((a, b) => a + b, 0) / vals.length;
         };
-        const tAvg = dayAvg("trappe");
-        const mAvg = dayAvg("mab");
-        if (tAvg != null) moyenne.trappe = tAvg;
-        if (mAvg != null) moyenne.mab = mAvg;
-        if (computeVf) {
-          // VF replaces coulissant_pvc highlight column when configured;
-          // recompute coulissant_pvc moyenne from VF day average.
-          const vfAvg = dayAvg("coulissant_pvc");
-          if (vfAvg != null) moyenne.coulissant_pvc = vfAvg;
+        for (const key of ["trappe", "mab", "coulissant_pvc", "peinture"] as LineKey[]) {
+          const v = dayAvg(key);
+          if (v != null) moyenne[key] = v;
         }
-
         if (currentDays.length > 0) {
           weeks.push({ days: currentDays, moyenne });
           currentDays = [];
@@ -197,6 +182,12 @@ const LINE_THRESHOLD: Record<LineKey, keyof Settings["thresholds"]> = {
  * the threshold, plus the first day inside that week that is below the
  * threshold (for display).
  */
+/**
+ * Buffer (units) below the threshold at which a week's average is considered
+ * "full" — once moyenne >= max - FULL_BUFFER we move on to the next week.
+ */
+const FULL_BUFFER = 5;
+
 export function findFirstAvailableWeek(
   weeks: WeekData[],
   line: LineKey,
@@ -220,7 +211,7 @@ export function findFirstAvailableWeek(
     const weekNumber = Math.floor(diffDays / 7);
     if (weekNumber < minWeek) continue;
     const moy = w.moyenne[line];
-    if (moy != null && moy >= max) continue; // week is full on average
+    if (moy != null && moy >= max - FULL_BUFFER) continue; // within 5 of max → full
     // Pick first day below threshold for the displayed date (fallback: first day).
     let firstDay: Date | null = null;
     for (const d of w.days) {
