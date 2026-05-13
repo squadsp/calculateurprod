@@ -136,18 +136,35 @@ function planEdits(
       const findCellByCol = (idx: number): TextItem | null => {
         if (!week.colXCount[idx]) return null;
         const targetX = week.colXSum[idx] / week.colXCount[idx];
+        // Compute all known column centers so we can reject a candidate
+        // that is actually closer to a neighboring column (e.g. al/pvc/al
+        // sitting next to MAB).
+        const colCenters: { idx: number; x: number }[] = Object.keys(week.colXCount).map((k) => {
+          const i = Number(k);
+          return { idx: i, x: week.colXSum[i] / week.colXCount[i] };
+        });
         let best: TextItem | null = null;
         let bestDist = Infinity;
         for (const it of numItems) {
           const center = it.x + it.width / 2;
           const d = Math.abs(center - targetX);
-          if (d < bestDist) {
-            bestDist = d;
-            best = it;
+          if (d >= bestDist) continue;
+          // Make sure this cell is closest to the target column, not to a neighbor.
+          let nearestIdx = idx;
+          let nearestDist = d;
+          for (const c of colCenters) {
+            const cd = Math.abs(center - c.x);
+            if (cd < nearestDist) {
+              nearestDist = cd;
+              nearestIdx = c.idx;
+            }
           }
+          if (nearestIdx !== idx) continue;
+          bestDist = d;
+          best = it;
         }
         // Reject if too far (more than ~half a typical column width).
-        return bestDist <= 15 ? best : null;
+        return bestDist <= 8 ? best : null;
       };
       const pushAvg = (idx: number, value: number) => {
         const cell = findCellByCol(idx);
