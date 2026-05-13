@@ -257,8 +257,9 @@ export function findFirstAvailableWeek(
   thresholds: Settings["thresholds"],
   minWeek = 4,
   today?: Date,
+  thresholdKey?: keyof Settings["thresholds"],
 ): { weekNumber: number; date: Date | null } | null {
-  const max = thresholds[LINE_THRESHOLD[line]];
+  const max = thresholds[thresholdKey ?? LINE_THRESHOLD[line]];
   if (!max || max <= 0) return null;
   const ref = today ? new Date(today) : new Date();
   ref.setHours(0, 0, 0, 0);
