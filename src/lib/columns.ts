@@ -121,14 +121,14 @@ export type Highlight = "red" | "yellow" | null;
 
 /**
  * Highlight rule:
- *  - value >= max - 5 → red    (full: at or within 5 of max, or any overage)
- *  - value >= max - 9 → yellow (approaching: within 9 of max)
- *  - else             → none
+ *  - value >= max + 10 → red    (well over the limit)
+ *  - value >= max - 5  → yellow (full: within 5 under up to 9 over)
+ *  - else              → none
  * If max is 0 or negative, no highlighting.
  */
 export function getHighlight(value: number, max: number): Highlight {
   if (!max || max <= 0) return null;
-  if (value >= max - 5) return "red";
-  if (value >= max - 9) return "yellow";
+  if (value >= max + 10) return "red";
+  if (value >= max - 5) return "yellow";
   return null;
 }
