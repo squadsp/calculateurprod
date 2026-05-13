@@ -118,6 +118,15 @@ function planEdits(
     const weeklyMab: number[] = [];
     const weeklyVf: number[] = [];
     let moyenneRow: TextItem[] | null = null;
+    // Track column x-centers from day rows so we can align the moyenne row,
+    // which may have blank cells (fewer numeric items than a day row).
+    const colXSum: Record<number, number> = {};
+    const colXCount: Record<number, number> = {};
+    const recordCol = (idx: number, cell: TextItem) => {
+      const center = cell.x + cell.width / 2;
+      colXSum[idx] = (colXSum[idx] ?? 0) + center;
+      colXCount[idx] = (colXCount[idx] ?? 0) + 1;
+    };
 
     for (const row of page.rows) {
       if (row[0] && /^moyenne$/i.test(row[0].str.trim())) {
@@ -142,6 +151,7 @@ function planEdits(
 
       const values = numItems.map((it) => parseNum(it.str));
       daysFound++;
+      numItems.forEach((it, i) => recordCol(i, it));
 
       // Trappe (index 2)
       if (numItems[TRAPPE_INDEX]) {
@@ -191,8 +201,24 @@ function planEdits(
     if (moyenneRow) {
       const numItems = moyenneRow.filter((it) => isNumeric(it.str));
       const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+      const findCellByCol = (idx: number): TextItem | null => {
+        if (!colXCount[idx]) return null;
+        const targetX = colXSum[idx] / colXCount[idx];
+        let best: TextItem | null = null;
+        let bestDist = Infinity;
+        for (const it of numItems) {
+          const center = it.x + it.width / 2;
+          const d = Math.abs(center - targetX);
+          if (d < bestDist) {
+            bestDist = d;
+            best = it;
+          }
+        }
+        // Reject if too far (more than ~half a typical column width).
+        return bestDist <= 15 ? best : null;
+      };
       const pushAvg = (idx: number, value: number) => {
-        const cell = numItems[idx];
+        const cell = findCellByCol(idx);
         if (!cell) return;
         edits.push({
           pageIndex,
