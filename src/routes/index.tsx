@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { processPdf } from "@/lib/pdfProcessor";
 import { DEFAULT_SETTINGS, type Settings } from "@/lib/columns";
-import { FileUp, Loader2, Settings as SettingsIcon, AlertCircle, Download, X } from "lucide-react";
+import { FileUp, Loader2, Settings as SettingsIcon, AlertCircle, Download, X, Printer } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -15,6 +15,9 @@ async function loadSettings(): Promise<Settings> {
   return {
     trappe_components: (data.trappe_components as Settings["trappe_components"]) ?? DEFAULT_SETTINGS.trappe_components,
     mab_components: (data.mab_components as Settings["mab_components"]) ?? DEFAULT_SETTINGS.mab_components,
+    vf_components:
+      ((data as { vf_components?: Settings["vf_components"] }).vf_components) ??
+      DEFAULT_SETTINGS.vf_components,
   };
 }
 
@@ -81,6 +84,26 @@ function Index() {
     document.body.appendChild(a);
     a.click();
     a.remove();
+  };
+
+  const printOne = (r: ProcessedPdf) => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.src = r.url;
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        window.open(r.url, "_blank");
+      }
+    };
+    document.body.appendChild(iframe);
   };
 
   const removeOne = (id: string) => {
@@ -183,6 +206,13 @@ function Index() {
                 >
                   <Download className="h-4 w-4" />
                   Télécharger
+                </button>
+                <button
+                  onClick={() => printOne(r)}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium border border-border px-3 py-1.5 rounded-md hover:bg-muted"
+                >
+                  <Printer className="h-4 w-4" />
+                  Imprimer
                 </button>
                 <button
                   onClick={() => removeOne(r.id)}
