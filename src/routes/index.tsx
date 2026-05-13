@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { processPdf } from "@/lib/pdfProcessor";
+import { PDFDocument } from "pdf-lib";
 import {
   DEFAULT_SETTINGS,
   DEFAULT_THRESHOLDS,
@@ -153,6 +154,39 @@ function Index() {
     document.body.appendChild(iframe);
   };
 
+  const printAll = async () => {
+    if (results.length === 0) return;
+    const sorted = [...results].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }),
+    );
+    const merged = await PDFDocument.create();
+    for (const r of sorted) {
+      const src = await PDFDocument.load(r.bytes);
+      const pages = await merged.copyPages(src, src.getPageIndices());
+      pages.forEach((p) => merged.addPage(p));
+    }
+    const out = await merged.save();
+    const blob = new Blob([out as BlobPart], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.src = url;
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        window.open(url, "_blank");
+      }
+    };
+    document.body.appendChild(iframe);
+  };
+
   const removeOne = (id: string) => {
     setResults((prev) => {
       const target = prev.find((r) => r.id === id);
@@ -264,8 +298,17 @@ function Index() {
 
         {results.length > 0 && (
           <div className="mt-8 space-y-2">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground px-1">
-              {results.length} fichier(s) prêt(s)
+            <div className="flex items-center justify-between px-1">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                {results.length} fichier(s) prêt(s)
+              </div>
+              <button
+                onClick={printAll}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary px-3 py-1.5 rounded-md hover:opacity-90"
+              >
+                <Printer className="h-4 w-4" />
+                Imprimer tout
+              </button>
             </div>
             {results.map((r) => (
               <div
