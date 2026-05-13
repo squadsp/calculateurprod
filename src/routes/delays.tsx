@@ -41,6 +41,8 @@ function DelaysPage() {
   const save = useServerFn(saveDelays);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [busy, setBusy] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<Record<LineKey, { text: string | null; dateLabel: string | null }> | null>(null);
   const [needsMore, setNeedsMore] = useState<LineKey[]>([]);
@@ -192,16 +194,37 @@ function DelaysPage() {
           </p>
         </div>
 
-        <label
-          onDragOver={(e) => e.preventDefault()}
+        <div
+          onClick={() => document.getElementById("delays-file-input")?.click()}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDragOver(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = "copy";
+            setDragOver(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDragOver(false);
+          }}
           onDrop={(e) => {
             e.preventDefault();
+            e.stopPropagation();
+            setDragOver(false);
             const fs = Array.from(e.dataTransfer.files ?? []);
             if (fs.length) onPick(fs);
           }}
-          className="block rounded-2xl border-2 border-dashed border-border bg-card p-8 text-center cursor-pointer hover:border-primary/60"
+          className={`block rounded-2xl border-2 border-dashed bg-card p-8 text-center cursor-pointer transition-colors ${
+            dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/60"
+          }`}
         >
           <input
+            id="delays-file-input"
             type="file"
             accept="application/pdf"
             multiple
@@ -212,12 +235,12 @@ function DelaysPage() {
               e.target.value = "";
             }}
           />
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2 pointer-events-none">
             <FileUp className="h-10 w-10 text-primary" />
             <div className="text-base font-medium">Glissez vos PDF ici ou cliquez pour choisir</div>
             <div className="text-xs text-muted-foreground">L'ordre des fichiers compte (réorganisez si besoin)</div>
           </div>
-        </label>
+        </div>
 
         {files.length > 0 && (
           <div className="space-y-2">
@@ -225,8 +248,39 @@ function DelaysPage() {
               {files.length} fichier(s) — ordre chronologique
             </div>
             {files.map((f, i) => (
-              <div key={f.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-                <div className="text-xs text-muted-foreground w-6">#{i + 1}</div>
+              <div
+                key={f.id}
+                draggable
+                onDragStart={(e) => {
+                  setDragIndex(i);
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", String(i));
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const from = dragIndex ?? Number(e.dataTransfer.getData("text/plain"));
+                  setDragIndex(null);
+                  if (Number.isNaN(from) || from === i) return;
+                  setFiles((prev) => {
+                    const next = [...prev];
+                    const [moved] = next.splice(from, 1);
+                    next.splice(i, 0, moved);
+                    return next;
+                  });
+                  setResults(null);
+                  setNeedsMore([]);
+                }}
+                onDragEnd={() => setDragIndex(null)}
+                className={`flex items-center gap-3 rounded-lg border bg-card p-3 cursor-move transition-opacity ${
+                  dragIndex === i ? "opacity-40 border-primary" : "border-border"
+                }`}
+              >
+                <div className="text-xs text-muted-foreground w-6 select-none">#{i + 1}</div>
                 <div className="flex-1 truncate text-sm font-medium">{f.name}</div>
                 <button
                   onClick={() => moveFile(i, -1)}
