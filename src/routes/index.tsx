@@ -32,7 +32,6 @@ function Index() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<ProcessedPdf[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -67,7 +66,6 @@ function Index() {
         });
       }
       setResults((prev) => [...prev, ...newResults]);
-      setActiveId(newResults[0]?.id ?? null);
     } catch (e) {
       console.error(e);
       setError(e instanceof Error ? e.message : "Erreur lors du traitement du PDF");
@@ -89,13 +87,9 @@ function Index() {
     setResults((prev) => {
       const target = prev.find((r) => r.id === id);
       if (target) URL.revokeObjectURL(target.url);
-      const next = prev.filter((r) => r.id !== id);
-      if (activeId === id) setActiveId(next[0]?.id ?? null);
-      return next;
+      return prev.filter((r) => r.id !== id);
     });
   };
-
-  const active = results.find((r) => r.id === activeId) ?? null;
 
   return (
     <div className="min-h-screen bg-background">
