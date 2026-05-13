@@ -325,9 +325,19 @@ export async function calculateDelays(
   const lines: LineKey[] = ["trappe", "mab", "coulissant_pvc", "peinture"];
   const results = {} as Record<LineKey, { date: Date | null; text: string | null }>;
   const needsMore: LineKey[] = [];
+  const computeVf = (settings.vf_components?.length ?? 0) > 0;
   // Week 1 = first PDF week (typically next Thursday). Minimum 4 weeks.
   for (const line of lines) {
-    const found = findFirstAvailableWeek(allWeeks, line, settings.thresholds, 4, today);
+    const thresholdKey =
+      line === "coulissant_pvc" && computeVf ? "vf" : LINE_THRESHOLD[line];
+    const found = findFirstAvailableWeek(
+      allWeeks,
+      line,
+      settings.thresholds,
+      4,
+      today,
+      thresholdKey,
+    );
     if (!found) {
       results[line] = { date: null, text: null };
       needsMore.push(line);
