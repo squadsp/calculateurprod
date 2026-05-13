@@ -6,10 +6,12 @@ import { saveSettings, verifyAdmin } from "@/lib/settings.functions";
 import {
   ALL_FIELDS,
   DEFAULT_SETTINGS,
+  DEFAULT_THRESHOLDS,
   FIELD_LABELS,
   type Component,
   type FieldKey,
   type Settings,
+  type Thresholds,
 } from "@/lib/columns";
 import { ArrowLeft, GripVertical, Loader2, LogOut, Save, Trash2 } from "lucide-react";
 
@@ -121,6 +123,7 @@ function SettingsEditor() {
   const [trappe, setTrappe] = useState<Component[]>(DEFAULT_SETTINGS.trappe_components);
   const [mab, setMab] = useState<Component[]>(DEFAULT_SETTINGS.mab_components);
   const [vf, setVf] = useState<Component[]>(DEFAULT_SETTINGS.vf_components);
+  const [thresholds, setThresholds] = useState<Thresholds>(DEFAULT_THRESHOLDS);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -131,6 +134,10 @@ function SettingsEditor() {
         setTrappe((data.trappe_components as Component[]) ?? DEFAULT_SETTINGS.trappe_components);
         setMab((data.mab_components as Component[]) ?? DEFAULT_SETTINGS.mab_components);
         setVf((data.vf_components as unknown as Component[]) ?? DEFAULT_SETTINGS.vf_components);
+        setThresholds({
+          ...DEFAULT_THRESHOLDS,
+          ...((data as { thresholds?: Partial<Thresholds> }).thresholds ?? {}),
+        });
       }
       setLoaded(true);
     })();
@@ -159,6 +166,7 @@ function SettingsEditor() {
           trappe_components: trappe,
           mab_components: mab,
           vf_components: vf,
+          thresholds,
         },
       });
       setMsg("Paramètres enregistrés");
@@ -227,6 +235,41 @@ function SettingsEditor() {
           onChange={setVf}
           onDrop={onDropTo("vf")}
         />
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">
+          Seuils de surlignage (max par jour)
+        </h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Au-dessus du max +10 → rouge. Entre max −9 et max +9 → jaune. Sinon, pas de
+          surlignage. Mettre 0 pour désactiver. Si VF est configuré ci-dessus, le seuil VF
+          remplace celui de Coulissant PVC pour cette colonne.
+        </p>
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {([
+            ["trappe", "Ligne Battant (Trappe)"],
+            ["mab", "Ligne Hybride (MAB)"],
+            ["coulissant_pvc", "Coulissant PVC"],
+            ["vf", "VF"],
+            ["peinture", "Ligne Peinture (Total)"],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
+              <span className="text-sm">{label}</span>
+              <input
+                type="number"
+                min={0}
+                step="1"
+                value={thresholds[key]}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  setThresholds((t) => ({ ...t, [key]: isNaN(v) ? 0 : v }));
+                }}
+                className="w-24 rounded border border-input bg-background px-2 py-1 text-sm text-right"
+              />
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-4">

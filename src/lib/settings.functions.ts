@@ -23,6 +23,13 @@ const SaveSchema = z.object({
   trappe_components: z.array(ComponentSchema).max(20),
   mab_components: z.array(ComponentSchema).max(20),
   vf_components: z.array(ComponentSchema).max(20),
+  thresholds: z.object({
+    trappe: z.number().min(0).max(100000),
+    mab: z.number().min(0).max(100000),
+    coulissant_pvc: z.number().min(0).max(100000),
+    vf: z.number().min(0).max(100000),
+    peinture: z.number().min(0).max(100000),
+  }),
 });
 
 export const saveSettings = createServerFn({ method: "POST" })
@@ -37,6 +44,7 @@ export const saveSettings = createServerFn({ method: "POST" })
         trappe_components: data.trappe_components,
         mab_components: data.mab_components,
         vf_components: data.vf_components,
+        thresholds: data.thresholds,
         updated_at: new Date().toISOString(),
       })
       .eq("id", 1);

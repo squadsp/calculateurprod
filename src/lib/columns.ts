@@ -41,12 +41,31 @@ export const COLUMN_INDEX: Record<FieldKey, number> = {
 export const TRAPPE_INDEX = 2;
 export const MAB_INDEX = 5;
 export const VF_INDEX = 8;
+export const COULISSANT_PVC_INDEX = 7;
+// Total column is the last numeric column in a day row (index 17 — Peinture total).
+export const TOTAL_INDEX = 17;
 
 export type Component = { field: FieldKey; multiplier: number };
+export type Thresholds = {
+  trappe: number;
+  mab: number;
+  coulissant_pvc: number;
+  vf: number;
+  peinture: number;
+};
 export type Settings = {
   trappe_components: Component[];
   mab_components: Component[];
   vf_components: Component[];
+  thresholds: Thresholds;
+};
+
+export const DEFAULT_THRESHOLDS: Thresholds = {
+  trappe: 150,
+  mab: 100,
+  coulissant_pvc: 100,
+  vf: 0,
+  peinture: 50,
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -60,6 +79,7 @@ export const DEFAULT_SETTINGS: Settings = {
     { field: "coulissant_hyb", multiplier: 1 },
   ],
   vf_components: [],
+  thresholds: DEFAULT_THRESHOLDS,
 };
 
 export const DAY_REGEX = /^(jeudi|vendredi|samedi|dimanche|lundi|mardi|mercredi)\s+le\s+\d+/i;
@@ -77,4 +97,20 @@ export function computeValue(values: number[], components: Component[]): number 
 export function formatNumber(n: number): string {
   // Match the PDF style: two decimals with comma or dot. Use dot to match Trappe/MAB columns style.
   return n.toFixed(2);
+}
+
+export type Highlight = "red" | "yellow" | null;
+
+/**
+ * Highlight rule:
+ *  - value >= max + 10 → red
+ *  - value >= max - 9  → yellow (within 9 of max, including over by less than 10)
+ *  - else              → none
+ * If max is 0 or negative, no highlighting.
+ */
+export function getHighlight(value: number, max: number): Highlight {
+  if (!max || max <= 0) return null;
+  if (value >= max + 10) return "red";
+  if (value >= max - 9) return "yellow";
+  return null;
 }
