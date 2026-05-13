@@ -1,0 +1,2 @@
+ALTER TABLE public.formula_settings
+ADD COLUMN IF NOT EXISTS threshold_labels jsonb NOT NULL DEFAULT '{"trappe":"Ligne Battant (Trappe)","mab":"Ligne Hybride (MAB)","coulissant_pvc":"Coulissant PVC","vf":"VF","peinture":"Ligne Peinture (Total)"}'::jsonb;

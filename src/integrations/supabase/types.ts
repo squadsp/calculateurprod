@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           id: number
           mab_components: Json
+          threshold_labels: Json
           thresholds: Json
           trappe_components: Json
           updated_at: string
@@ -26,6 +27,7 @@ export type Database = {
         Insert: {
           id?: number
           mab_components?: Json
+          threshold_labels?: Json
           thresholds?: Json
           trappe_components?: Json
           updated_at?: string
@@ -34,6 +36,7 @@ export type Database = {
         Update: {
           id?: number
           mab_components?: Json
+          threshold_labels?: Json
           thresholds?: Json
           trappe_components?: Json
           updated_at?: string
