@@ -22,6 +22,7 @@ const SaveSchema = z.object({
   password: z.string().max(200),
   trappe_components: z.array(ComponentSchema).max(20),
   mab_components: z.array(ComponentSchema).max(20),
+  vf_components: z.array(ComponentSchema).max(20),
 });
 
 export const saveSettings = createServerFn({ method: "POST" })
@@ -35,6 +36,7 @@ export const saveSettings = createServerFn({ method: "POST" })
       .update({
         trappe_components: data.trappe_components,
         mab_components: data.mab_components,
+        vf_components: data.vf_components,
         updated_at: new Date().toISOString(),
       })
       .eq("id", 1);

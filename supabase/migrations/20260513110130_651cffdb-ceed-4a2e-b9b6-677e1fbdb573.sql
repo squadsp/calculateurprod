@@ -1,0 +1,1 @@
+ALTER TABLE public.formula_settings ADD COLUMN IF NOT EXISTS vf_components jsonb NOT NULL DEFAULT '[]'::jsonb;

@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import {
   TRAPPE_INDEX,
   MAB_INDEX,
+  VF_INDEX,
   computeValue,
   formatNumber,
   type Settings,
@@ -109,9 +110,20 @@ function planEdits(
 ): { edits: CellEdit[]; daysFound: number } {
   const edits: CellEdit[] = [];
   let daysFound = 0;
+  const computeVf = (settings.vf_components?.length ?? 0) > 0;
 
   pages.forEach((page, pageIndex) => {
+    // Per-page accumulators for the weekly "moyenne" row.
+    const weeklyTrappe: number[] = [];
+    const weeklyMab: number[] = [];
+    const weeklyVf: number[] = [];
+    let moyenneRow: TextItem[] | null = null;
+
     for (const row of page.rows) {
+      if (row[0] && /^moyenne$/i.test(row[0].str.trim())) {
+        moyenneRow = row;
+        continue;
+      }
       // Day rows look like: "jeudi" | "le" | "14" | 134.00 | 4,00 | ...
       // The day name is the first item, then "le", then the day number, then 18 column values.
       if (!row[0] || !/^(jeudi|vendredi|samedi|dimanche|lundi|mardi|mercredi)$/i.test(row[0].str.trim())) {
@@ -135,6 +147,7 @@ function planEdits(
       if (numItems[TRAPPE_INDEX]) {
         const cell = numItems[TRAPPE_INDEX];
         const newVal = computeValue(values, settings.trappe_components);
+        weeklyTrappe.push(newVal);
         edits.push({
           pageIndex,
           x: cell.x,
@@ -148,6 +161,7 @@ function planEdits(
       if (numItems[MAB_INDEX]) {
         const cell = numItems[MAB_INDEX];
         const newVal = computeValue(values, settings.mab_components);
+        weeklyMab.push(newVal);
         edits.push({
           pageIndex,
           x: cell.x,
@@ -157,6 +171,41 @@ function planEdits(
           newText: formatNumber(newVal),
         });
       }
+      // VF (index 8) — only when configured
+      if (computeVf && numItems[VF_INDEX]) {
+        const cell = numItems[VF_INDEX];
+        const newVal = computeValue(values, settings.vf_components);
+        weeklyVf.push(newVal);
+        edits.push({
+          pageIndex,
+          x: cell.x,
+          y: cell.y,
+          width: cell.width,
+          height: cell.height,
+          newText: formatNumber(newVal),
+        });
+      }
+    }
+
+    // Update moyenne row for this week (page).
+    if (moyenneRow) {
+      const numItems = moyenneRow.filter((it) => isNumeric(it.str));
+      const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+      const pushAvg = (idx: number, value: number) => {
+        const cell = numItems[idx];
+        if (!cell) return;
+        edits.push({
+          pageIndex,
+          x: cell.x,
+          y: cell.y,
+          width: cell.width,
+          height: cell.height,
+          newText: formatNumber(value),
+        });
+      };
+      if (weeklyTrappe.length) pushAvg(TRAPPE_INDEX, avg(weeklyTrappe));
+      if (weeklyMab.length) pushAvg(MAB_INDEX, avg(weeklyMab));
+      if (computeVf && weeklyVf.length) pushAvg(VF_INDEX, avg(weeklyVf));
     }
   });
 

@@ -40,11 +40,13 @@ export const COLUMN_INDEX: Record<FieldKey, number> = {
 
 export const TRAPPE_INDEX = 2;
 export const MAB_INDEX = 5;
+export const VF_INDEX = 8;
 
 export type Component = { field: FieldKey; multiplier: number };
 export type Settings = {
   trappe_components: Component[];
   mab_components: Component[];
+  vf_components: Component[];
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -57,6 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
     { field: "battant_hyb", multiplier: 1 },
     { field: "coulissant_hyb", multiplier: 1 },
   ],
+  vf_components: [],
 };
 
 export const DAY_REGEX = /^(jeudi|vendredi|samedi|dimanche|lundi|mardi|mercredi)\s+le\s+\d+/i;
