@@ -363,6 +363,13 @@ async function applyEdits(
     const padX = 1;
     const padY = 1;
     const bg = e.highlight === "red" ? COLOR_RED : e.highlight === "yellow" ? COLOR_YELLOW : null;
+    // The new text (e.g. "150.00") is often wider than the original cell
+    // width measured by pdf.js. Compute the actual draw width so the
+    // background rectangle covers the entire rewritten value.
+    const fontSize = Math.max(6, Math.min(e.height, 9));
+    const newTextWidth = e.newText ? font.widthOfTextAtSize(e.newText, fontSize) : 0;
+    const rectWidth = Math.max(e.width, newTextWidth) + padX * 2;
+    const rectX = e.x + e.width - rectWidth + padX;
 
     if (e.newText === null) {
       // Highlight-only: draw a translucent colored rect over the existing
@@ -382,16 +389,14 @@ async function applyEdits(
 
     // Cover original text with background (white or highlight color).
     page.drawRectangle({
-      x: e.x - padX,
+      x: rectX,
       y: e.y - padY,
-      width: Math.max(e.width + padX * 2, 24),
+      width: rectWidth,
       height: e.height + padY * 2,
       color: bg ?? rgb(1, 1, 1),
     });
-    const fontSize = Math.max(6, Math.min(e.height, 9));
-    const textWidth = font.widthOfTextAtSize(e.newText, fontSize);
     const rightEdge = e.x + e.width;
-    const drawX = rightEdge - textWidth;
+    const drawX = rightEdge - newTextWidth;
     page.drawText(e.newText, {
       x: drawX,
       y: e.y,
