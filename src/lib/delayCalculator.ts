@@ -191,36 +191,39 @@ const LINE_THRESHOLD: Record<LineKey, keyof Settings["thresholds"]> = {
 };
 
 /**
- * For a line, scan weeks in chronological order and return the first date where:
- *  - the week's moyenne is below the line's threshold (week not "full"), AND
- *  - that day's value is below the threshold.
- * Returns null if all days across all provided weeks are full.
+ * Week-based search. Each entry in `weeks` is treated as one PDF week
+ * (Thursday → Wednesday). Week number = index + 1. Returns the first
+ * week (with weekNumber >= minWeek) whose average for `line` is below
+ * the threshold, plus the first day inside that week that is below the
+ * threshold (for display).
  */
-export function findFirstAvailableDate(
+export function findFirstAvailableWeek(
   weeks: WeekData[],
   line: LineKey,
   thresholds: Settings["thresholds"],
-  minDate?: Date,
-): Date | null {
+  minWeek = 4,
+): { weekNumber: number; date: Date | null } | null {
   const max = thresholds[LINE_THRESHOLD[line]];
   if (!max || max <= 0) return null;
-  for (const w of weeks) {
+  for (let i = 0; i < weeks.length; i++) {
+    const weekNumber = i + 1;
+    if (weekNumber < minWeek) continue;
+    const w = weeks[i];
     const moy = w.moyenne[line];
-    if (moy != null && moy >= max) continue; // whole week full
+    if (moy != null && moy >= max) continue; // week is full on average
+    // Pick first day below threshold for the displayed date (fallback: first day).
+    let firstDay: Date | null = null;
     for (const d of w.days) {
-      if (minDate && d.date < minDate) continue; // enforce minimum delay
       const v = d.values[line];
-      if (v == null) continue;
-      if (v < max) return d.date;
+      if (v != null && v < max) {
+        firstDay = d.date;
+        break;
+      }
     }
+    if (!firstDay && w.days.length > 0) firstDay = w.days[0].date;
+    return { weekNumber, date: firstDay };
   }
   return null;
-}
-
-export function weeksBetween(today: Date, target: Date): number {
-  const ms = target.getTime() - today.getTime();
-  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
-  return Math.max(0, Math.ceil(days / 7));
 }
 
 export function formatDelay(weeks: number): string {
@@ -257,18 +260,14 @@ export async function calculateDelays(
   const lines: LineKey[] = ["trappe", "mab", "coulissant_pvc", "peinture"];
   const results = {} as Record<LineKey, { date: Date | null; text: string | null }>;
   const needsMore: LineKey[] = [];
-  // Enforce a 4-week minimum: only look at days at or after today + 4 weeks.
-  const minDate = new Date(today);
-  minDate.setHours(0, 0, 0, 0);
-  minDate.setDate(minDate.getDate() + 4 * 7);
+  // Week 1 = first PDF week (typically next Thursday). Minimum 4 weeks.
   for (const line of lines) {
-    const date = findFirstAvailableDate(allWeeks, line, settings.thresholds, minDate);
-    if (!date) {
+    const found = findFirstAvailableWeek(allWeeks, line, settings.thresholds, 4);
+    if (!found) {
       results[line] = { date: null, text: null };
       needsMore.push(line);
     } else {
-      const w = weeksBetween(today, date);
-      results[line] = { date, text: formatDelay(w) };
+      results[line] = { date: found.date, text: formatDelay(found.weekNumber) };
     }
   }
 
