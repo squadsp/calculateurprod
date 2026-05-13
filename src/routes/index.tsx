@@ -168,77 +168,37 @@ function Index() {
         )}
 
         {results.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
-            <aside className="space-y-2">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground px-1">
-                {results.length} fichier(s)
-              </div>
-              {results.map((r) => (
-                <div
-                  key={r.id}
-                  className={`group rounded-lg border p-3 cursor-pointer transition-colors ${
-                    activeId === r.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                  }`}
-                  onClick={() => setActiveId(r.id)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium truncate">{r.name}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {r.days} jour(s) · {r.edits} édit(s)
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeOne(r.id);
-                      }}
-                      className="text-muted-foreground hover:text-destructive transition-colors"
-                      aria-label="Retirer"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      downloadOne(r);
-                    }}
-                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Télécharger
-                  </button>
-                </div>
-              ))}
-            </aside>
-
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
-              {active ? (
-                <div className="flex flex-col h-[80vh]">
-                  <div className="flex items-center justify-between border-b border-border px-4 py-2">
-                    <div className="text-sm font-medium truncate">{active.name}</div>
-                    <button
-                      onClick={() => downloadOne(active)}
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary px-3 py-1.5 rounded-md hover:opacity-90"
-                    >
-                      <Download className="h-4 w-4" />
-                      Télécharger
-                    </button>
-                  </div>
-                  <iframe
-                    key={active.id}
-                    src={active.url}
-                    title={active.name}
-                    className="flex-1 w-full bg-muted"
-                  />
-                </div>
-              ) : (
-                <div className="p-12 text-center text-sm text-muted-foreground">
-                  Sélectionnez un fichier pour le prévisualiser
-                </div>
-              )}
+          <div className="mt-8 space-y-2">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground px-1">
+              {results.length} fichier(s) prêt(s)
             </div>
+            {results.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium truncate">{r.name}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {r.days} jour(s) · {r.edits} édit(s)
+                  </div>
+                </div>
+                <button
+                  onClick={() => downloadOne(r)}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-foreground bg-primary px-3 py-1.5 rounded-md hover:opacity-90"
+                >
+                  <Download className="h-4 w-4" />
+                  Télécharger
+                </button>
+                <button
+                  onClick={() => removeOne(r.id)}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                  aria-label="Retirer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </main>
