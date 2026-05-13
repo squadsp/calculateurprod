@@ -13,17 +13,5 @@ for(const it of items){
   const last=rows[rows.length-1];
   if(last && Math.abs(last[0].y-it.y)<=TOL) last.push(it); else rows.push([it]);
 }
-const DAY=/^(jeudi|vendredi|samedi|dimanche|lundi|mardi|mercredi)\s+le\s+\d+/i;
-const isNum=s=>/^-?\d{1,4}([.,]\d+)?$/.test(s.trim());
-let dayCount=0;
-for(const r of rows){
-  const firstNum=r.findIndex(it=>isNum(it.s));
-  if(firstNum<1) continue;
-  const label=r.slice(0,firstNum).map(it=>it.s).join(" ").replace(/\s+/g," ").trim();
-  if(!DAY.test(label)) continue;
-  const nums=r.slice(firstNum).filter(it=>isNum(it.s));
-  if(nums.length<8) continue;
-  dayCount++;
-  console.log(label, "→", nums.length, "values:", nums.map(n=>n.s).join(", "));
-}
-console.log("Days found:", dayCount);
+console.log("Total rows:", rows.length);
+rows.slice(0,40).forEach((r,i)=> console.log(i, r.map(it=>it.s).join("|")));
