@@ -35,7 +35,7 @@ async function loadSettings(): Promise<Settings> {
 
 type FileEntry = { id: string; name: string; buf: ArrayBuffer };
 
-const LINES: LineKey[] = ["trappe", "mab", "coulissant_pvc", "peinture"];
+const ALL_LINES: LineKey[] = ["trappe", "mab", "coulissant_pvc", "vf", "peinture"];
 
 function DelaysPage() {
   const save = useServerFn(saveDelays);
@@ -46,6 +46,12 @@ function DelaysPage() {
   const [needsMore, setNeedsMore] = useState<LineKey[]>([]);
   const [labels, setLabels] = useState<ThresholdLabels>(DEFAULT_THRESHOLD_LABELS);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [activeLines, setActiveLines] = useState<LineKey[]>([
+    "trappe",
+    "mab",
+    "coulissant_pvc",
+    "peinture",
+  ]);
 
   // Load previously saved delays so they survive a refresh.
   useEffect(() => {
@@ -59,10 +65,10 @@ function DelaysPage() {
       const tl = (data.threshold_labels as ThresholdLabels | null) ?? DEFAULT_THRESHOLD_LABELS;
       setLabels({ ...DEFAULT_THRESHOLD_LABELS, ...tl });
       const d = (data.delays ?? {}) as Record<string, string>;
-      const has = LINES.some((l) => d[l]);
+      const has = ALL_LINES.some((l) => d[l]);
       if (!has) return;
       const fmt: Record<LineKey, { text: string | null; dateLabel: string | null }> = {} as never;
-      for (const line of LINES) fmt[line] = { text: d[line] || null, dateLabel: null };
+      for (const line of ALL_LINES) fmt[line] = { text: d[line] || null, dateLabel: null };
       setResults(fmt);
       if (d.updated_at) {
         const dt = new Date(d.updated_at);
@@ -115,6 +121,14 @@ function DelaysPage() {
     try {
       const settings = await loadSettings();
       setLabels(settings.threshold_labels);
+      const computeVf = (settings.vf_components?.length ?? 0) > 0;
+      const pvcInVf = (settings.vf_components ?? []).some((c) => c.field === "coulissant_pvc");
+      const lines: LineKey[] = ALL_LINES.filter((l) => {
+        if (l === "vf") return computeVf;
+        if (l === "coulissant_pvc") return !pvcInVf;
+        return true;
+      });
+      setActiveLines(lines);
       const today = new Date();
       const { results: r, needsMore: nm } = await calculateDelays(
         files.map((f) => f.buf),
@@ -122,8 +136,12 @@ function DelaysPage() {
         today,
       );
       const fmt: Record<LineKey, { text: string | null; dateLabel: string | null }> = {} as never;
-      for (const line of LINES) {
+      for (const line of ALL_LINES) {
         const v = r[line];
+        if (!v) {
+          fmt[line] = { text: null, dateLabel: null };
+          continue;
+        }
         fmt[line] = {
           text: v.text,
           dateLabel: v.date
@@ -139,6 +157,7 @@ function DelaysPage() {
         trappe: fmt.trappe.text ?? "",
         mab: fmt.mab.text ?? "",
         coulissant_pvc: fmt.coulissant_pvc.text ?? "",
+        vf: fmt.vf.text ?? "",
         peinture: fmt.peinture.text ?? "",
       };
       await save({ data: payload });
@@ -266,7 +285,7 @@ function DelaysPage() {
 
         {results && (
           <div className="grid sm:grid-cols-2 gap-3">
-            {LINES.map((line) => (
+            {activeLines.map((line) => (
               <div key={line} className="rounded-xl border border-border bg-card p-4">
                 <div className="text-xs uppercase tracking-wide text-muted-foreground">{labels[line]}</div>
                 <div className="mt-2 text-2xl font-semibold">

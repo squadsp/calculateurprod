@@ -6,6 +6,7 @@ const DelaysSchema = z.object({
   trappe: z.string().max(120),
   mab: z.string().max(120),
   coulissant_pvc: z.string().max(120),
+  vf: z.string().max(120).optional(),
   peinture: z.string().max(120),
 });
 
