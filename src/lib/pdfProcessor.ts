@@ -53,6 +53,11 @@ function parseNum(s: string): number {
   return parseFloat(s.replace(",", "."));
 }
 
+function strongerHighlight(a: Highlight, b: Highlight): Highlight {
+  const rank = (h: Highlight) => (h === "red" ? 2 : h === "yellow" ? 1 : 0);
+  return rank(a) >= rank(b) ? a : b;
+}
+
 /**
  * Extract text items grouped into rows per page.
  * Returns rows sorted top→bottom, items sorted left→right.
@@ -130,6 +135,15 @@ function planEdits(
       trappe: [] as number[],
       mab: [] as number[],
       vf: [] as number[],
+      // Indexes into the global `edits` array for each modified day cell so
+      // we can upgrade their highlight once we know the weekly average.
+      trappeEditIdx: [] as number[],
+      mabEditIdx: [] as number[],
+      vfEditIdx: [] as number[],
+      // Raw cells of unmodified columns gathered through the week — pushed
+      // (with the right highlight) only when we hit the moyenne row.
+      pvcCells: [] as TextItem[],
+      totalCells: [] as TextItem[],
       colXSum: {} as Record<number, number>,
       colXCount: {} as Record<number, number>,
     });
@@ -206,15 +220,33 @@ function planEdits(
       };
       if (week.trappe.length) {
         const v = avg(week.trappe);
-        pushAvg(TRAPPE_INDEX, v, hl(v, t.trappe));
+        const h = hl(v, t.trappe);
+        pushAvg(TRAPPE_INDEX, v, h);
+        if (h) {
+          for (const i of week.trappeEditIdx) {
+            edits[i].highlight = strongerHighlight(edits[i].highlight, h);
+          }
+        }
       }
       if (week.mab.length) {
         const v = avg(week.mab);
-        pushAvg(MAB_INDEX, v, hl(v, t.mab));
+        const h = hl(v, t.mab);
+        pushAvg(MAB_INDEX, v, h);
+        if (h) {
+          for (const i of week.mabEditIdx) {
+            edits[i].highlight = strongerHighlight(edits[i].highlight, h);
+          }
+        }
       }
       if (computeVf && week.vf.length) {
         const v = avg(week.vf);
-        pushAvg(VF_INDEX, v, hl(v, t.vf));
+        const h = hl(v, t.vf);
+        pushAvg(VF_INDEX, v, h);
+        if (h) {
+          for (const i of week.vfEditIdx) {
+            edits[i].highlight = strongerHighlight(edits[i].highlight, h);
+          }
+        }
       }
       // Highlight-only for non-modified columns: read the existing moyenne cell
       // value and apply the threshold rule.
@@ -223,14 +255,32 @@ function planEdits(
         if (!cell) return null;
         return parseNum(cell.str);
       };
-      if (!computeVf && options.highlights) {
-        const v = cellValue(COULISSANT_PVC_INDEX);
-        if (v != null) pushHighlightOnly(COULISSANT_PVC_INDEX, hl(v, t.coulissant_pvc));
-      }
-      if (options.highlights) {
-        const totalV = cellValue(TOTAL_INDEX);
-        if (totalV != null) pushHighlightOnly(TOTAL_INDEX, hl(totalV, t.peinture));
-      }
+      const flushStaticColumn = (
+        idx: number,
+        cells: TextItem[],
+        max: number,
+      ) => {
+        if (!options.highlights) return;
+        const v = cellValue(idx);
+        const avgH = v != null ? hl(v, max) : null;
+        if (avgH) pushHighlightOnly(idx, avgH);
+        for (const cell of cells) {
+          const dayH = hl(parseNum(cell.str), max);
+          const finalH = strongerHighlight(dayH, avgH);
+          if (!finalH) continue;
+          edits.push({
+            pageIndex,
+            x: cell.x,
+            y: cell.y,
+            width: cell.width,
+            height: cell.height,
+            newText: null,
+            highlight: finalH,
+          });
+        }
+      };
+      if (!computeVf) flushStaticColumn(COULISSANT_PVC_INDEX, week.pvcCells, t.coulissant_pvc);
+      flushStaticColumn(TOTAL_INDEX, week.totalCells, t.peinture);
       week = createWeekStats();
     };
 
@@ -264,6 +314,7 @@ function planEdits(
         const cell = numItems[TRAPPE_INDEX];
         const newVal = computeValue(values, settings.trappe_components);
         week.trappe.push(newVal);
+        week.trappeEditIdx.push(edits.length);
         edits.push({
           pageIndex,
           x: cell.x,
@@ -279,6 +330,7 @@ function planEdits(
         const cell = numItems[MAB_INDEX];
         const newVal = computeValue(values, settings.mab_components);
         week.mab.push(newVal);
+        week.mabEditIdx.push(edits.length);
         edits.push({
           pageIndex,
           x: cell.x,
@@ -294,6 +346,7 @@ function planEdits(
         const cell = numItems[VF_INDEX];
         const newVal = computeValue(values, settings.vf_components);
         week.vf.push(newVal);
+        week.vfEditIdx.push(edits.length);
         edits.push({
           pageIndex,
           x: cell.x,
@@ -305,41 +358,13 @@ function planEdits(
         });
       }
 
-      // Highlight-only for unmodified columns.
-      // Coulissant PVC: only when VF is NOT being computed (otherwise the VF
-      // column above already carries the highlight semantics for that line).
-      if (options.highlights && !computeVf && numItems[COULISSANT_PVC_INDEX]) {
-        const cell = numItems[COULISSANT_PVC_INDEX];
-        const v = parseNum(cell.str);
-        const h = getHighlight(v, t.coulissant_pvc);
-        if (h) {
-          edits.push({
-            pageIndex,
-            x: cell.x,
-            y: cell.y,
-            width: cell.width,
-            height: cell.height,
-            newText: null,
-            highlight: h,
-          });
-        }
+      // Track raw cells for unmodified columns; highlights are emitted at
+      // flush time so that a triggered weekly average can promote them.
+      if (!computeVf && numItems[COULISSANT_PVC_INDEX]) {
+        week.pvcCells.push(numItems[COULISSANT_PVC_INDEX]);
       }
-      // Peinture (Total) — last column.
-      if (options.highlights && numItems[TOTAL_INDEX]) {
-        const cell = numItems[TOTAL_INDEX];
-        const v = parseNum(cell.str);
-        const h = getHighlight(v, t.peinture);
-        if (h) {
-          edits.push({
-            pageIndex,
-            x: cell.x,
-            y: cell.y,
-            width: cell.width,
-            height: cell.height,
-            newText: null,
-            highlight: h,
-          });
-        }
+      if (numItems[TOTAL_INDEX]) {
+        week.totalCells.push(numItems[TOTAL_INDEX]);
       }
     }
   });
