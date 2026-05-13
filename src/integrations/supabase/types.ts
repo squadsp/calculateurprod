@@ -14,7 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      formula_settings: {
+        Row: {
+          id: number
+          mab_components: Json
+          trappe_components: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          mab_components?: Json
+          trappe_components?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          mab_components?: Json
+          trappe_components?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
