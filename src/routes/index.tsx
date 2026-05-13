@@ -59,7 +59,7 @@ function Index() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold tracking-tight">Planification – Recalcul Trappe / MAB</h1>
+          <h1 className="text-lg font-semibold tracking-tight">Calculateur De Production</h1>
           <Link
             to="/admin"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -72,10 +72,9 @@ function Index() {
 
       <main className="max-w-3xl mx-auto px-6 py-16">
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold tracking-tight">Déposez un PDF de planification</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Calculateur Battant et Hybride</h2>
           <p className="mt-2 text-muted-foreground">
-            Les colonnes <span className="font-medium text-foreground">Trappe</span> et{" "}
-            <span className="font-medium text-foreground">MAB</span> seront recalculées et un PDF modifié sera téléchargé automatiquement.
+            Déposez un PDF de planification : les colonnes seront recalculées automatiquement et un PDF modifié sera téléchargé.
           </p>
         </div>
 
