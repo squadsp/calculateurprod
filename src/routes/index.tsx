@@ -16,7 +16,7 @@ async function loadSettings(): Promise<Settings> {
     trappe_components: (data.trappe_components as Settings["trappe_components"]) ?? DEFAULT_SETTINGS.trappe_components,
     mab_components: (data.mab_components as Settings["mab_components"]) ?? DEFAULT_SETTINGS.mab_components,
     vf_components:
-      ((data as { vf_components?: Settings["vf_components"] }).vf_components) ??
+      (data.vf_components as unknown as Settings["vf_components"]) ??
       DEFAULT_SETTINGS.vf_components,
   };
 }
