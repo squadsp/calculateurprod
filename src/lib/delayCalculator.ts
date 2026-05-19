@@ -317,6 +317,12 @@ export async function calculateDelays(
   const allWeeks: WeekData[] = [];
   let cursor = new Date(today);
   cursor.setHours(0, 0, 0, 0);
+  // Start the date-matching cursor well before today so PDFs whose first day
+  // is in the past still resolve to their real (past) dates rather than being
+  // shifted forward to the next month/year with the same (weekday, day-of-month).
+  // Same-weekday+same-day-of-month repeats only every few months, so a 6-month
+  // look-back is safe for weekly schedules.
+  cursor.setDate(cursor.getDate() - 180);
   for (const buf of pdfs) {
     const { weeks, lastDate } = await extractWeeks(buf, settings, cursor);
     allWeeks.push(...weeks);
