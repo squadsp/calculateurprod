@@ -181,7 +181,7 @@ function PortesPage() {
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold tracking-tight">Calculateur de portes</h2>
           <p className="mt-2 text-muted-foreground">
-            Déposez un ou plusieurs PDF de jambages : les lignes #1, #2 et laminé sont conservées, les 3R/4R ignorés.
+            Déposez un ou plusieurs PDF de jambages
           </p>
         </div>
 
