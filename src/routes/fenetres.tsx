@@ -11,7 +11,7 @@ import {
   type Thresholds,
   type ThresholdLabels,
 } from "@/lib/columns";
-import { FileUp, Loader2, Settings as SettingsIcon, AlertCircle, Download, X, Printer, CalendarClock } from "lucide-react";
+import { FileUp, Loader2, Settings as SettingsIcon, AlertCircle, Download, X, Printer, CalendarClock, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/fenetres")({
   component: Index,
@@ -53,6 +53,13 @@ function Index() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<ProcessedPdf[]>([]);
   const [highlightsEnabled, setHighlightsEnabled] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsAdmin(sessionStorage.getItem("trappemab_admin") === "1");
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
