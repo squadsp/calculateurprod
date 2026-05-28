@@ -26,8 +26,8 @@ function loadKeywords(): PortesKeywords {
     const parsed = JSON.parse(raw) as Partial<PortesKeywords>;
     return {
       laminate: parsed.laminate ?? DEFAULT_PORTES_KEYWORDS.laminate,
-      reject: DEFAULT_PORTES_KEYWORDS.reject,
-      keep: DEFAULT_PORTES_KEYWORDS.keep,
+      reject: parsed.reject ?? DEFAULT_PORTES_KEYWORDS.reject,
+      keep: parsed.keep ?? DEFAULT_PORTES_KEYWORDS.keep,
     };
   } catch {
     return DEFAULT_PORTES_KEYWORDS;
@@ -168,7 +168,7 @@ function PortesPage() {
           </Link>
           <h1 className="text-lg font-semibold tracking-tight">Portes</h1>
           <Link
-            to="/admin"
+            to="/portes-admin"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <SettingsIcon className="h-4 w-4" />
