@@ -24,12 +24,10 @@ function loadKeywords(): PortesKeywords {
     const raw = localStorage.getItem("portes_keywords");
     if (!raw) return DEFAULT_PORTES_KEYWORDS;
     const parsed = JSON.parse(raw) as Partial<PortesKeywords>;
-    const reject = parsed.reject ?? DEFAULT_PORTES_KEYWORDS.reject;
-    const hasStd = reject.some((r) => r.toLowerCase() === "std");
     return {
       laminate: parsed.laminate ?? DEFAULT_PORTES_KEYWORDS.laminate,
-      reject: hasStd ? reject : [...reject, "std"],
-      keep: parsed.keep ?? DEFAULT_PORTES_KEYWORDS.keep,
+      reject: DEFAULT_PORTES_KEYWORDS.reject,
+      keep: DEFAULT_PORTES_KEYWORDS.keep,
     };
   } catch {
     return DEFAULT_PORTES_KEYWORDS;
