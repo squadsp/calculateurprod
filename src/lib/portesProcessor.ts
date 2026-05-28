@@ -22,7 +22,7 @@ export type PortesKeywords = {
 export const DEFAULT_PORTES_KEYWORDS: PortesKeywords = {
   laminate: ["laminé", "lamine"],
   reject: ["#3R", "#4R", "3R", "4R", "std"],
-  keep: ["#1", "#2"],
+  keep: ['1/4-7"'],
 };
 
 type Item = { str: string; x: number; y: number; width: number; height: number };
