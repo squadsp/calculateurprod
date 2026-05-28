@@ -206,15 +206,20 @@ function Index() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold tracking-tight">Calculateur De Production</h1>
+          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Accueil
+          </Link>
+          <h1 className="text-lg font-semibold tracking-tight">Fenêtres</h1>
           <div className="flex items-center gap-4">
-            <Link
-              to="/delays"
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <CalendarClock className="h-4 w-4" />
-              Délais
-            </Link>
+            {isAdmin && (
+              <Link
+                to="/delays"
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <CalendarClock className="h-4 w-4" />
+                Délais
+              </Link>
+            )}
             <Link
               to="/admin"
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
