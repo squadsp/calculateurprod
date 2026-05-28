@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as FenetresRouteImport } from './routes/fenetres'
 import { Route as DelaysRouteImport } from './routes/delays'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
+const FenetresRoute = FenetresRouteImport.update({
+  id: '/fenetres',
+  path: '/fenetres',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DelaysRoute = DelaysRouteImport.update({
   id: '/delays',
   path: '/delays',
@@ -33,34 +39,45 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/delays': typeof DelaysRoute
+  '/fenetres': typeof FenetresRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/delays': typeof DelaysRoute
+  '/fenetres': typeof FenetresRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/delays': typeof DelaysRoute
+  '/fenetres': typeof FenetresRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/delays'
+  fullPaths: '/' | '/admin' | '/delays' | '/fenetres'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/delays'
-  id: '__root__' | '/' | '/admin' | '/delays'
+  to: '/' | '/admin' | '/delays' | '/fenetres'
+  id: '__root__' | '/' | '/admin' | '/delays' | '/fenetres'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   DelaysRoute: typeof DelaysRoute
+  FenetresRoute: typeof FenetresRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/fenetres': {
+      id: '/fenetres'
+      path: '/fenetres'
+      fullPath: '/fenetres'
+      preLoaderRoute: typeof FenetresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/delays': {
       id: '/delays'
       path: '/delays'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   DelaysRoute: DelaysRoute,
+  FenetresRoute: FenetresRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
