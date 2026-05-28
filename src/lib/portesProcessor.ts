@@ -105,7 +105,7 @@ export async function processPortesPdf(
   const dataRows: DataRow[] = [];
   // Also collect candidate "total" cells: rows whose ONLY content is an integer,
   // or rows that start with "Total". These appear at the end of the document.
-  type TotalCell = { pageIndex: number; item: Item; row: Item[] };
+  type TotalCell = { pageIndex: number; item: Item; row: Item[]; kind: "total" | "lone" };
   const totalCandidates: TotalCell[] = [];
 
   pages.forEach((page, pageIndex) => {
@@ -125,13 +125,11 @@ export async function processPortesPdf(
       const nonNumeric = row.filter((it) => !isIntegerToken(it.str));
 
       if (isTotalLabel && numericItems.length >= 1) {
-        // Replace the last integer on this "Total : 46" line.
-        totalCandidates.push({ pageIndex, item: numericItems[numericItems.length - 1], row });
+        totalCandidates.push({ pageIndex, item: numericItems[numericItems.length - 1], row, kind: "total" });
         continue;
       }
       if (nonNumeric.length === 0 && numericItems.length === 1) {
-        // Lone integer row near the end → likely the column-sum cell.
-        totalCandidates.push({ pageIndex, item: numericItems[0], row });
+        totalCandidates.push({ pageIndex, item: numericItems[0], row, kind: "lone" });
         continue;
       }
 
@@ -191,9 +189,27 @@ export async function processPortesPdf(
   // Replace total numbers. Only the totals at the very end of the document
   // (last page) get rewritten; this matches the "case with the total" rule.
   const lastPageIndex = pages.length - 1;
-  const lastPageTotals = totalCandidates.filter((t) => t.pageIndex === lastPageIndex);
+  // Anchor on the "Total :" row on the last page. Then also replace any lone
+  // integer cell sitting close above it on the same page (the column sum).
+  // This prevents us from rewriting the footer page-number.
+  const totalAnchor = totalCandidates.find(
+    (t) => t.pageIndex === lastPageIndex && t.kind === "total",
+  );
+  const toReplace: TotalCell[] = [];
+  if (totalAnchor) {
+    toReplace.push(totalAnchor);
+    for (const t of totalCandidates) {
+      if (t === totalAnchor) continue;
+      if (t.pageIndex !== lastPageIndex) continue;
+      if (t.kind !== "lone") continue;
+      // Above the Total row (higher y in PDF coords), within 120pt.
+      if (t.item.y > totalAnchor.item.y && t.item.y - totalAnchor.item.y < 120) {
+        toReplace.push(t);
+      }
+    }
+  }
   let replaced = 0;
-  for (const t of lastPageTotals) {
+  for (const t of toReplace) {
     const page = outPages[t.pageIndex];
     if (!page) continue;
     const it = t.item;
