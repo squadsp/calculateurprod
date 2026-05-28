@@ -9,10 +9,22 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PortesRouteImport } from './routes/portes'
+import { Route as FenetresRouteImport } from './routes/fenetres'
 import { Route as DelaysRouteImport } from './routes/delays'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
+const PortesRoute = PortesRouteImport.update({
+  id: '/portes',
+  path: '/portes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FenetresRoute = FenetresRouteImport.update({
+  id: '/fenetres',
+  path: '/fenetres',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DelaysRoute = DelaysRouteImport.update({
   id: '/delays',
   path: '/delays',
@@ -33,34 +45,56 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/delays': typeof DelaysRoute
+  '/fenetres': typeof FenetresRoute
+  '/portes': typeof PortesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/delays': typeof DelaysRoute
+  '/fenetres': typeof FenetresRoute
+  '/portes': typeof PortesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/delays': typeof DelaysRoute
+  '/fenetres': typeof FenetresRoute
+  '/portes': typeof PortesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/delays'
+  fullPaths: '/' | '/admin' | '/delays' | '/fenetres' | '/portes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/delays'
-  id: '__root__' | '/' | '/admin' | '/delays'
+  to: '/' | '/admin' | '/delays' | '/fenetres' | '/portes'
+  id: '__root__' | '/' | '/admin' | '/delays' | '/fenetres' | '/portes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   DelaysRoute: typeof DelaysRoute
+  FenetresRoute: typeof FenetresRoute
+  PortesRoute: typeof PortesRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/portes': {
+      id: '/portes'
+      path: '/portes'
+      fullPath: '/portes'
+      preLoaderRoute: typeof PortesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fenetres': {
+      id: '/fenetres'
+      path: '/fenetres'
+      fullPath: '/fenetres'
+      preLoaderRoute: typeof FenetresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/delays': {
       id: '/delays'
       path: '/delays'
@@ -89,7 +123,19 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   DelaysRoute: DelaysRoute,
+  FenetresRoute: FenetresRoute,
+  PortesRoute: PortesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
