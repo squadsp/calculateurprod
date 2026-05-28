@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { DoorOpen, Settings as SettingsIcon, CalendarClock } from "lucide-react";
-import windowIcon from "@/assets/window-icon.png";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -56,7 +55,11 @@ function HomePage() {
             className="group rounded-2xl border-2 border-border bg-card p-8 hover:border-primary hover:shadow-lg transition-all flex flex-col items-center text-center gap-4"
           >
             <div className="rounded-full bg-primary/10 p-5 group-hover:bg-primary/20 transition-colors">
-              <img src={windowIcon} alt="Fenêtres" className="h-10 w-10" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                <rect x="3" y="3" width="18" height="18" rx="1.5" />
+                <line x1="12" y1="3" x2="12" y2="21" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+              </svg>
             </div>
             <div>
               <div className="text-xl font-semibold">Fenêtres</div>
