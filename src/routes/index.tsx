@@ -56,7 +56,7 @@ function HomePage() {
             className="group rounded-2xl border-2 border-border bg-card p-8 hover:border-primary hover:shadow-lg transition-all flex flex-col items-center text-center gap-4"
           >
             <div className="rounded-full bg-primary/10 p-5 group-hover:bg-primary/20 transition-colors">
-              <AppWindow className="h-10 w-10 text-primary" />
+              <img src={windowIcon} alt="Fenêtres" className="h-10 w-10" />
             </div>
             <div>
               <div className="text-xl font-semibold">Fenêtres</div>
