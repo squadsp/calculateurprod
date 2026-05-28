@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { DoorOpen, Settings as SettingsIcon, CalendarClock } from "lucide-react";
-import windowIcon from "@/assets/window-icon.png";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
