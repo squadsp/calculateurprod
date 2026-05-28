@@ -39,6 +39,18 @@ function containsAny(text: string, needles: string[]): boolean {
 function classify(desc: string, kw: PortesKeywords): "keep" | "skip" {
   if (containsAny(desc, kw.laminate)) return "keep";
   if (containsAny(desc, kw.reject)) return "skip";
+
+  // Special rule: lines with 1" 1/4 are generally kept, but if followed by -digit,
+  // only -7" (or -7) is allowed. E.g. 1" 1/4-7" is good, 1" 1/4-6" is not.
+  const base = '1" 1/4';
+  if (desc.includes(base)) {
+    const idx = desc.indexOf(base);
+    const after = desc.slice(idx + base.length);
+    const m = after.match(/^-(\d+)"?/);
+    if (m) return m[1] === "7" ? "keep" : "skip";
+    return "keep";
+  }
+
   if (containsAny(desc, kw.keep)) return "keep";
   return "skip";
 }
