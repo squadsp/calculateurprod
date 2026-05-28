@@ -21,7 +21,7 @@ export type PortesKeywords = {
 
 export const DEFAULT_PORTES_KEYWORDS: PortesKeywords = {
   laminate: ["laminé", "lamine"],
-  reject: ['1" 1/4-R', "#3R", "#4R", "3R", "4R", "std"],
+  reject: ['1" 1/4-R', "#3R", "#4R", "3R", "4R", "std", "-Rec"],
   keep: ['1" 1/4'],
 };
 
