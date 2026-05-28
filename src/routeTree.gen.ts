@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PortesAdminRouteImport } from './routes/portes-admin'
 import { Route as PortesRouteImport } from './routes/portes'
 import { Route as FenetresRouteImport } from './routes/fenetres'
 import { Route as DelaysRouteImport } from './routes/delays'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
+const PortesAdminRoute = PortesAdminRouteImport.update({
+  id: '/portes-admin',
+  path: '/portes-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PortesRoute = PortesRouteImport.update({
   id: '/portes',
   path: '/portes',
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/delays': typeof DelaysRoute
   '/fenetres': typeof FenetresRoute
   '/portes': typeof PortesRoute
+  '/portes-admin': typeof PortesAdminRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/delays': typeof DelaysRoute
   '/fenetres': typeof FenetresRoute
   '/portes': typeof PortesRoute
+  '/portes-admin': typeof PortesAdminRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,27 @@ export interface FileRoutesById {
   '/delays': typeof DelaysRoute
   '/fenetres': typeof FenetresRoute
   '/portes': typeof PortesRoute
+  '/portes-admin': typeof PortesAdminRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/delays' | '/fenetres' | '/portes'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/delays'
+    | '/fenetres'
+    | '/portes'
+    | '/portes-admin'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/delays' | '/fenetres' | '/portes'
-  id: '__root__' | '/' | '/admin' | '/delays' | '/fenetres' | '/portes'
+  to: '/' | '/admin' | '/delays' | '/fenetres' | '/portes' | '/portes-admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/delays'
+    | '/fenetres'
+    | '/portes'
+    | '/portes-admin'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,10 +99,18 @@ export interface RootRouteChildren {
   DelaysRoute: typeof DelaysRoute
   FenetresRoute: typeof FenetresRoute
   PortesRoute: typeof PortesRoute
+  PortesAdminRoute: typeof PortesAdminRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/portes-admin': {
+      id: '/portes-admin'
+      path: '/portes-admin'
+      fullPath: '/portes-admin'
+      preLoaderRoute: typeof PortesAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/portes': {
       id: '/portes'
       path: '/portes'
@@ -125,7 +155,18 @@ const rootRouteChildren: RootRouteChildren = {
   DelaysRoute: DelaysRoute,
   FenetresRoute: FenetresRoute,
   PortesRoute: PortesRoute,
+  PortesAdminRoute: PortesAdminRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
