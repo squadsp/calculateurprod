@@ -59,9 +59,6 @@ function HomePage() {
             </div>
             <div>
               <div className="text-xl font-semibold">Fenêtres</div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Calculateur battant et hybride
-              </p>
             </div>
           </Link>
 
@@ -74,9 +71,6 @@ function HomePage() {
             </div>
             <div>
               <div className="text-xl font-semibold">Portes</div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Calculateur de portes
-              </p>
             </div>
           </Link>
         </div>
