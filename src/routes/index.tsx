@@ -19,7 +19,7 @@ function HomePage() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold tracking-tight">Calculateur De Production</h1>
+          <h1 className="text-lg font-semibold tracking-tight">Calculateur de production</h1>
           <div className="flex items-center gap-4">
             {isAdmin && (
               <Link
@@ -60,7 +60,7 @@ function HomePage() {
             <div>
               <div className="text-xl font-semibold">Fenêtres</div>
               <p className="text-sm text-muted-foreground mt-1">
-                Calculateur Battant et Hybride
+                Calculateur battant et hybride
               </p>
             </div>
           </Link>
