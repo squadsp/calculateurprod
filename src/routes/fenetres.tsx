@@ -233,7 +233,7 @@ function Index() {
 
       <main className="max-w-6xl mx-auto px-6 py-10">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold tracking-tight">calculateur de production</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Calculateur de production</h2>
           <p className="mt-2 text-muted-foreground">
             Déposez un ou plusieurs PDF de planification : prévisualisez le résultat avant de télécharger.
           </p>
