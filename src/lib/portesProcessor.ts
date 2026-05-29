@@ -169,17 +169,15 @@ export async function processPortesPdf(
   const kept = dataRows.filter((d) => d.keep);
   const sum = kept.reduce((acc, d) => acc + d.qty, 0);
 
-  // Categorize kept rows: {Vinyle|Laminé} × {Blanc|Noir} × {Gauche|Droite}
-  type CatKey = "vinyle-blanc" | "vinyle-noir" | "lamine-blanc" | "lamine-noir";
+  // Categorize kept rows: Vinyle (toujours blanc) | Laminé × {Blanc|Noir} × {Gauche|Droite}
+  type CatKey = "vinyle-blanc" | "lamine-blanc" | "lamine-noir";
   const CAT_LABEL: Record<CatKey, string> = {
     "vinyle-blanc": "Vinyle Blanc",
-    "vinyle-noir": "Vinyle Noir",
     "lamine-blanc": "Laminé Blanc",
     "lamine-noir": "Laminé Noir",
   };
   const buckets: Record<CatKey, { gauche: number; droite: number }> = {
     "vinyle-blanc": { gauche: 0, droite: 0 },
-    "vinyle-noir": { gauche: 0, droite: 0 },
     "lamine-blanc": { gauche: 0, droite: 0 },
     "lamine-noir": { gauche: 0, droite: 0 },
   };
