@@ -294,7 +294,7 @@ export async function processPortesPdf(
       x: marginX, y, size: 18, font: fontBold, color: rgb(0, 0, 0),
     });
     y -= 22;
-    const cats: CatKey[] = ["vinyle-blanc", "vinyle-noir", "lamine-blanc", "lamine-noir"];
+    const cats: CatKey[] = ["vinyle-blanc", "lamine-blanc", "lamine-noir"];
     for (const k of cats) {
       const total = buckets[k].gauche + buckets[k].droite;
       summary.drawText(`${CAT_LABEL[k]}`, {
