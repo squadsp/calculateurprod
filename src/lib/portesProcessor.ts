@@ -210,15 +210,6 @@ export async function processPortesPdf(
   const toReplace: TotalCell[] = [];
   if (totalAnchor) {
     toReplace.push(totalAnchor);
-    for (const t of totalCandidates) {
-      if (t === totalAnchor) continue;
-      if (t.pageIndex !== lastPageIndex) continue;
-      if (t.kind !== "lone") continue;
-      // Above the Total row (higher y in PDF coords), within 120pt.
-      if (t.item.y > totalAnchor.item.y && t.item.y - totalAnchor.item.y < 120) {
-        toReplace.push(t);
-      }
-    }
   }
   let replaced = 0;
   for (const t of toReplace) {
