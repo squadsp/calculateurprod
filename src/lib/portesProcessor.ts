@@ -169,6 +169,39 @@ export async function processPortesPdf(
   const kept = dataRows.filter((d) => d.keep);
   const sum = kept.reduce((acc, d) => acc + d.qty, 0);
 
+  // Categorize kept rows: {Vinyle|Laminé} × {Blanc|Noir} × {Gauche|Droite}
+  type CatKey = "vinyle-blanc" | "vinyle-noir" | "lamine-blanc" | "lamine-noir";
+  const CAT_LABEL: Record<CatKey, string> = {
+    "vinyle-blanc": "Vinyle Blanc",
+    "vinyle-noir": "Vinyle Noir",
+    "lamine-blanc": "Laminé Blanc",
+    "lamine-noir": "Laminé Noir",
+  };
+  const buckets: Record<CatKey, { gauche: number; droite: number }> = {
+    "vinyle-blanc": { gauche: 0, droite: 0 },
+    "vinyle-noir": { gauche: 0, droite: 0 },
+    "lamine-blanc": { gauche: 0, droite: 0 },
+    "lamine-noir": { gauche: 0, droite: 0 },
+  };
+  const norm = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  for (const d of kept) {
+    const t = norm(d.desc);
+    const isLamine = t.includes("lamine");
+    const isVinyle = t.includes("vinyle");
+    const isBlanc = t.includes("blanc");
+    const isNoir = t.includes("noir");
+    const isGauche = /\bgauche\b/.test(t);
+    const isDroite = /\bdroite\b/.test(t);
+    if (!(isLamine || isVinyle) || !(isBlanc || isNoir)) continue;
+    if (!(isGauche || isDroite)) continue;
+    const matKey: CatKey = isLamine
+      ? isBlanc ? "lamine-blanc" : "lamine-noir"
+      : isBlanc ? "vinyle-blanc" : "vinyle-noir";
+    const side: "gauche" | "droite" = isGauche ? "gauche" : "droite";
+    buckets[matKey][side] += d.qty;
+  }
+
   // Apply edits with pdf-lib.
   const pdfDoc = await PDFDocument.load(buf.slice(0));
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -239,6 +272,40 @@ export async function processPortesPdf(
       color: rgb(0, 0, 0),
     });
     replaced++;
+  }
+
+  // Append a summary page with category × side breakdown so it never
+  // overlaps existing content on the source document.
+  {
+    const refPage = outPages[outPages.length - 1];
+    const size = refPage ? refPage.getSize() : { width: 612, height: 792 };
+    const summary = pdfDoc.addPage([size.width, size.height]);
+    const marginX = 60;
+    let y = size.height - 80;
+    summary.drawText("Récapitulatif par catégorie", {
+      x: marginX, y, size: 18, font: fontBold, color: rgb(0, 0, 0),
+    });
+    y -= 18;
+    summary.drawText(`Total général : ${sum}`, {
+      x: marginX, y, size: 11, font, color: rgb(0.35, 0.35, 0.35),
+    });
+    y -= 30;
+    const cats: CatKey[] = ["vinyle-blanc", "vinyle-noir", "lamine-blanc", "lamine-noir"];
+    for (const k of cats) {
+      const total = buckets[k].gauche + buckets[k].droite;
+      summary.drawText(`${CAT_LABEL[k]}    (total : ${total})`, {
+        x: marginX, y, size: 13, font: fontBold, color: rgb(0, 0, 0),
+      });
+      y -= 18;
+      summary.drawText(`Gauche : ${buckets[k].gauche}`, {
+        x: marginX + 24, y, size: 11, font, color: rgb(0, 0, 0),
+      });
+      y -= 14;
+      summary.drawText(`Droite : ${buckets[k].droite}`, {
+        x: marginX + 24, y, size: 11, font, color: rgb(0, 0, 0),
+      });
+      y -= 24;
+    }
   }
 
   const bytes = await pdfDoc.save();
