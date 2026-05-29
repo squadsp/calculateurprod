@@ -274,54 +274,37 @@ export async function processPortesPdf(
     replaced++;
   }
 
-  // Draw category breakdown at the bottom of the last page.
-  const lastOutPage = outPages[outPages.length - 1];
-  if (lastOutPage) {
-    const { width: pw } = lastOutPage.getSize();
-    const marginX = 40;
-    const lineH = 12;
-    const titleSize = 10;
-    const bodySize = 9;
-    // Compute block height: 4 categories × (title + 2 lines) + spacing.
-    const blockH = 4 * (lineH + 2 * lineH) + 10;
-    let y = 20 + blockH;
-    // Background panel
-    lastOutPage.drawRectangle({
-      x: marginX - 6,
-      y: 20 - 4,
-      width: pw - 2 * (marginX - 6),
-      height: blockH + 6,
-      color: rgb(1, 1, 1),
-      borderColor: rgb(0.8, 0.8, 0.8),
-      borderWidth: 0.5,
+  // Append a summary page with category × side breakdown so it never
+  // overlaps existing content on the source document.
+  {
+    const refPage = outPages[outPages.length - 1];
+    const size = refPage ? refPage.getSize() : { width: 612, height: 792 };
+    const summary = pdfDoc.addPage([size.width, size.height]);
+    const marginX = 60;
+    let y = size.height - 80;
+    summary.drawText("Récapitulatif par catégorie", {
+      x: marginX, y, size: 18, font: fontBold, color: rgb(0, 0, 0),
     });
+    y -= 18;
+    summary.drawText(`Total général : ${sum}`, {
+      x: marginX, y, size: 11, font, color: rgb(0.35, 0.35, 0.35),
+    });
+    y -= 30;
     const cats: CatKey[] = ["vinyle-blanc", "vinyle-noir", "lamine-blanc", "lamine-noir"];
     for (const k of cats) {
       const total = buckets[k].gauche + buckets[k].droite;
-      lastOutPage.drawText(`${CAT_LABEL[k]}  (total: ${total})`, {
-        x: marginX,
-        y,
-        size: titleSize,
-        font: fontBold,
-        color: rgb(0, 0, 0),
+      summary.drawText(`${CAT_LABEL[k]}    (total : ${total})`, {
+        x: marginX, y, size: 13, font: fontBold, color: rgb(0, 0, 0),
       });
-      y -= lineH;
-      lastOutPage.drawText(`   Gauche : ${buckets[k].gauche}`, {
-        x: marginX,
-        y,
-        size: bodySize,
-        font,
-        color: rgb(0, 0, 0),
+      y -= 18;
+      summary.drawText(`Gauche : ${buckets[k].gauche}`, {
+        x: marginX + 24, y, size: 11, font, color: rgb(0, 0, 0),
       });
-      y -= lineH;
-      lastOutPage.drawText(`   Droite : ${buckets[k].droite}`, {
-        x: marginX,
-        y,
-        size: bodySize,
-        font,
-        color: rgb(0, 0, 0),
+      y -= 14;
+      summary.drawText(`Droite : ${buckets[k].droite}`, {
+        x: marginX + 24, y, size: 11, font, color: rgb(0, 0, 0),
       });
-      y -= lineH;
+      y -= 24;
     }
   }
 
