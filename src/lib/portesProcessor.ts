@@ -288,32 +288,44 @@ export async function processPortesPdf(
     summary.drawText("Récapitulatif par catégorie", {
       x: marginX, y, size: 18, font: fontBold, color: rgb(0, 0, 0),
     });
-    y -= 18;
-    summary.drawText(`Total général : ${sum}`, {
-      x: marginX, y, size: 11, font, color: rgb(0.35, 0.35, 0.35),
-    });
-    y -= 30;
+    y -= 22;
     const cats: CatKey[] = ["vinyle-blanc", "vinyle-noir", "lamine-blanc", "lamine-noir"];
     for (const k of cats) {
       const total = buckets[k].gauche + buckets[k].droite;
-      summary.drawText(`${CAT_LABEL[k]}    (total : ${total})`, {
+      summary.drawText(`${CAT_LABEL[k]}`, {
         x: marginX, y, size: 13, font: fontBold, color: rgb(0, 0, 0),
       });
-      y -= 18;
-      summary.drawText(`Gauche : ${buckets[k].gauche}`, {
-        x: marginX + 24, y, size: 11, font, color: rgb(0, 0, 0),
+      y -= 17;
+      summary.drawText(`  Gauche : ${buckets[k].gauche}`, {
+        x: marginX + 12, y, size: 11, font, color: rgb(0, 0, 0),
       });
       y -= 14;
-      summary.drawText(`Droite : ${buckets[k].droite}`, {
-        x: marginX + 24, y, size: 11, font, color: rgb(0, 0, 0),
+      summary.drawText(`  Droite : ${buckets[k].droite}`, {
+        x: marginX + 12, y, size: 11, font, color: rgb(0, 0, 0),
       });
-      y -= 24;
+      y -= 14;
+      summary.drawText(`  Total = ${total}`, {
+        x: marginX + 12, y, size: 11, font: fontBold, color: rgb(0.2, 0.2, 0.2),
+      });
+      y -= 26;
     }
     if (uncategorized > 0) {
       summary.drawText(`Non catégorisé : ${uncategorized}`, {
         x: marginX, y, size: 11, font, color: rgb(0.6, 0.2, 0.2),
       });
+      y -= 20;
     }
+    // Ligne de séparation
+    summary.drawLine({
+      start: { x: marginX, y },
+      end: { x: size.width - marginX, y },
+      thickness: 1.5,
+      color: rgb(0, 0, 0),
+    });
+    y -= 22;
+    summary.drawText(`Total général = ${sum}`, {
+      x: marginX, y, size: 16, font: fontBold, color: rgb(0, 0, 0),
+    });
   }
 
   const bytes = await pdfDoc.save();
