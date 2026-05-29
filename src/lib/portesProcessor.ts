@@ -183,18 +183,21 @@ export async function processPortesPdf(
     "lamine-blanc": { gauche: 0, droite: 0 },
     "lamine-noir": { gauche: 0, droite: 0 },
   };
+  let uncategorized = 0;
   const norm = (s: string) =>
     s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   for (const d of kept) {
     const t = norm(d.desc);
     const isLamine = t.includes("lamine");
-    const isVinyle = t.includes("vinyle");
+    const isVinyle = t.includes("vinyl"); // matches vinyl & vinyle
     const isBlanc = t.includes("blanc");
     const isNoir = t.includes("noir");
-    const isGauche = /\bgauche\b/.test(t);
-    const isDroite = /\bdroite\b/.test(t);
-    if (!(isLamine || isVinyle) || !(isBlanc || isNoir)) continue;
-    if (!(isGauche || isDroite)) continue;
+    const isGauche = t.includes("gauche");
+    const isDroite = t.includes("droite");
+    if (!(isLamine || isVinyle) || !(isBlanc || isNoir) || !(isGauche || isDroite)) {
+      uncategorized += d.qty;
+      continue;
+    }
     const matKey: CatKey = isLamine
       ? isBlanc ? "lamine-blanc" : "lamine-noir"
       : isBlanc ? "vinyle-blanc" : "vinyle-noir";
@@ -305,6 +308,11 @@ export async function processPortesPdf(
         x: marginX + 24, y, size: 11, font, color: rgb(0, 0, 0),
       });
       y -= 24;
+    }
+    if (uncategorized > 0) {
+      summary.drawText(`Non catégorisé : ${uncategorized}`, {
+        x: marginX, y, size: 11, font, color: rgb(0.6, 0.2, 0.2),
+      });
     }
   }
 
