@@ -169,17 +169,15 @@ export async function processPortesPdf(
   const kept = dataRows.filter((d) => d.keep);
   const sum = kept.reduce((acc, d) => acc + d.qty, 0);
 
-  // Categorize kept rows: {Vinyle|Laminé} × {Blanc|Noir} × {Gauche|Droite}
-  type CatKey = "vinyle-blanc" | "vinyle-noir" | "lamine-blanc" | "lamine-noir";
+  // Categorize kept rows: Vinyle (toujours blanc) | Laminé × {Blanc|Noir} × {Gauche|Droite}
+  type CatKey = "vinyle-blanc" | "lamine-blanc" | "lamine-noir";
   const CAT_LABEL: Record<CatKey, string> = {
     "vinyle-blanc": "Vinyle Blanc",
-    "vinyle-noir": "Vinyle Noir",
     "lamine-blanc": "Laminé Blanc",
     "lamine-noir": "Laminé Noir",
   };
   const buckets: Record<CatKey, { gauche: number; droite: number }> = {
     "vinyle-blanc": { gauche: 0, droite: 0 },
-    "vinyle-noir": { gauche: 0, droite: 0 },
     "lamine-blanc": { gauche: 0, droite: 0 },
     "lamine-noir": { gauche: 0, droite: 0 },
   };
@@ -194,13 +192,20 @@ export async function processPortesPdf(
     const isNoir = t.includes("noir");
     const isGauche = t.includes("gauche");
     const isDroite = t.includes("droite");
-    if (!(isLamine || isVinyle) || !(isBlanc || isNoir) || !(isGauche || isDroite)) {
+    // Vinyle est toujours blanc, donc pas besoin de vérifier la couleur pour vinyle
+    const hasMaterial = isLamine || isVinyle;
+    const hasColor = isBlanc || isNoir || isVinyle; // vinyle compte comme couleur valide
+    const hasSide = isGauche || isDroite;
+    if (!hasMaterial || !hasColor || !hasSide) {
       uncategorized += d.qty;
       continue;
     }
-    const matKey: CatKey = isLamine
-      ? isBlanc ? "lamine-blanc" : "lamine-noir"
-      : isBlanc ? "vinyle-blanc" : "vinyle-noir";
+    let matKey: CatKey;
+    if (isVinyle) {
+      matKey = "vinyle-blanc";
+    } else {
+      matKey = isBlanc ? "lamine-blanc" : "lamine-noir";
+    }
     const side: "gauche" | "droite" = isGauche ? "gauche" : "droite";
     buckets[matKey][side] += d.qty;
   }
@@ -289,7 +294,7 @@ export async function processPortesPdf(
       x: marginX, y, size: 18, font: fontBold, color: rgb(0, 0, 0),
     });
     y -= 22;
-    const cats: CatKey[] = ["vinyle-blanc", "vinyle-noir", "lamine-blanc", "lamine-noir"];
+    const cats: CatKey[] = ["vinyle-blanc", "lamine-blanc", "lamine-noir"];
     for (const k of cats) {
       const total = buckets[k].gauche + buckets[k].droite;
       summary.drawText(`${CAT_LABEL[k]}`, {
