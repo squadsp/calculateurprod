@@ -192,13 +192,20 @@ export async function processPortesPdf(
     const isNoir = t.includes("noir");
     const isGauche = t.includes("gauche");
     const isDroite = t.includes("droite");
-    if (!(isLamine || isVinyle) || !(isBlanc || isNoir) || !(isGauche || isDroite)) {
+    // Vinyle est toujours blanc, donc pas besoin de vérifier la couleur pour vinyle
+    const hasMaterial = isLamine || isVinyle;
+    const hasColor = isBlanc || isNoir || isVinyle; // vinyle compte comme couleur valide
+    const hasSide = isGauche || isDroite;
+    if (!hasMaterial || !hasColor || !hasSide) {
       uncategorized += d.qty;
       continue;
     }
-    const matKey: CatKey = isLamine
-      ? isBlanc ? "lamine-blanc" : "lamine-noir"
-      : isBlanc ? "vinyle-blanc" : "vinyle-noir";
+    let matKey: CatKey;
+    if (isVinyle) {
+      matKey = "vinyle-blanc";
+    } else {
+      matKey = isBlanc ? "lamine-blanc" : "lamine-noir";
+    }
     const side: "gauche" | "droite" = isGauche ? "gauche" : "droite";
     buckets[matKey][side] += d.qty;
   }
