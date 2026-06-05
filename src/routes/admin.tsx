@@ -2,7 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { saveSettings, verifyAdmin } from "@/lib/settings.functions";
+import {
+  changeUserPassword,
+  createUser,
+  deleteUser,
+  listUsers,
+  saveSettings,
+  verifyAdmin,
+} from "@/lib/settings.functions";
 import {
   ALL_FIELDS,
   DEFAULT_SETTINGS,
@@ -15,20 +22,37 @@ import {
   type Thresholds,
   type ThresholdLabels,
 } from "@/lib/columns";
-import { ArrowLeft, GripVertical, Loader2, LogOut, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, GripVertical, KeyRound, Loader2, LogOut, Save, Trash2, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
 const ADMIN_KEY = "trappemab_admin";
+const ADMIN_USER_KEY = "trappemab_admin_user";
+const ADMIN_PASS_KEY = "trappemab_admin_pass";
+const ADMIN_ROLE_KEY = "trappemab_admin_role";
+
+type Role = "super_admin" | "admin";
+
+function getCreds(): { username: string; password: string; role: Role } | null {
+  if (typeof window === "undefined") return null;
+  const username = sessionStorage.getItem(ADMIN_USER_KEY);
+  const password = sessionStorage.getItem(ADMIN_PASS_KEY);
+  const role = sessionStorage.getItem(ADMIN_ROLE_KEY) as Role | null;
+  if (!username || !password || !role) return null;
+  return { username, password, role };
+}
 
 function AdminPage() {
   const [authed, setAuthed] = useState(false);
+  const [role, setRole] = useState<Role | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && sessionStorage.getItem(ADMIN_KEY) === "1") {
       setAuthed(true);
+      const r = sessionStorage.getItem(ADMIN_ROLE_KEY) as Role | null;
+      if (r) setRole(r);
     }
   }, []);
 
@@ -45,7 +69,11 @@ function AdminPage() {
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
               onClick={() => {
                 sessionStorage.removeItem(ADMIN_KEY);
+                sessionStorage.removeItem(ADMIN_USER_KEY);
+                sessionStorage.removeItem(ADMIN_PASS_KEY);
+                sessionStorage.removeItem(ADMIN_ROLE_KEY);
                 setAuthed(false);
+                setRole(null);
               }}
             >
               <LogOut className="h-4 w-4" /> Déconnexion
@@ -56,13 +84,25 @@ function AdminPage() {
         </div>
       </header>
       <main className="max-w-5xl mx-auto px-6 py-10">
-        {authed ? <SettingsEditor /> : <LoginForm onSuccess={() => setAuthed(true)} />}
+        {authed ? (
+          <div className="space-y-12">
+            <SettingsEditor />
+            {role === "super_admin" && <UsersManager />}
+          </div>
+        ) : (
+          <LoginForm
+            onSuccess={(r) => {
+              setAuthed(true);
+              setRole(r);
+            }}
+          />
+        )}
       </main>
     </div>
   );
 }
 
-function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+function LoginForm({ onSuccess }: { onSuccess: (role: Role) => void }) {
   const verify = useServerFn(verifyAdmin);
   const [u, setU] = useState("");
   const [p, setP] = useState("");
@@ -77,9 +117,12 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         setErr(null);
         setBusy(true);
         try {
-          await verify({ data: { username: u, password: p } });
+          const res = await verify({ data: { username: u, password: p } });
           sessionStorage.setItem(ADMIN_KEY, "1");
-          onSuccess();
+          sessionStorage.setItem(ADMIN_USER_KEY, u);
+          sessionStorage.setItem(ADMIN_PASS_KEY, p);
+          sessionStorage.setItem(ADMIN_ROLE_KEY, res.role);
+          onSuccess(res.role);
         } catch (e2) {
           setErr(e2 instanceof Error ? e2.message : "Erreur");
         } finally {
@@ -165,11 +208,12 @@ function SettingsEditor() {
     setSaving(true);
     setMsg(null);
     try {
-      // Use admin creds stored client-side at login time. Simpler: re-prompt is overkill; samuelp/samuelp.
+      const creds = getCreds();
+      if (!creds) throw new Error("Session expirée, reconnectez-vous");
       await save({
         data: {
-          username: "samuelp",
-          password: "samuelp",
+          username: creds.username,
+          password: creds.password,
           trappe_components: trappe,
           mab_components: mab,
           vf_components: vf,
