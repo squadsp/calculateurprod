@@ -2,7 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { saveSettings, verifyAdmin } from "@/lib/settings.functions";
+import {
+  changeUserPassword,
+  createUser,
+  deleteUser,
+  listUsers,
+  saveSettings,
+  verifyAdmin,
+} from "@/lib/settings.functions";
 import {
   ALL_FIELDS,
   DEFAULT_SETTINGS,
@@ -15,20 +22,37 @@ import {
   type Thresholds,
   type ThresholdLabels,
 } from "@/lib/columns";
-import { ArrowLeft, GripVertical, Loader2, LogOut, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, GripVertical, KeyRound, Loader2, LogOut, Save, Trash2, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
 const ADMIN_KEY = "trappemab_admin";
+const ADMIN_USER_KEY = "trappemab_admin_user";
+const ADMIN_PASS_KEY = "trappemab_admin_pass";
+const ADMIN_ROLE_KEY = "trappemab_admin_role";
+
+type Role = "super_admin" | "admin";
+
+function getCreds(): { username: string; password: string; role: Role } | null {
+  if (typeof window === "undefined") return null;
+  const username = sessionStorage.getItem(ADMIN_USER_KEY);
+  const password = sessionStorage.getItem(ADMIN_PASS_KEY);
+  const role = sessionStorage.getItem(ADMIN_ROLE_KEY) as Role | null;
+  if (!username || !password || !role) return null;
+  return { username, password, role };
+}
 
 function AdminPage() {
   const [authed, setAuthed] = useState(false);
+  const [role, setRole] = useState<Role | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && sessionStorage.getItem(ADMIN_KEY) === "1") {
       setAuthed(true);
+      const r = sessionStorage.getItem(ADMIN_ROLE_KEY) as Role | null;
+      if (r) setRole(r);
     }
   }, []);
 
@@ -45,7 +69,11 @@ function AdminPage() {
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
               onClick={() => {
                 sessionStorage.removeItem(ADMIN_KEY);
+                sessionStorage.removeItem(ADMIN_USER_KEY);
+                sessionStorage.removeItem(ADMIN_PASS_KEY);
+                sessionStorage.removeItem(ADMIN_ROLE_KEY);
                 setAuthed(false);
+                setRole(null);
               }}
             >
               <LogOut className="h-4 w-4" /> Déconnexion
@@ -56,13 +84,25 @@ function AdminPage() {
         </div>
       </header>
       <main className="max-w-5xl mx-auto px-6 py-10">
-        {authed ? <SettingsEditor /> : <LoginForm onSuccess={() => setAuthed(true)} />}
+        {authed ? (
+          <div className="space-y-12">
+            <SettingsEditor />
+            {role === "super_admin" && <UsersManager />}
+          </div>
+        ) : (
+          <LoginForm
+            onSuccess={(r) => {
+              setAuthed(true);
+              setRole(r);
+            }}
+          />
+        )}
       </main>
     </div>
   );
 }
 
-function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+function LoginForm({ onSuccess }: { onSuccess: (role: Role) => void }) {
   const verify = useServerFn(verifyAdmin);
   const [u, setU] = useState("");
   const [p, setP] = useState("");
@@ -77,9 +117,12 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         setErr(null);
         setBusy(true);
         try {
-          await verify({ data: { username: u, password: p } });
+          const res = await verify({ data: { username: u, password: p } });
           sessionStorage.setItem(ADMIN_KEY, "1");
-          onSuccess();
+          sessionStorage.setItem(ADMIN_USER_KEY, u);
+          sessionStorage.setItem(ADMIN_PASS_KEY, p);
+          sessionStorage.setItem(ADMIN_ROLE_KEY, res.role);
+          onSuccess(res.role);
         } catch (e2) {
           setErr(e2 instanceof Error ? e2.message : "Erreur");
         } finally {
@@ -165,11 +208,12 @@ function SettingsEditor() {
     setSaving(true);
     setMsg(null);
     try {
-      // Use admin creds stored client-side at login time. Simpler: re-prompt is overkill; samuelp/samuelp.
+      const creds = getCreds();
+      if (!creds) throw new Error("Session expirée, reconnectez-vous");
       await save({
         data: {
-          username: "samuelp",
-          password: "samuelp",
+          username: creds.username,
+          password: creds.password,
           trappe_components: trappe,
           mab_components: mab,
           vf_components: vf,
@@ -365,5 +409,241 @@ function FormulaBox({
               .join(" + ")}
       </div>
     </div>
+  );
+}
+
+type AppUserRow = { username: string; role: Role; created_at: string };
+
+function UsersManager() {
+  const list = useServerFn(listUsers);
+  const create = useServerFn(createUser);
+  const remove = useServerFn(deleteUser);
+  const changePwd = useServerFn(changeUserPassword);
+
+  const [users, setUsers] = useState<AppUserRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const [newU, setNewU] = useState("");
+  const [newP, setNewP] = useState("");
+  const [newRole, setNewRole] = useState<Role>("admin");
+  const [busy, setBusy] = useState(false);
+
+  const refresh = async () => {
+    setErr(null);
+    const creds = getCreds();
+    if (!creds) {
+      setErr("Session expirée");
+      setLoading(false);
+      return;
+    }
+    try {
+      const res = await list({ data: { username: creds.username, password: creds.password } });
+      setUsers(res.users as AppUserRow[]);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr(null);
+    setMsg(null);
+    setBusy(true);
+    try {
+      const creds = getCreds();
+      if (!creds) throw new Error("Session expirée");
+      await create({
+        data: {
+          username: creds.username,
+          password: creds.password,
+          newUsername: newU.trim(),
+          newPassword: newP,
+          newRole,
+        },
+      });
+      setNewU("");
+      setNewP("");
+      setNewRole("admin");
+      setMsg("Utilisateur créé");
+      await refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async (username: string) => {
+    if (!confirm(`Supprimer l'utilisateur « ${username} » ?`)) return;
+    setErr(null);
+    setMsg(null);
+    try {
+      const creds = getCreds();
+      if (!creds) throw new Error("Session expirée");
+      await remove({
+        data: { username: creds.username, password: creds.password, targetUsername: username },
+      });
+      setMsg("Utilisateur supprimé");
+      await refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erreur");
+    }
+  };
+
+  const handleResetPwd = async (username: string) => {
+    const pwd = prompt(`Nouveau mot de passe pour « ${username} » :`);
+    if (!pwd) return;
+    if (pwd.length < 4) {
+      setErr("Mot de passe trop court (min 4 caractères)");
+      return;
+    }
+    setErr(null);
+    setMsg(null);
+    try {
+      const creds = getCreds();
+      if (!creds) throw new Error("Session expirée");
+      await changePwd({
+        data: {
+          username: creds.username,
+          password: creds.password,
+          targetUsername: username,
+          newPassword: pwd,
+        },
+      });
+      setMsg("Mot de passe mis à jour");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erreur");
+    }
+  };
+
+  return (
+    <section className="space-y-6 border-t border-border pt-10">
+      <div>
+        <h2 className="text-xl font-semibold">Gestion des utilisateurs</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Créez ou supprimez des comptes administrateurs. Réservé au super administrateur.
+        </p>
+      </div>
+
+      <form
+        onSubmit={handleCreate}
+        className="rounded-xl border border-border bg-card p-5 space-y-3"
+      >
+        <div className="text-sm font-medium">Nouvel utilisateur</div>
+        <div className="grid sm:grid-cols-4 gap-3">
+          <input
+            placeholder="Nom d'utilisateur"
+            value={newU}
+            onChange={(e) => setNewU(e.target.value)}
+            required
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          <input
+            type="password"
+            placeholder="Mot de passe"
+            value={newP}
+            onChange={(e) => setNewP(e.target.value)}
+            required
+            minLength={4}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          <select
+            value={newRole}
+            onChange={(e) => setNewRole(e.target.value as Role)}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="admin">Admin</option>
+            <option value="super_admin">Super admin</option>
+          </select>
+          <button
+            type="submit"
+            disabled={busy}
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+            Ajouter
+          </button>
+        </div>
+      </form>
+
+      {(err || msg) && (
+        <p className={`text-sm ${err ? "text-destructive" : "text-muted-foreground"}`}>
+          {err ?? msg}
+        </p>
+      )}
+
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/40">
+            <tr className="text-left">
+              <th className="px-4 py-2 font-medium">Utilisateur</th>
+              <th className="px-4 py-2 font-medium">Rôle</th>
+              <th className="px-4 py-2 font-medium">Créé le</th>
+              <th className="px-4 py-2 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin inline" />
+                </td>
+              </tr>
+            ) : users.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                  Aucun utilisateur
+                </td>
+              </tr>
+            ) : (
+              users.map((u) => (
+                <tr key={u.username} className="border-t border-border">
+                  <td className="px-4 py-2 font-medium">{u.username}</td>
+                  <td className="px-4 py-2">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
+                        u.role === "super_admin"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {u.role === "super_admin" ? "Super admin" : "Admin"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-muted-foreground">
+                    {new Date(u.created_at).toLocaleDateString("fr-CA")}
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <div className="inline-flex gap-2">
+                      <button
+                        onClick={() => handleResetPwd(u.username)}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <KeyRound className="h-3.5 w-3.5" /> Mot de passe
+                      </button>
+                      <button
+                        onClick={() => handleDelete(u.username)}
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
