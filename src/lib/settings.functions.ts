@@ -1,9 +1,27 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const ADMIN_USER = "samuelp";
-const ADMIN_PASS = "samuelp";
+type Role = "super_admin" | "admin";
+
+async function authenticate(username: string, password: string): Promise<Role> {
+  const { data, error } = await supabaseAdmin
+    .from("app_users")
+    .select("password_hash, role")
+    .eq("username", username)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Identifiants invalides");
+  const ok = await bcrypt.compare(password, (data as { password_hash: string }).password_hash);
+  if (!ok) throw new Error("Identifiants invalides");
+  return (data as { role: Role }).role;
+}
+
+async function requireSuperAdmin(username: string, password: string): Promise<void> {
+  const role = await authenticate(username, password);
+  if (role !== "super_admin") throw new Error("Action réservée au super administrateur");
+}
 
 const ComponentSchema = z.object({
   field: z.enum([
@@ -42,9 +60,7 @@ const SaveSchema = z.object({
 export const saveSettings = createServerFn({ method: "POST" })
   .inputValidator((d) => SaveSchema.parse(d))
   .handler(async ({ data }) => {
-    if (data.username !== ADMIN_USER || data.password !== ADMIN_PASS) {
-      throw new Error("Identifiants invalides");
-    }
+    await authenticate(data.username, data.password);
     const { error } = await supabaseAdmin
       .from("formula_settings")
       .update({
@@ -68,8 +84,83 @@ const LoginSchema = z.object({
 export const verifyAdmin = createServerFn({ method: "POST" })
   .inputValidator((d) => LoginSchema.parse(d))
   .handler(async ({ data }) => {
-    if (data.username !== ADMIN_USER || data.password !== ADMIN_PASS) {
-      throw new Error("Identifiants invalides");
+    const role = await authenticate(data.username, data.password);
+    return { ok: true, role };
+  });
+
+const AdminAuthSchema = z.object({
+  username: z.string().max(100),
+  password: z.string().max(200),
+});
+
+export const listUsers = createServerFn({ method: "POST" })
+  .inputValidator((d) => AdminAuthSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireSuperAdmin(data.username, data.password);
+    const { data: rows, error } = await supabaseAdmin
+      .from("app_users")
+      .select("username, role, created_at")
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return { users: rows ?? [] };
+  });
+
+const CreateUserSchema = AdminAuthSchema.extend({
+  newUsername: z.string().trim().min(1).max(100).regex(/^[a-zA-Z0-9_.-]+$/, "Nom d'utilisateur invalide"),
+  newPassword: z.string().min(4).max(200),
+  newRole: z.enum(["super_admin", "admin"]),
+});
+
+export const createUser = createServerFn({ method: "POST" })
+  .inputValidator((d) => CreateUserSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireSuperAdmin(data.username, data.password);
+    const hash = await bcrypt.hash(data.newPassword, 10);
+    const { error } = await supabaseAdmin.from("app_users").insert({
+      username: data.newUsername,
+      password_hash: hash,
+      role: data.newRole,
+    });
+    if (error) {
+      if (error.code === "23505") throw new Error("Ce nom d'utilisateur existe déjà");
+      throw new Error(error.message);
     }
+    return { ok: true };
+  });
+
+const DeleteUserSchema = AdminAuthSchema.extend({
+  targetUsername: z.string().min(1).max(100),
+});
+
+export const deleteUser = createServerFn({ method: "POST" })
+  .inputValidator((d) => DeleteUserSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireSuperAdmin(data.username, data.password);
+    if (data.targetUsername === data.username) {
+      throw new Error("Vous ne pouvez pas vous supprimer vous-même");
+    }
+    const { error } = await supabaseAdmin
+      .from("app_users")
+      .delete()
+      .eq("username", data.targetUsername);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const ChangePasswordSchema = AdminAuthSchema.extend({
+  targetUsername: z.string().min(1).max(100),
+  newPassword: z.string().min(4).max(200),
+});
+
+export const changeUserPassword = createServerFn({ method: "POST" })
+  .inputValidator((d) => ChangePasswordSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireSuperAdmin(data.username, data.password);
+    const hash = await bcrypt.hash(data.newPassword, 10);
+    const { error } = await supabaseAdmin
+      .from("app_users")
+      .update({ password_hash: hash, updated_at: new Date().toISOString() })
+      .eq("username", data.targetUsername);
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
