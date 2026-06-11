@@ -15,8 +15,10 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_THRESHOLDS,
   DEFAULT_THRESHOLD_LABELS,
+  DEFAULT_DELAY_SETTINGS,
   FIELD_LABELS,
   type Component,
+  type DelaySettings,
   type FieldKey,
   type Settings,
   type Thresholds,
@@ -170,6 +172,7 @@ function SettingsEditor() {
   const [vf, setVf] = useState<Component[]>(DEFAULT_SETTINGS.vf_components);
   const [thresholds, setThresholds] = useState<Thresholds>(DEFAULT_THRESHOLDS);
   const [labels, setLabels] = useState<ThresholdLabels>(DEFAULT_THRESHOLD_LABELS);
+  const [delaySettings, setDelaySettings] = useState<DelaySettings>(DEFAULT_DELAY_SETTINGS);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -187,6 +190,10 @@ function SettingsEditor() {
         setLabels({
           ...DEFAULT_THRESHOLD_LABELS,
           ...((data as { threshold_labels?: Partial<ThresholdLabels> }).threshold_labels ?? {}),
+        });
+        setDelaySettings({
+          ...DEFAULT_DELAY_SETTINGS,
+          ...((data as { delay_settings?: Partial<DelaySettings> }).delay_settings ?? {}),
         });
       }
       setLoaded(true);
@@ -219,6 +226,7 @@ function SettingsEditor() {
           vf_components: vf,
           thresholds,
           threshold_labels: labels,
+          delay_settings: delaySettings,
         },
       });
       setMsg("Paramètres enregistrés");
