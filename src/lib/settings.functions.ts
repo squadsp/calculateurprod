@@ -2,26 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { authenticate, requireSuperAdmin, resolveAdmin, resolveSuperAdmin } from "@/lib/auth.functions";
 
 type Role = "super_admin" | "admin";
-
-async function authenticate(username: string, password: string): Promise<Role> {
-  const { data, error } = await supabaseAdmin
-    .from("app_users")
-    .select("password_hash, role")
-    .eq("username", username)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Identifiants invalides");
-  const ok = await bcrypt.compare(password, (data as { password_hash: string }).password_hash);
-  if (!ok) throw new Error("Identifiants invalides");
-  return (data as { role: Role }).role;
-}
-
-async function requireSuperAdmin(username: string, password: string): Promise<void> {
-  const role = await authenticate(username, password);
-  if (role !== "super_admin") throw new Error("Action réservée au super administrateur");
-}
 
 const ComponentSchema = z.object({
   field: z.enum([
