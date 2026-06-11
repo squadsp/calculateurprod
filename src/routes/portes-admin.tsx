@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { login, logout, getSession } from "@/lib/auth.functions";
 import { DEFAULT_PORTES_KEYWORDS, type PortesKeywords } from "@/lib/portesProcessor";
+import { SettingsNav } from "@/components/SettingsNav";
 import { ArrowLeft, Loader2, LogOut, Save, Plus, X, RotateCcw } from "lucide-react";
 
 export const Route = createFileRoute("/portes-admin")({
@@ -87,7 +88,14 @@ function PortesAdminPage() {
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-6 py-10">
-        {authed ? <PortesSettingsEditor /> : <LoginForm onSuccess={() => setAuthed(true)} />}
+        {authed ? (
+          <>
+            <SettingsNav />
+            <PortesSettingsEditor />
+          </>
+        ) : (
+          <LoginForm onSuccess={() => setAuthed(true)} />
+        )}
       </main>
     </div>
   );

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PortesAdminRouteImport } from './routes/portes-admin'
 import { Route as PortesRouteImport } from './routes/portes'
 import { Route as FenetresRouteImport } from './routes/fenetres'
+import { Route as DelaysAdminRouteImport } from './routes/delays-admin'
 import { Route as DelaysRouteImport } from './routes/delays'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -29,6 +30,11 @@ const PortesRoute = PortesRouteImport.update({
 const FenetresRoute = FenetresRouteImport.update({
   id: '/fenetres',
   path: '/fenetres',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DelaysAdminRoute = DelaysAdminRouteImport.update({
+  id: '/delays-admin',
+  path: '/delays-admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DelaysRoute = DelaysRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/delays': typeof DelaysRoute
+  '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/delays': typeof DelaysRoute
+  '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/delays': typeof DelaysRoute
+  '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
@@ -78,16 +87,25 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/delays'
+    | '/delays-admin'
     | '/fenetres'
     | '/portes'
     | '/portes-admin'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/delays' | '/fenetres' | '/portes' | '/portes-admin'
+  to:
+    | '/'
+    | '/admin'
+    | '/delays'
+    | '/delays-admin'
+    | '/fenetres'
+    | '/portes'
+    | '/portes-admin'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/delays'
+    | '/delays-admin'
     | '/fenetres'
     | '/portes'
     | '/portes-admin'
@@ -97,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   DelaysRoute: typeof DelaysRoute
+  DelaysAdminRoute: typeof DelaysAdminRoute
   FenetresRoute: typeof FenetresRoute
   PortesRoute: typeof PortesRoute
   PortesAdminRoute: typeof PortesAdminRoute
@@ -123,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/fenetres'
       fullPath: '/fenetres'
       preLoaderRoute: typeof FenetresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/delays-admin': {
+      id: '/delays-admin'
+      path: '/delays-admin'
+      fullPath: '/delays-admin'
+      preLoaderRoute: typeof DelaysAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/delays': {
@@ -153,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   DelaysRoute: DelaysRoute,
+  DelaysAdminRoute: DelaysAdminRoute,
   FenetresRoute: FenetresRoute,
   PortesRoute: PortesRoute,
   PortesAdminRoute: PortesAdminRoute,
