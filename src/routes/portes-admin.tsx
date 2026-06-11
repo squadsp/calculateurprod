@@ -68,7 +68,7 @@ function PortesAdminPage() {
 }
 
 function LoginForm({ onSuccess }: { onSuccess: () => void }) {
-  const verify = useServerFn(verifyAdmin);
+  const doLogin = useServerFn(login);
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -82,8 +82,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         setErr(null);
         setBusy(true);
         try {
-          await verify({ data: { username: u, password: p } });
-          sessionStorage.setItem(ADMIN_KEY, "1");
+          await doLogin({ data: { username: u, password: p } });
           onSuccess();
         } catch (e2) {
           setErr(e2 instanceof Error ? e2.message : "Erreur");
