@@ -8,8 +8,8 @@ import {
   deleteUser,
   listUsers,
   saveSettings,
-  verifyAdmin,
 } from "@/lib/settings.functions";
+import { login, logout, getSession } from "@/lib/auth.functions";
 import {
   ALL_FIELDS,
   DEFAULT_SETTINGS,
@@ -30,33 +30,49 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-const ADMIN_KEY = "trappemab_admin";
-const ADMIN_USER_KEY = "trappemab_admin_user";
-const ADMIN_PASS_KEY = "trappemab_admin_pass";
-const ADMIN_ROLE_KEY = "trappemab_admin_role";
-
 type Role = "super_admin" | "admin";
-
-function getCreds(): { username: string; password: string; role: Role } | null {
-  if (typeof window === "undefined") return null;
-  const username = sessionStorage.getItem(ADMIN_USER_KEY);
-  const password = sessionStorage.getItem(ADMIN_PASS_KEY);
-  const role = sessionStorage.getItem(ADMIN_ROLE_KEY) as Role | null;
-  if (!username || !password || !role) return null;
-  return { username, password, role };
-}
 
 function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [role, setRole] = useState<Role | null>(null);
+  const [checking, setChecking] = useState(true);
+
+  const getSess = useServerFn(getSession);
+  const doLogoutFn = useServerFn(logout);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem(ADMIN_KEY) === "1") {
-      setAuthed(true);
-      const r = sessionStorage.getItem(ADMIN_ROLE_KEY) as Role | null;
-      if (r) setRole(r);
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await getSess({ data: undefined });
+        if (mounted && res.session) {
+          setAuthed(true);
+          setRole(res.session.role as Role);
+        }
+      } finally {
+        if (mounted) setChecking(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [getSess]);
+
+  const doLogout = async () => {
+    try {
+      await doLogoutFn({ data: undefined });
+    } catch {
+      // ignore
     }
-  }, []);
+    setAuthed(false);
+    setRole(null);
+  };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,14 +85,7 @@ function AdminPage() {
           {authed ? (
             <button
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                sessionStorage.removeItem(ADMIN_KEY);
-                sessionStorage.removeItem(ADMIN_USER_KEY);
-                sessionStorage.removeItem(ADMIN_PASS_KEY);
-                sessionStorage.removeItem(ADMIN_ROLE_KEY);
-                setAuthed(false);
-                setRole(null);
-              }}
+              onClick={doLogout}
             >
               <LogOut className="h-4 w-4" /> Déconnexion
             </button>
@@ -88,7 +97,7 @@ function AdminPage() {
       <main className="max-w-5xl mx-auto px-6 py-10">
         {authed ? (
           <div className="space-y-12">
-            <SettingsEditor />
+            <SettingsEditor role={role} />
             {role === "super_admin" && <UsersManager />}
           </div>
         ) : (
@@ -105,7 +114,7 @@ function AdminPage() {
 }
 
 function LoginForm({ onSuccess }: { onSuccess: (role: Role) => void }) {
-  const verify = useServerFn(verifyAdmin);
+  const doLogin = useServerFn(login);
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -119,12 +128,8 @@ function LoginForm({ onSuccess }: { onSuccess: (role: Role) => void }) {
         setErr(null);
         setBusy(true);
         try {
-          const res = await verify({ data: { username: u, password: p } });
-          sessionStorage.setItem(ADMIN_KEY, "1");
-          sessionStorage.setItem(ADMIN_USER_KEY, u);
-          sessionStorage.setItem(ADMIN_PASS_KEY, p);
-          sessionStorage.setItem(ADMIN_ROLE_KEY, res.role);
-          onSuccess(res.role);
+          const res = await doLogin({ data: { username: u, password: p } });
+          onSuccess(res.role as Role);
         } catch (e2) {
           setErr(e2 instanceof Error ? e2.message : "Erreur");
         } finally {
@@ -164,7 +169,7 @@ function LoginForm({ onSuccess }: { onSuccess: (role: Role) => void }) {
   );
 }
 
-function SettingsEditor() {
+function SettingsEditor({ role }: { role: Role | null }) {
   const save = useServerFn(saveSettings);
   const [loaded, setLoaded] = useState(false);
   const [trappe, setTrappe] = useState<Component[]>(DEFAULT_SETTINGS.trappe_components);
@@ -215,12 +220,8 @@ function SettingsEditor() {
     setSaving(true);
     setMsg(null);
     try {
-      const creds = getCreds();
-      if (!creds) throw new Error("Session expirée, reconnectez-vous");
       await save({
         data: {
-          username: creds.username,
-          password: creds.password,
           trappe_components: trappe,
           mab_components: mab,
           vf_components: vf,
@@ -510,14 +511,8 @@ function UsersManager() {
 
   const refresh = async () => {
     setErr(null);
-    const creds = getCreds();
-    if (!creds) {
-      setErr("Session expirée");
-      setLoading(false);
-      return;
-    }
     try {
-      const res = await list({ data: { username: creds.username, password: creds.password } });
+      const res = await list({ data: {} });
       setUsers(res.users as AppUserRow[]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Erreur");
@@ -537,12 +532,8 @@ function UsersManager() {
     setMsg(null);
     setBusy(true);
     try {
-      const creds = getCreds();
-      if (!creds) throw new Error("Session expirée");
       await create({
         data: {
-          username: creds.username,
-          password: creds.password,
           newUsername: newU.trim(),
           newPassword: newP,
           newRole,
@@ -565,10 +556,8 @@ function UsersManager() {
     setErr(null);
     setMsg(null);
     try {
-      const creds = getCreds();
-      if (!creds) throw new Error("Session expirée");
       await remove({
-        data: { username: creds.username, password: creds.password, targetUsername: username },
+        data: { targetUsername: username },
       });
       setMsg("Utilisateur supprimé");
       await refresh();
@@ -587,12 +576,8 @@ function UsersManager() {
     setErr(null);
     setMsg(null);
     try {
-      const creds = getCreds();
-      if (!creds) throw new Error("Session expirée");
       await changePwd({
         data: {
-          username: creds.username,
-          password: creds.password,
           targetUsername: username,
           newPassword: pwd,
         },

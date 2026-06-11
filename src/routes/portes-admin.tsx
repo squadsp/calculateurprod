@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { verifyAdmin } from "@/lib/settings.functions";
+import { login, logout, getSession } from "@/lib/auth.functions";
 import { DEFAULT_PORTES_KEYWORDS, type PortesKeywords } from "@/lib/portesProcessor";
 import { ArrowLeft, Loader2, LogOut, Save, Plus, X, RotateCcw } from "lucide-react";
 
@@ -9,7 +9,6 @@ export const Route = createFileRoute("/portes-admin")({
   component: PortesAdminPage,
 });
 
-const ADMIN_KEY = "trappemab_admin";
 const STORAGE_KEY = "portes_keywords";
 
 function loadKeywords(): PortesKeywords {
@@ -30,12 +29,42 @@ function loadKeywords(): PortesKeywords {
 
 function PortesAdminPage() {
   const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  const getSess = useServerFn(getSession);
+  const doLogoutFn = useServerFn(logout);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem(ADMIN_KEY) === "1") {
-      setAuthed(true);
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await getSess({ data: undefined });
+        if (mounted && res.session) {
+          setAuthed(true);
+        }
+      } finally {
+        if (mounted) setChecking(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [getSess]);
+
+  const doLogout = async () => {
+    try {
+      await doLogoutFn({ data: undefined });
+    } catch {
+      // ignore
     }
-  }, []);
+    setAuthed(false);
+  };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,10 +77,7 @@ function PortesAdminPage() {
           {authed ? (
             <button
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                sessionStorage.removeItem(ADMIN_KEY);
-                setAuthed(false);
-              }}
+              onClick={doLogout}
             >
               <LogOut className="h-4 w-4" /> Déconnexion
             </button>
@@ -68,7 +94,7 @@ function PortesAdminPage() {
 }
 
 function LoginForm({ onSuccess }: { onSuccess: () => void }) {
-  const verify = useServerFn(verifyAdmin);
+  const doLogin = useServerFn(login);
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -82,8 +108,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         setErr(null);
         setBusy(true);
         try {
-          await verify({ data: { username: u, password: p } });
-          sessionStorage.setItem(ADMIN_KEY, "1");
+          await doLogin({ data: { username: u, password: p } });
           onSuccess();
         } catch (e2) {
           setErr(e2 instanceof Error ? e2.message : "Erreur");

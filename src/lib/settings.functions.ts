@@ -3,25 +3,8 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+
 type Role = "super_admin" | "admin";
-
-async function authenticate(username: string, password: string): Promise<Role> {
-  const { data, error } = await supabaseAdmin
-    .from("app_users")
-    .select("password_hash, role")
-    .eq("username", username)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Identifiants invalides");
-  const ok = await bcrypt.compare(password, (data as { password_hash: string }).password_hash);
-  if (!ok) throw new Error("Identifiants invalides");
-  return (data as { role: Role }).role;
-}
-
-async function requireSuperAdmin(username: string, password: string): Promise<void> {
-  const role = await authenticate(username, password);
-  if (role !== "super_admin") throw new Error("Action réservée au super administrateur");
-}
 
 const ComponentSchema = z.object({
   field: z.enum([
@@ -36,8 +19,8 @@ const ComponentSchema = z.object({
 });
 
 const SaveSchema = z.object({
-  username: z.string().max(100),
-  password: z.string().max(200),
+  username: z.string().max(100).optional(),
+  password: z.string().max(200).optional(),
   trappe_components: z.array(ComponentSchema).max(20),
   mab_components: z.array(ComponentSchema).max(20),
   vf_components: z.array(ComponentSchema).max(20),
@@ -66,7 +49,8 @@ const SaveSchema = z.object({
 export const saveSettings = createServerFn({ method: "POST" })
   .inputValidator((d) => SaveSchema.parse(d))
   .handler(async ({ data }) => {
-    await authenticate(data.username, data.password);
+    const { resolveAdmin } = await import("@/lib/auth.server");
+    await resolveAdmin(data);
     const { error } = await supabaseAdmin
       .from("formula_settings")
       .update({
@@ -91,19 +75,21 @@ const LoginSchema = z.object({
 export const verifyAdmin = createServerFn({ method: "POST" })
   .inputValidator((d) => LoginSchema.parse(d))
   .handler(async ({ data }) => {
+    const { authenticate } = await import("@/lib/auth.server");
     const role = await authenticate(data.username, data.password);
     return { ok: true, role };
   });
 
 const AdminAuthSchema = z.object({
-  username: z.string().max(100),
-  password: z.string().max(200),
+  username: z.string().max(100).optional(),
+  password: z.string().max(200).optional(),
 });
 
 export const listUsers = createServerFn({ method: "POST" })
   .inputValidator((d) => AdminAuthSchema.parse(d))
   .handler(async ({ data }) => {
-    await requireSuperAdmin(data.username, data.password);
+    const { resolveSuperAdmin } = await import("@/lib/auth.server");
+    await resolveSuperAdmin(data);
     const { data: rows, error } = await supabaseAdmin
       .from("app_users")
       .select("username, role, created_at")
@@ -121,7 +107,8 @@ const CreateUserSchema = AdminAuthSchema.extend({
 export const createUser = createServerFn({ method: "POST" })
   .inputValidator((d) => CreateUserSchema.parse(d))
   .handler(async ({ data }) => {
-    await requireSuperAdmin(data.username, data.password);
+    const { resolveSuperAdmin } = await import("@/lib/auth.server");
+    await resolveSuperAdmin(data);
     const hash = await bcrypt.hash(data.newPassword, 10);
     const { error } = await supabaseAdmin.from("app_users").insert({
       username: data.newUsername,
@@ -142,8 +129,9 @@ const DeleteUserSchema = AdminAuthSchema.extend({
 export const deleteUser = createServerFn({ method: "POST" })
   .inputValidator((d) => DeleteUserSchema.parse(d))
   .handler(async ({ data }) => {
-    await requireSuperAdmin(data.username, data.password);
-    if (data.targetUsername === data.username) {
+    const { resolveSuperAdmin } = await import("@/lib/auth.server");
+    const admin = await resolveSuperAdmin(data);
+    if (data.targetUsername === admin.username) {
       throw new Error("Vous ne pouvez pas vous supprimer vous-même");
     }
     const { error } = await supabaseAdmin
@@ -162,7 +150,8 @@ const ChangePasswordSchema = AdminAuthSchema.extend({
 export const changeUserPassword = createServerFn({ method: "POST" })
   .inputValidator((d) => ChangePasswordSchema.parse(d))
   .handler(async ({ data }) => {
-    await requireSuperAdmin(data.username, data.password);
+    const { resolveSuperAdmin } = await import("@/lib/auth.server");
+    await resolveSuperAdmin(data);
     const hash = await bcrypt.hash(data.newPassword, 10);
     const { error } = await supabaseAdmin
       .from("app_users")
