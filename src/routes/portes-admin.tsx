@@ -9,7 +9,6 @@ export const Route = createFileRoute("/portes-admin")({
   component: PortesAdminPage,
 });
 
-const ADMIN_KEY = "trappemab_admin";
 const STORAGE_KEY = "portes_keywords";
 
 function loadKeywords(): PortesKeywords {
