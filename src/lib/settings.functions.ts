@@ -51,7 +51,7 @@ export const saveSettings = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { resolveAdmin } = await import("@/lib/auth.server");
     await resolveAdmin(data);
-    const update: Record<string, unknown> = {
+    const update: any = {
       trappe_components: data.trappe_components,
       mab_components: data.mab_components,
       vf_components: data.vf_components,
