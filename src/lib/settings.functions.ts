@@ -43,7 +43,7 @@ const SaveSchema = z.object({
     min_weeks: z.number().int().min(0).max(52),
     range_span: z.number().int().min(0).max(52),
     week_offset: z.number().int().min(-12).max(52),
-  }),
+  }).optional(),
 });
 
 export const saveSettings = createServerFn({ method: "POST" })
@@ -51,14 +51,44 @@ export const saveSettings = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { resolveAdmin } = await import("@/lib/auth.server");
     await resolveAdmin(data);
+    const update: Record<string, unknown> = {
+      trappe_components: data.trappe_components,
+      mab_components: data.mab_components,
+      vf_components: data.vf_components,
+      thresholds: data.thresholds,
+      threshold_labels: data.threshold_labels,
+      updated_at: new Date().toISOString(),
+    };
+    if (data.delay_settings !== undefined) {
+      update.delay_settings = data.delay_settings;
+    }
+    const { error } = await supabaseAdmin
+      .from("formula_settings")
+      .update(update)
+      .eq("id", 1);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const SaveDelaySchema = z.object({
+  username: z.string().max(100).optional(),
+  password: z.string().max(200).optional(),
+  delay_settings: z.object({
+    full_ratio: z.number().min(0).max(1),
+    min_weeks: z.number().int().min(0).max(52),
+    range_span: z.number().int().min(0).max(52),
+    week_offset: z.number().int().min(-12).max(52),
+  }),
+});
+
+export const saveDelaySettings = createServerFn({ method: "POST" })
+  .inputValidator((d) => SaveDelaySchema.parse(d))
+  .handler(async ({ data }) => {
+    const { resolveAdmin } = await import("@/lib/auth.server");
+    await resolveAdmin(data);
     const { error } = await supabaseAdmin
       .from("formula_settings")
       .update({
-        trappe_components: data.trappe_components,
-        mab_components: data.mab_components,
-        vf_components: data.vf_components,
-        thresholds: data.thresholds,
-        threshold_labels: data.threshold_labels,
         delay_settings: data.delay_settings,
         updated_at: new Date().toISOString(),
       })
