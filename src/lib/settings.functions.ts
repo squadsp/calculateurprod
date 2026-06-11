@@ -55,6 +55,12 @@ const SaveSchema = z.object({
     vf: z.string().min(1).max(80),
     peinture: z.string().min(1).max(80),
   }),
+  delay_settings: z.object({
+    full_ratio: z.number().min(0).max(1),
+    min_weeks: z.number().int().min(0).max(52),
+    range_span: z.number().int().min(0).max(52),
+    week_offset: z.number().int().min(-12).max(52),
+  }),
 });
 
 export const saveSettings = createServerFn({ method: "POST" })
@@ -69,6 +75,7 @@ export const saveSettings = createServerFn({ method: "POST" })
         vf_components: data.vf_components,
         thresholds: data.thresholds,
         threshold_labels: data.threshold_labels,
+        delay_settings: data.delay_settings,
         updated_at: new Date().toISOString(),
       })
       .eq("id", 1);

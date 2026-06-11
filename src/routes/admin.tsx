@@ -15,8 +15,10 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_THRESHOLDS,
   DEFAULT_THRESHOLD_LABELS,
+  DEFAULT_DELAY_SETTINGS,
   FIELD_LABELS,
   type Component,
+  type DelaySettings,
   type FieldKey,
   type Settings,
   type Thresholds,
@@ -170,6 +172,7 @@ function SettingsEditor() {
   const [vf, setVf] = useState<Component[]>(DEFAULT_SETTINGS.vf_components);
   const [thresholds, setThresholds] = useState<Thresholds>(DEFAULT_THRESHOLDS);
   const [labels, setLabels] = useState<ThresholdLabels>(DEFAULT_THRESHOLD_LABELS);
+  const [delaySettings, setDelaySettings] = useState<DelaySettings>(DEFAULT_DELAY_SETTINGS);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -187,6 +190,10 @@ function SettingsEditor() {
         setLabels({
           ...DEFAULT_THRESHOLD_LABELS,
           ...((data as { threshold_labels?: Partial<ThresholdLabels> }).threshold_labels ?? {}),
+        });
+        setDelaySettings({
+          ...DEFAULT_DELAY_SETTINGS,
+          ...((data as { delay_settings?: Partial<DelaySettings> }).delay_settings ?? {}),
         });
       }
       setLoaded(true);
@@ -219,6 +226,7 @@ function SettingsEditor() {
           vf_components: vf,
           thresholds,
           threshold_labels: labels,
+          delay_settings: delaySettings,
         },
       });
       setMsg("Paramètres enregistrés");
@@ -321,6 +329,76 @@ function SettingsEditor() {
               />
             </div>
           ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">
+          Paramètres du calculateur de délais
+        </h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Une semaine est considérée pleine (ignorée) lorsque la production atteint le pourcentage
+          ci-dessous de la capacité (max × nombre de jours présents dans la semaine). Le délai
+          minimum, l'écart de l'intervalle affiché et le décalage de semaines sont aussi configurables.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
+            <span className="text-sm">Seuil « semaine pleine » (%)</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step="1"
+              value={Math.round(delaySettings.full_ratio * 100)}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                const pct = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
+                setDelaySettings((s) => ({ ...s, full_ratio: pct / 100 }));
+              }}
+              className="w-24 rounded border border-input bg-background px-2 py-1 text-sm text-right"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
+            <span className="text-sm">Délai minimum (semaines)</span>
+            <input
+              type="number"
+              min={0}
+              step="1"
+              value={delaySettings.min_weeks}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                setDelaySettings((s) => ({ ...s, min_weeks: isNaN(v) ? 0 : v }));
+              }}
+              className="w-24 rounded border border-input bg-background px-2 py-1 text-sm text-right"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
+            <span className="text-sm">Écart de l'intervalle (semaines)</span>
+            <input
+              type="number"
+              min={0}
+              step="1"
+              value={delaySettings.range_span}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                setDelaySettings((s) => ({ ...s, range_span: isNaN(v) ? 0 : v }));
+              }}
+              className="w-24 rounded border border-input bg-background px-2 py-1 text-sm text-right"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
+            <span className="text-sm">Décalage de semaines</span>
+            <input
+              type="number"
+              step="1"
+              value={delaySettings.week_offset}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                setDelaySettings((s) => ({ ...s, week_offset: isNaN(v) ? 0 : v }));
+              }}
+              className="w-24 rounded border border-input bg-background px-2 py-1 text-sm text-right"
+            />
+          </label>
         </div>
       </div>
 

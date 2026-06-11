@@ -2,6 +2,8 @@ import {
   COULISSANT_PVC_INDEX,
   TOTAL_INDEX,
   computeValue,
+  DEFAULT_DELAY_SETTINGS,
+  type DelaySettings,
   type Settings,
 } from "./columns";
 
@@ -256,8 +258,6 @@ const LINE_THRESHOLD: Record<LineKey, keyof Settings["thresholds"]> = {
  * (daily max from settings). This correctly handles partial weeks (e.g. a
  * 4-day week has 80% of a 5-day week's max).
  */
-const FULL_RATIO = 0.8;
-
 export function findFirstAvailableWeek(
   weeks: WeekData[],
   line: LineKey,
@@ -265,6 +265,7 @@ export function findFirstAvailableWeek(
   minWeek = 4,
   today?: Date,
   thresholdKey?: keyof Settings["thresholds"],
+  fullRatio: number = DEFAULT_DELAY_SETTINGS.full_ratio,
 ): { weekNumber: number; date: Date | null } | null {
   const max = thresholds[thresholdKey ?? LINE_THRESHOLD[line]];
   if (!max || max <= 0) return null;
@@ -289,12 +290,12 @@ export function findFirstAvailableWeek(
     if (dayVals.length > 0) {
       const sum = dayVals.reduce((a, b) => a + b, 0);
       const capacity = dayVals.length * max;
-      if (capacity > 0 && sum / capacity >= FULL_RATIO) continue;
+      if (capacity > 0 && sum / capacity >= fullRatio) continue;
     } else {
       // Fallback to the PDF's "Moyenne" row when no per-day values were
       // captured (e.g. peinture/PVC read directly from the moyenne row).
       const moy = w.moyenne[line];
-      if (moy != null && max > 0 && moy / max >= FULL_RATIO) continue;
+      if (moy != null && max > 0 && moy / max >= fullRatio) continue;
     }
     // Pick first day below threshold for the displayed date (fallback: first day).
     let firstDay: Date | null = null;
@@ -311,9 +312,9 @@ export function findFirstAvailableWeek(
   return null;
 }
 
-export function formatDelay(weeks: number): string {
-  const lower = Math.max(4, weeks);
-  const upper = lower + 2;
+export function formatDelay(weeks: number, minWeeks = 4, rangeSpan = 2): string {
+  const lower = Math.max(minWeeks, weeks);
+  const upper = lower + rangeSpan;
   return `${lower}-${upper} semaines`;
 }
 
@@ -353,7 +354,8 @@ export async function calculateDelays(
   const needsMore: LineKey[] = [];
   const computeVf = (settings.vf_components?.length ?? 0) > 0;
   const pvcInVf = (settings.vf_components ?? []).some((c) => c.field === "coulissant_pvc");
-  // Week 1 = first PDF week (typically next Thursday). Minimum 4 weeks.
+  const ds = { ...DEFAULT_DELAY_SETTINGS, ...(settings.delay_settings ?? {}) };
+  // Week 1 = first PDF week (typically next Thursday). Minimum weeks from settings.
   for (const line of lines) {
     if (line === "vf" && !computeVf) continue;
     if (line === "coulissant_pvc" && pvcInVf) continue;
@@ -361,14 +363,20 @@ export async function calculateDelays(
       allWeeks,
       line,
       settings.thresholds,
-      4,
+      ds.min_weeks,
       today,
+      undefined,
+      ds.full_ratio,
     );
     if (!found) {
       results[line] = { date: null, text: null };
       needsMore.push(line);
     } else {
-      results[line] = { date: found.date, text: formatDelay(found.weekNumber) };
+      const adjusted = found.weekNumber + ds.week_offset;
+      results[line] = {
+        date: found.date,
+        text: formatDelay(adjusted, ds.min_weeks, ds.range_span),
+      };
     }
   }
 

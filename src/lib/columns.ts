@@ -59,6 +59,7 @@ export type Settings = {
   vf_components: Component[];
   thresholds: Thresholds;
   threshold_labels: ThresholdLabels;
+  delay_settings: DelaySettings;
 };
 
 export type ThresholdLabels = {
@@ -67,6 +68,24 @@ export type ThresholdLabels = {
   coulissant_pvc: string;
   vf: string;
   peinture: string;
+};
+
+export type DelaySettings = {
+  /** Occupancy ratio (0-1) above which a week is considered full and skipped. */
+  full_ratio: number;
+  /** Minimum number of weeks to return (delay floor). */
+  min_weeks: number;
+  /** Span (in weeks) between the lower and upper bound of the displayed range. */
+  range_span: number;
+  /** Offset (in weeks) added to the computed week number before display. */
+  week_offset: number;
+};
+
+export const DEFAULT_DELAY_SETTINGS: DelaySettings = {
+  full_ratio: 0.8,
+  min_weeks: 4,
+  range_span: 2,
+  week_offset: 0,
 };
 
 export const DEFAULT_THRESHOLD_LABELS: ThresholdLabels = {
@@ -98,6 +117,7 @@ export const DEFAULT_SETTINGS: Settings = {
   vf_components: [],
   thresholds: DEFAULT_THRESHOLDS,
   threshold_labels: DEFAULT_THRESHOLD_LABELS,
+  delay_settings: DEFAULT_DELAY_SETTINGS,
 };
 
 export const DAY_REGEX = /^(jeudi|vendredi|samedi|dimanche|lundi|mardi|mercredi)\s+le\s+\d+/i;

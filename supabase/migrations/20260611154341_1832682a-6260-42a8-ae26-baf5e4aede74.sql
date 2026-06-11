@@ -1,0 +1,1 @@
+ALTER TABLE public.formula_settings ADD COLUMN IF NOT EXISTS delay_settings jsonb NOT NULL DEFAULT '{"full_ratio": 0.8, "min_weeks": 4, "range_span": 2, "week_offset": 0}'::jsonb;
