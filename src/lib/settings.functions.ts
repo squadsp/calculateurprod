@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { authenticate, requireSuperAdmin, resolveAdmin, resolveSuperAdmin } from "@/lib/auth.functions";
+
 
 type Role = "super_admin" | "admin";
 
