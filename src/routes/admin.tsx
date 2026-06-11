@@ -38,6 +38,7 @@ function AdminPage() {
   const [checking, setChecking] = useState(true);
 
   const getSess = useServerFn(getSession);
+  const doLogoutFn = useServerFn(logout);
 
   useEffect(() => {
     let mounted = true;
@@ -56,7 +57,6 @@ function AdminPage() {
   }, [getSess]);
 
   const doLogout = async () => {
-    const doLogoutFn = useServerFn(logout);
     try {
       await doLogoutFn({ data: undefined });
     } catch {
