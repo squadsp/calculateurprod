@@ -3,15 +3,13 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  login,
-  logout,
-  getSession,
   changeUserPassword,
   createUser,
   deleteUser,
   listUsers,
   saveSettings,
 } from "@/lib/settings.functions";
+import { login, logout, getSession } from "@/lib/auth.functions";
 import {
   ALL_FIELDS,
   DEFAULT_SETTINGS,
