@@ -75,6 +75,7 @@ const LoginSchema = z.object({
 export const verifyAdmin = createServerFn({ method: "POST" })
   .inputValidator((d) => LoginSchema.parse(d))
   .handler(async ({ data }) => {
+    const { authenticate } = await import("@/lib/auth.server");
     const role = await authenticate(data.username, data.password);
     return { ok: true, role };
   });
@@ -87,6 +88,7 @@ const AdminAuthSchema = z.object({
 export const listUsers = createServerFn({ method: "POST" })
   .inputValidator((d) => AdminAuthSchema.parse(d))
   .handler(async ({ data }) => {
+    const { resolveSuperAdmin } = await import("@/lib/auth.server");
     await resolveSuperAdmin(data);
     const { data: rows, error } = await supabaseAdmin
       .from("app_users")
@@ -105,6 +107,7 @@ const CreateUserSchema = AdminAuthSchema.extend({
 export const createUser = createServerFn({ method: "POST" })
   .inputValidator((d) => CreateUserSchema.parse(d))
   .handler(async ({ data }) => {
+    const { resolveSuperAdmin } = await import("@/lib/auth.server");
     await resolveSuperAdmin(data);
     const hash = await bcrypt.hash(data.newPassword, 10);
     const { error } = await supabaseAdmin.from("app_users").insert({
@@ -126,6 +129,7 @@ const DeleteUserSchema = AdminAuthSchema.extend({
 export const deleteUser = createServerFn({ method: "POST" })
   .inputValidator((d) => DeleteUserSchema.parse(d))
   .handler(async ({ data }) => {
+    const { resolveSuperAdmin } = await import("@/lib/auth.server");
     const admin = await resolveSuperAdmin(data);
     if (data.targetUsername === admin.username) {
       throw new Error("Vous ne pouvez pas vous supprimer vous-même");
@@ -146,6 +150,7 @@ const ChangePasswordSchema = AdminAuthSchema.extend({
 export const changeUserPassword = createServerFn({ method: "POST" })
   .inputValidator((d) => ChangePasswordSchema.parse(d))
   .handler(async ({ data }) => {
+    const { resolveSuperAdmin } = await import("@/lib/auth.server");
     await resolveSuperAdmin(data);
     const hash = await bcrypt.hash(data.newPassword, 10);
     const { error } = await supabaseAdmin
