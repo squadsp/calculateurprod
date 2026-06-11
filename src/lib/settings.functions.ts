@@ -49,6 +49,7 @@ const SaveSchema = z.object({
 export const saveSettings = createServerFn({ method: "POST" })
   .inputValidator((d) => SaveSchema.parse(d))
   .handler(async ({ data }) => {
+    const { resolveAdmin } = await import("@/lib/auth.server");
     await resolveAdmin(data);
     const { error } = await supabaseAdmin
       .from("formula_settings")
