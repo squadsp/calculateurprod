@@ -30,6 +30,10 @@ async function loadSettings(): Promise<Settings> {
       ...DEFAULT_THRESHOLD_LABELS,
       ...((data as { threshold_labels?: Partial<ThresholdLabels> }).threshold_labels ?? {}),
     },
+    delay_settings: {
+      ...DEFAULT_SETTINGS.delay_settings,
+      ...((data as { delay_settings?: Partial<Settings["delay_settings"]> }).delay_settings ?? {}),
+    },
   };
 }
 
