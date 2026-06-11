@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          role: string
+          token: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          role: string
+          token: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          role?: string
+          token?: string
+          username?: string
+        }
+        Relationships: []
+      }
       app_users: {
         Row: {
           created_at: string
