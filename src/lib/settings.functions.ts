@@ -19,8 +19,8 @@ const ComponentSchema = z.object({
 });
 
 const SaveSchema = z.object({
-  username: z.string().max(100),
-  password: z.string().max(200),
+  username: z.string().max(100).optional(),
+  password: z.string().max(200).optional(),
   trappe_components: z.array(ComponentSchema).max(20),
   mab_components: z.array(ComponentSchema).max(20),
   vf_components: z.array(ComponentSchema).max(20),
@@ -49,7 +49,7 @@ const SaveSchema = z.object({
 export const saveSettings = createServerFn({ method: "POST" })
   .inputValidator((d) => SaveSchema.parse(d))
   .handler(async ({ data }) => {
-    await authenticate(data.username, data.password);
+    await resolveAdmin(data);
     const { error } = await supabaseAdmin
       .from("formula_settings")
       .update({
