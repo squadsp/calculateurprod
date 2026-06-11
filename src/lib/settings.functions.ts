@@ -79,14 +79,14 @@ export const verifyAdmin = createServerFn({ method: "POST" })
   });
 
 const AdminAuthSchema = z.object({
-  username: z.string().max(100),
-  password: z.string().max(200),
+  username: z.string().max(100).optional(),
+  password: z.string().max(200).optional(),
 });
 
 export const listUsers = createServerFn({ method: "POST" })
   .inputValidator((d) => AdminAuthSchema.parse(d))
   .handler(async ({ data }) => {
-    await requireSuperAdmin(data.username, data.password);
+    await resolveSuperAdmin(data);
     const { data: rows, error } = await supabaseAdmin
       .from("app_users")
       .select("username, role, created_at")
@@ -104,7 +104,7 @@ const CreateUserSchema = AdminAuthSchema.extend({
 export const createUser = createServerFn({ method: "POST" })
   .inputValidator((d) => CreateUserSchema.parse(d))
   .handler(async ({ data }) => {
-    await requireSuperAdmin(data.username, data.password);
+    await resolveSuperAdmin(data);
     const hash = await bcrypt.hash(data.newPassword, 10);
     const { error } = await supabaseAdmin.from("app_users").insert({
       username: data.newUsername,
@@ -125,8 +125,8 @@ const DeleteUserSchema = AdminAuthSchema.extend({
 export const deleteUser = createServerFn({ method: "POST" })
   .inputValidator((d) => DeleteUserSchema.parse(d))
   .handler(async ({ data }) => {
-    await requireSuperAdmin(data.username, data.password);
-    if (data.targetUsername === data.username) {
+    const admin = await resolveSuperAdmin(data);
+    if (data.targetUsername === admin.username) {
       throw new Error("Vous ne pouvez pas vous supprimer vous-même");
     }
     const { error } = await supabaseAdmin
@@ -145,7 +145,7 @@ const ChangePasswordSchema = AdminAuthSchema.extend({
 export const changeUserPassword = createServerFn({ method: "POST" })
   .inputValidator((d) => ChangePasswordSchema.parse(d))
   .handler(async ({ data }) => {
-    await requireSuperAdmin(data.username, data.password);
+    await resolveSuperAdmin(data);
     const hash = await bcrypt.hash(data.newPassword, 10);
     const { error } = await supabaseAdmin
       .from("app_users")
