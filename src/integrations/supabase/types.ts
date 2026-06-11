@@ -40,6 +40,7 @@ export type Database = {
       }
       formula_settings: {
         Row: {
+          delay_settings: Json
           delays: Json
           id: number
           mab_components: Json
@@ -50,6 +51,7 @@ export type Database = {
           vf_components: Json
         }
         Insert: {
+          delay_settings?: Json
           delays?: Json
           id?: number
           mab_components?: Json
@@ -60,6 +62,7 @@ export type Database = {
           vf_components?: Json
         }
         Update: {
+          delay_settings?: Json
           delays?: Json
           id?: number
           mab_components?: Json
