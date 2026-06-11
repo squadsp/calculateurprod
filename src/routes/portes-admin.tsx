@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { verifyAdmin } from "@/lib/settings.functions";
+import { login, logout, getSession } from "@/lib/auth.functions";
 import { DEFAULT_PORTES_KEYWORDS, type PortesKeywords } from "@/lib/portesProcessor";
 import { ArrowLeft, Loader2, LogOut, Save, Plus, X, RotateCcw } from "lucide-react";
 
