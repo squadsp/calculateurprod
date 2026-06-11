@@ -250,10 +250,13 @@ const LINE_THRESHOLD: Record<LineKey, keyof Settings["thresholds"]> = {
  * threshold (for display).
  */
 /**
- * Buffer (units) below the threshold at which a week's average is considered
- * "full" — once moyenne >= max - FULL_BUFFER we move on to the next week.
+ * A week is considered "full" (unavailable) when the actual production
+ * across the days present in that week reaches FULL_RATIO of the maximum
+ * capacity for those days. Capacity = (number of days in the week) ×
+ * (daily max from settings). This correctly handles partial weeks (e.g. a
+ * 4-day week has 80% of a 5-day week's max).
  */
-const FULL_BUFFER = 5;
+const FULL_RATIO = 0.8;
 
 export function findFirstAvailableWeek(
   weeks: WeekData[],
@@ -278,8 +281,21 @@ export function findFirstAvailableWeek(
     );
     const weekNumber = Math.floor(diffDays / 7);
     if (weekNumber < minWeek) continue;
-    const moy = w.moyenne[line];
-    if (moy != null && moy >= max - FULL_BUFFER) continue; // within 5 of max → full
+    // Occupancy = sum of actual day values / (days × daily max).
+    // If >= 80% the week is "full" and we skip to the next one.
+    const dayVals = w.days
+      .map((d) => d.values[line])
+      .filter((v): v is number => v != null);
+    if (dayVals.length > 0) {
+      const sum = dayVals.reduce((a, b) => a + b, 0);
+      const capacity = dayVals.length * max;
+      if (capacity > 0 && sum / capacity >= FULL_RATIO) continue;
+    } else {
+      // Fallback to the PDF's "Moyenne" row when no per-day values were
+      // captured (e.g. peinture/PVC read directly from the moyenne row).
+      const moy = w.moyenne[line];
+      if (moy != null && max > 0 && moy / max >= FULL_RATIO) continue;
+    }
     // Pick first day below threshold for the displayed date (fallback: first day).
     let firstDay: Date | null = null;
     for (const d of w.days) {
