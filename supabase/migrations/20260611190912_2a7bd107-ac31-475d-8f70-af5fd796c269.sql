@@ -1,0 +1,1 @@
+CREATE POLICY "Deny all access" ON public.admin_sessions FOR ALL USING (false);
