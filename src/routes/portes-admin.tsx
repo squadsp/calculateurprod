@@ -30,12 +30,42 @@ function loadKeywords(): PortesKeywords {
 
 function PortesAdminPage() {
   const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  const getSess = useServerFn(getSession);
+  const doLogoutFn = useServerFn(logout);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem(ADMIN_KEY) === "1") {
-      setAuthed(true);
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await getSess({ data: undefined });
+        if (mounted && res.session) {
+          setAuthed(true);
+        }
+      } finally {
+        if (mounted) setChecking(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [getSess]);
+
+  const doLogout = async () => {
+    try {
+      await doLogoutFn({ data: undefined });
+    } catch {
+      // ignore
     }
-  }, []);
+    setAuthed(false);
+  };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,10 +78,7 @@ function PortesAdminPage() {
           {authed ? (
             <button
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                sessionStorage.removeItem(ADMIN_KEY);
-                setAuthed(false);
-              }}
+              onClick={doLogout}
             >
               <LogOut className="h-4 w-4" /> Déconnexion
             </button>
