@@ -37,7 +37,7 @@ async function resolveAdminFromCookie(): Promise<{ username: string; role: Role 
   if (error || !data) return null;
   if (new Date(data.expires_at) < new Date()) {
     await supabaseAdmin.from("admin_sessions").delete().eq("token", token);
-    deleteCookie(COOKIE_NAME, { path: "/" });
+    deleteCookie(COOKIE_NAME, { path: "/", sameSite: "none", secure: true });
     return null;
   }
   return { username: data.username, role: data.role as Role };
@@ -75,7 +75,7 @@ export async function createSession(username: string, role: Role): Promise<void>
   setCookie(COOKIE_NAME, token, {
     httpOnly: true,
     secure: true,
-    sameSite: "lax",
+    sameSite: "none",
     maxAge: 60 * 60 * 24 * SESSION_DAYS,
     path: "/",
   });
@@ -86,7 +86,7 @@ export async function destroySession(): Promise<void> {
   if (token) {
     await supabaseAdmin.from("admin_sessions").delete().eq("token", token);
   }
-  deleteCookie(COOKIE_NAME, { path: "/" });
+  deleteCookie(COOKIE_NAME, { path: "/", sameSite: "none", secure: true });
 }
 
 export async function getSessionFromCookie(): Promise<{ username: string; role: Role } | null> {
