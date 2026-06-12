@@ -37,7 +37,7 @@ async function resolveAdminFromCookie(): Promise<{ username: string; role: Role 
   if (error || !data) return null;
   if (new Date(data.expires_at) < new Date()) {
     await supabaseAdmin.from("admin_sessions").delete().eq("token", token);
-    deleteCookie(COOKIE_NAME, { path: "/" });
+    deleteCookie(COOKIE_NAME, { path: "/", sameSite: "none", secure: true });
     return null;
   }
   return { username: data.username, role: data.role as Role };
