@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { getSession } from "@/lib/auth.functions";
 import { DoorOpen, Settings as SettingsIcon, CalendarClock } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -8,12 +10,22 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const [isAdmin, setIsAdmin] = useState(false);
+  const getSess = useServerFn(getSession);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsAdmin(sessionStorage.getItem("trappemab_admin") === "1");
-    }
-  }, []);
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await getSess({ data: undefined });
+        if (mounted) setIsAdmin(!!res.session);
+      } catch {
+        if (mounted) setIsAdmin(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [getSess]);
 
   return (
     <div className="min-h-screen bg-background">
