@@ -42,8 +42,9 @@ function classify(desc: string, kw: PortesKeywords): "keep" | "skip" {
 
   // Special rule: lines with 1" 1/4 are generally kept, but if followed by -digit,
   // only -7" (or -7) is allowed. E.g. 1" 1/4-7" is good, 1" 1/4-6" is not.
+  // Only applied when '1" 1/4' is explicitly listed in the keep list (portes preset).
   const base = '1" 1/4';
-  if (desc.includes(base)) {
+  if (kw.keep.some((k) => k.includes(base)) && desc.includes(base)) {
     const idx = desc.indexOf(base);
     const after = desc.slice(idx + base.length);
     const m = after.match(/^-(\d+)"?/);
