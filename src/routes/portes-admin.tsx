@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { login, logout, getSession } from "@/lib/auth.functions";
 import { DEFAULT_PORTES_KEYWORDS, type PortesKeywords } from "@/lib/portesProcessor";
 import { SettingsNav } from "@/components/SettingsNav";
+import { getCalculatorName, setCalculatorName, getDefaultCalculatorName, type CalculatorKey } from "@/lib/calculatorNames";
 import { ArrowLeft, Loader2, LogOut, Save, Plus, X, RotateCcw } from "lucide-react";
 
 export const Route = createFileRoute("/portes-admin")({
