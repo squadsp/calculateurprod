@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PortesPeintureRouteImport } from './routes/portes-peinture'
 import { Route as PortesJambagesRouteImport } from './routes/portes-jambages'
 import { Route as PortesAdminRouteImport } from './routes/portes-admin'
 import { Route as PortesRouteImport } from './routes/portes'
@@ -18,6 +19,11 @@ import { Route as DelaysRouteImport } from './routes/delays'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
+const PortesPeintureRoute = PortesPeintureRouteImport.update({
+  id: '/portes-peinture',
+  path: '/portes-peinture',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PortesJambagesRoute = PortesJambagesRouteImport.update({
   id: '/portes-jambages',
   path: '/portes-jambages',
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-jambages': typeof PortesJambagesRoute
+  '/portes-peinture': typeof PortesPeintureRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-jambages': typeof PortesJambagesRoute
+  '/portes-peinture': typeof PortesPeintureRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-jambages': typeof PortesJambagesRoute
+  '/portes-peinture': typeof PortesPeintureRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/portes'
     | '/portes-admin'
     | '/portes-jambages'
+    | '/portes-peinture'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/portes'
     | '/portes-admin'
     | '/portes-jambages'
+    | '/portes-peinture'
   id:
     | '__root__'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/portes'
     | '/portes-admin'
     | '/portes-jambages'
+    | '/portes-peinture'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,10 +144,18 @@ export interface RootRouteChildren {
   PortesRoute: typeof PortesRoute
   PortesAdminRoute: typeof PortesAdminRoute
   PortesJambagesRoute: typeof PortesJambagesRoute
+  PortesPeintureRoute: typeof PortesPeintureRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/portes-peinture': {
+      id: '/portes-peinture'
+      path: '/portes-peinture'
+      fullPath: '/portes-peinture'
+      preLoaderRoute: typeof PortesPeintureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/portes-jambages': {
       id: '/portes-jambages'
       path: '/portes-jambages'
@@ -204,6 +224,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortesRoute: PortesRoute,
   PortesAdminRoute: PortesAdminRoute,
   PortesJambagesRoute: PortesJambagesRoute,
+  PortesPeintureRoute: PortesPeintureRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
