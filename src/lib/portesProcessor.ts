@@ -59,9 +59,10 @@ function classify(desc: string, kw: PortesKeywords): "keep" | "skip" {
 export async function processPortesPdf(
   buf: ArrayBuffer,
   keywords: PortesKeywords = DEFAULT_PORTES_KEYWORDS,
-  options: { highlights?: boolean } = {},
+  options: { highlights?: boolean; categorize?: boolean } = {},
 ): Promise<{ bytes: Uint8Array; kept: number; sum: number; replaced: number }> {
   const highlights = options.highlights ?? true;
+  const categorize = options.categorize ?? true;
   const pdfjs = await getPdfjs();
   const loadingTask = pdfjs.getDocument({ data: buf.slice(0) });
   const pdf = await loadingTask.promise;
@@ -285,7 +286,7 @@ export async function processPortesPdf(
 
   // Append a summary page with category × side breakdown so it never
   // overlaps existing content on the source document.
-  {
+  if (categorize) {
     const refPage = outPages[outPages.length - 1];
     const size = refPage ? refPage.getSize() : { width: 612, height: 792 };
     const summary = pdfDoc.addPage([size.width, size.height]);
