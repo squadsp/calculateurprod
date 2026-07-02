@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { login, logout, getSession } from "@/lib/auth.functions";
 import { DEFAULT_PORTES_KEYWORDS, type PortesKeywords } from "@/lib/portesProcessor";
 import { SettingsNav } from "@/components/SettingsNav";
+import { getCalculatorName, setCalculatorName, getDefaultCalculatorName, type CalculatorKey } from "@/lib/calculatorNames";
 import { ArrowLeft, Loader2, LogOut, Save, Plus, X, RotateCcw } from "lucide-react";
 
 export const Route = createFileRoute("/portes-admin")({
@@ -176,20 +177,23 @@ function PortesSettingsEditor({
   showSpecialRule,
 }: {
   heading: string;
-  storageKey: string;
+  storageKey: CalculatorKey;
   defaultKeywords: PortesKeywords;
   showSpecialRule: boolean;
 }) {
   const [kw, setKw] = useState<PortesKeywords>(defaultKeywords);
+  const [name, setName] = useState<string>(getDefaultCalculatorName(storageKey));
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setKw(loadKeywords(storageKey, defaultKeywords));
+    setName(getCalculatorName(storageKey));
   }, [storageKey, defaultKeywords]);
 
   const save = () => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(kw));
+      setCalculatorName(storageKey, name);
       setMsg("Paramètres enregistrés");
       setTimeout(() => setMsg(null), 2000);
     } catch {
@@ -199,6 +203,8 @@ function PortesSettingsEditor({
 
   const reset = () => {
     setKw(defaultKeywords);
+    setName(getDefaultCalculatorName(storageKey));
+    setCalculatorName(storageKey, "");
     localStorage.removeItem(storageKey);
     setMsg("Valeurs par défaut restaurées");
     setTimeout(() => setMsg(null), 2000);
@@ -212,6 +218,19 @@ function PortesSettingsEditor({
           Configurez quelles lignes du PDF sont conservées ou ignorées lors du calcul.
           Les correspondances sont insensibles à la casse.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <label className="block text-base font-semibold mb-1">Nom du calculateur</label>
+        <p className="text-xs text-muted-foreground mb-3">
+          Ce nom apparaît sur la page d'accueil des portes et l'en-tête du calculateur.
+        </p>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={getDefaultCalculatorName(storageKey)}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        />
       </div>
 
       <KeywordList
