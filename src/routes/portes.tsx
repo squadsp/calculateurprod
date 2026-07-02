@@ -1,11 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Settings as SettingsIcon, DoorOpen, PaintBucket } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getCalculatorName } from "@/lib/calculatorNames";
 
 export const Route = createFileRoute("/portes")({
   component: PortesHub,
 });
 
 function PortesHub() {
+  const [portesName, setPortesName] = useState("Portes");
+  const [peintureName, setPeintureName] = useState("Portes Peinture");
+  useEffect(() => {
+    setPortesName(getCalculatorName("portes_keywords"));
+    setPeintureName(getCalculatorName("peinture_keywords"));
+  }, []);
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -41,7 +49,7 @@ function PortesHub() {
               <DoorOpen className="h-10 w-10 text-primary" />
             </div>
             <div>
-              <div className="text-xl font-semibold">Portes</div>
+              <div className="text-xl font-semibold">{portesName}</div>
             </div>
           </Link>
 
@@ -53,7 +61,7 @@ function PortesHub() {
               <PaintBucket className="h-10 w-10 text-primary" />
             </div>
             <div>
-              <div className="text-xl font-semibold">Portes Peinture</div>
+              <div className="text-xl font-semibold">{peintureName}</div>
             </div>
           </Link>
         </div>
