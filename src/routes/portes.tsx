@@ -4,6 +4,8 @@ import { PDFDocument } from "pdf-lib";
 import { ArrowLeft, Settings as SettingsIcon, FileUp, Loader2, AlertCircle, Download, X, Printer } from "lucide-react";
 import { processPortesPdf, DEFAULT_PORTES_KEYWORDS, type PortesKeywords } from "@/lib/portesProcessor";
 
+const EMPTY_KEYWORDS: PortesKeywords = { laminate: [], reject: [], keep: [] };
+
 export const Route = createFileRoute("/portes")({
   component: PortesPage,
 });
@@ -18,23 +20,75 @@ type ProcessedPdf = {
   original: ArrayBuffer;
 };
 
-function loadKeywords(): PortesKeywords {
-  if (typeof window === "undefined") return DEFAULT_PORTES_KEYWORDS;
+function loadKeywords(storageKey: string, fallback: PortesKeywords): PortesKeywords {
+  if (typeof window === "undefined") return fallback;
   try {
-    const raw = localStorage.getItem("portes_keywords");
-    if (!raw) return DEFAULT_PORTES_KEYWORDS;
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<PortesKeywords>;
     return {
-      laminate: parsed.laminate ?? DEFAULT_PORTES_KEYWORDS.laminate,
-      reject: parsed.reject ?? DEFAULT_PORTES_KEYWORDS.reject,
-      keep: parsed.keep ?? DEFAULT_PORTES_KEYWORDS.keep,
+      laminate: parsed.laminate ?? fallback.laminate,
+      reject: parsed.reject ?? fallback.reject,
+      keep: parsed.keep ?? fallback.keep,
     };
   } catch {
-    return DEFAULT_PORTES_KEYWORDS;
+    return fallback;
   }
 }
 
 function PortesPage() {
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Accueil
+          </Link>
+          <h1 className="text-lg font-semibold tracking-tight">Portes &amp; Peinture</h1>
+          <Link
+            to="/portes-admin"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <SettingsIcon className="h-4 w-4" />
+            Paramètres
+          </Link>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-6 py-10 space-y-14">
+        <CalculatorSection
+          title="Calculateur de portes"
+          subtitle="Déposez un ou plusieurs PDF de jambages"
+          storageKey="portes_keywords"
+          defaultKeywords={DEFAULT_PORTES_KEYWORDS}
+          categorize
+        />
+        <div className="border-t border-border" />
+        <CalculatorSection
+          title="Calculateur de peinture"
+          subtitle="Déposez un ou plusieurs PDF"
+          storageKey="peinture_keywords"
+          defaultKeywords={EMPTY_KEYWORDS}
+          categorize={false}
+        />
+      </main>
+    </div>
+  );
+}
+
+function CalculatorSection({
+  title,
+  subtitle,
+  storageKey,
+  defaultKeywords,
+  categorize,
+}: {
+  title: string;
+  subtitle: string;
+  storageKey: string;
+  defaultKeywords: PortesKeywords;
+  categorize: boolean;
+}) {
   const [dragOver, setDragOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,11 +111,11 @@ function PortesPage() {
     }
     setBusy(true);
     try {
-      const kw = loadKeywords();
+      const kw = loadKeywords(storageKey, defaultKeywords);
       const newResults: ProcessedPdf[] = [];
       for (const file of pdfs) {
         const buf = await file.arrayBuffer();
-        const { bytes, kept, sum } = await processPortesPdf(buf, kw, { highlights: highlightsEnabled });
+        const { bytes, kept, sum } = await processPortesPdf(buf, kw, { highlights: highlightsEnabled, categorize });
         const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
         newResults.push({
@@ -81,17 +135,17 @@ function PortesPage() {
     } finally {
       setBusy(false);
     }
-  }, [highlightsEnabled]);
+  }, [highlightsEnabled, storageKey, defaultKeywords, categorize]);
 
   const toggleHighlights = useCallback(async (next: boolean) => {
     setHighlightsEnabled(next);
     if (results.length === 0) return;
     setBusy(true);
     try {
-      const kw = loadKeywords();
+      const kw = loadKeywords(storageKey, defaultKeywords);
       const reprocessed: ProcessedPdf[] = [];
       for (const r of results) {
-        const { bytes, kept, sum } = await processPortesPdf(r.original, kw, { highlights: next });
+        const { bytes, kept, sum } = await processPortesPdf(r.original, kw, { highlights: next, categorize });
         const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
         URL.revokeObjectURL(r.url);
@@ -104,7 +158,7 @@ function PortesPage() {
     } finally {
       setBusy(false);
     }
-  }, [results]);
+  }, [results, storageKey, defaultKeywords, categorize]);
 
   const downloadOne = (r: ProcessedPdf) => {
     const a = document.createElement("a");
@@ -160,30 +214,11 @@ function PortesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Accueil
-          </Link>
-          <h1 className="text-lg font-semibold tracking-tight">Portes</h1>
-          <Link
-            to="/portes-admin"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <SettingsIcon className="h-4 w-4" />
-            Paramètres
-          </Link>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-6 py-10">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold tracking-tight">Calculateur de portes</h2>
-          <p className="mt-2 text-muted-foreground">
-            Déposez un ou plusieurs PDF de jambages
-          </p>
-        </div>
+    <section>
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
+        <p className="mt-2 text-muted-foreground">{subtitle}</p>
+      </div>
 
         <div className="mb-4 flex items-center justify-end gap-2 text-sm">
           <label className="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -282,7 +317,6 @@ function PortesPage() {
             ))}
           </div>
         )}
-      </main>
-    </div>
+    </section>
   );
 }

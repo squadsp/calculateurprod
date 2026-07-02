@@ -42,8 +42,9 @@ function classify(desc: string, kw: PortesKeywords): "keep" | "skip" {
 
   // Special rule: lines with 1" 1/4 are generally kept, but if followed by -digit,
   // only -7" (or -7) is allowed. E.g. 1" 1/4-7" is good, 1" 1/4-6" is not.
+  // Only applied when '1" 1/4' is explicitly listed in the keep list (portes preset).
   const base = '1" 1/4';
-  if (desc.includes(base)) {
+  if (kw.keep.some((k) => k.includes(base)) && desc.includes(base)) {
     const idx = desc.indexOf(base);
     const after = desc.slice(idx + base.length);
     const m = after.match(/^-(\d+)"?/);
@@ -58,9 +59,10 @@ function classify(desc: string, kw: PortesKeywords): "keep" | "skip" {
 export async function processPortesPdf(
   buf: ArrayBuffer,
   keywords: PortesKeywords = DEFAULT_PORTES_KEYWORDS,
-  options: { highlights?: boolean } = {},
+  options: { highlights?: boolean; categorize?: boolean } = {},
 ): Promise<{ bytes: Uint8Array; kept: number; sum: number; replaced: number }> {
   const highlights = options.highlights ?? true;
+  const categorize = options.categorize ?? true;
   const pdfjs = await getPdfjs();
   const loadingTask = pdfjs.getDocument({ data: buf.slice(0) });
   const pdf = await loadingTask.promise;
@@ -284,7 +286,7 @@ export async function processPortesPdf(
 
   // Append a summary page with category × side breakdown so it never
   // overlaps existing content on the source document.
-  {
+  if (categorize) {
     const refPage = outPages[outPages.length - 1];
     const size = refPage ? refPage.getSize() : { width: 612, height: 792 };
     const summary = pdfDoc.addPage([size.width, size.height]);

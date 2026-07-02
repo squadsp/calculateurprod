@@ -10,21 +10,21 @@ export const Route = createFileRoute("/portes-admin")({
   component: PortesAdminPage,
 });
 
-const STORAGE_KEY = "portes_keywords";
+const EMPTY_KEYWORDS: PortesKeywords = { laminate: [], reject: [], keep: [] };
 
-function loadKeywords(): PortesKeywords {
-  if (typeof window === "undefined") return DEFAULT_PORTES_KEYWORDS;
+function loadKeywords(storageKey: string, fallback: PortesKeywords): PortesKeywords {
+  if (typeof window === "undefined") return fallback;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_PORTES_KEYWORDS;
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<PortesKeywords>;
     return {
-      laminate: parsed.laminate ?? DEFAULT_PORTES_KEYWORDS.laminate,
-      reject: parsed.reject ?? DEFAULT_PORTES_KEYWORDS.reject,
-      keep: parsed.keep ?? DEFAULT_PORTES_KEYWORDS.keep,
+      laminate: parsed.laminate ?? fallback.laminate,
+      reject: parsed.reject ?? fallback.reject,
+      keep: parsed.keep ?? fallback.keep,
     };
   } catch {
-    return DEFAULT_PORTES_KEYWORDS;
+    return fallback;
   }
 }
 
@@ -91,7 +91,19 @@ function PortesAdminPage() {
         {authed ? (
           <>
             <SettingsNav />
-            <PortesSettingsEditor />
+            <PortesSettingsEditor
+              heading="Mots-clés du traitement des portes"
+              storageKey="portes_keywords"
+              defaultKeywords={DEFAULT_PORTES_KEYWORDS}
+              showSpecialRule
+            />
+            <div className="my-10 border-t border-border" />
+            <PortesSettingsEditor
+              heading="Mots-clés du traitement de la peinture"
+              storageKey="peinture_keywords"
+              defaultKeywords={EMPTY_KEYWORDS}
+              showSpecialRule={false}
+            />
           </>
         ) : (
           <LoginForm onSuccess={() => setAuthed(true)} />
@@ -157,17 +169,27 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-function PortesSettingsEditor() {
-  const [kw, setKw] = useState<PortesKeywords>(DEFAULT_PORTES_KEYWORDS);
+function PortesSettingsEditor({
+  heading,
+  storageKey,
+  defaultKeywords,
+  showSpecialRule,
+}: {
+  heading: string;
+  storageKey: string;
+  defaultKeywords: PortesKeywords;
+  showSpecialRule: boolean;
+}) {
+  const [kw, setKw] = useState<PortesKeywords>(defaultKeywords);
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setKw(loadKeywords());
-  }, []);
+    setKw(loadKeywords(storageKey, defaultKeywords));
+  }, [storageKey, defaultKeywords]);
 
   const save = () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(kw));
+      localStorage.setItem(storageKey, JSON.stringify(kw));
       setMsg("Paramètres enregistrés");
       setTimeout(() => setMsg(null), 2000);
     } catch {
@@ -176,8 +198,8 @@ function PortesSettingsEditor() {
   };
 
   const reset = () => {
-    setKw(DEFAULT_PORTES_KEYWORDS);
-    localStorage.removeItem(STORAGE_KEY);
+    setKw(defaultKeywords);
+    localStorage.removeItem(storageKey);
     setMsg("Valeurs par défaut restaurées");
     setTimeout(() => setMsg(null), 2000);
   };
@@ -185,7 +207,7 @@ function PortesSettingsEditor() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-semibold">Mots-clés du traitement des portes</h2>
+        <h2 className="text-xl font-semibold">{heading}</h2>
         <p className="text-sm text-muted-foreground mt-1">
           Configurez quelles lignes du PDF sont conservées ou ignorées lors du calcul.
           Les correspondances sont insensibles à la casse.
@@ -210,7 +232,11 @@ function PortesSettingsEditor() {
 
       <KeywordList
         title="Conservés (liste blanche)"
-        description={`Lignes conservées par défaut. Règle spéciale : "1\" 1/4" est conservé sauf si suivi de "-<chiffre>" autre que "-7".`}
+        description={
+          showSpecialRule
+            ? `Lignes conservées par défaut. Règle spéciale : "1\" 1/4" est conservé sauf si suivi de "-<chiffre>" autre que "-7".`
+            : "Lignes conservées si elles contiennent un de ces mots."
+        }
         tone="success"
         items={kw.keep}
         onChange={(v) => setKw((k) => ({ ...k, keep: v }))}
