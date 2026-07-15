@@ -113,7 +113,7 @@ function PortesMachinagePage() {
   const downloadOne = (r: Result) => {
     const a = document.createElement("a");
     a.href = r.url;
-    a.download = `${r.name.replace(/\.(mdb|accdb)$/i, "")} - machinage.pdf`;
+    a.download = `Machinage ${date}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
