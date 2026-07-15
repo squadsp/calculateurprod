@@ -105,6 +105,8 @@ function PortesAdminPage() {
               defaultKeywords={EMPTY_KEYWORDS}
               showSpecialRule={false}
             />
+            <div className="my-10 border-t border-border" />
+            <MachinageNameEditor />
           </>
         ) : (
           <LoginForm onSuccess={() => setAuthed(true)} />
