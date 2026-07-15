@@ -1,5 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import MDBReader from "mdb-reader";
+// Force the browser build directly — Vite's dep prebundler otherwise resolves
+// the Node build (which pulls readable-stream/md5.js and crashes at runtime).
+import MDBReader from "mdb-reader/lib/browser/index.js";
 
 export type MachinageRow = {
   id: string;
