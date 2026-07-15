@@ -1,6 +1,7 @@
 const NAME_KEYS = {
-  portes_keywords: { storage: "portes_name", default: "Portes" },
+  portes_keywords: { storage: "portes_name", default: "Jambage" },
   peinture_keywords: { storage: "peinture_name", default: "Portes Peinture" },
+  machinage: { storage: "machinage_name", default: "Machinage" },
 } as const;
 
 export type CalculatorKey = keyof typeof NAME_KEYS;
