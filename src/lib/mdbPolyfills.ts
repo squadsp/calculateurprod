@@ -1,8 +1,5 @@
-// Force resolution to the npm packages (trailing slash) so the SSR/worker
-// bundle doesn't externalize them to `__vite-browser-external`.
-import { Buffer as BufferPolyfill } from "buffer/";
-// @ts-expect-error no types for process/browser subpath
-import processPolyfill from "process/browser";
+import { Buffer as BufferPolyfill } from "buffer";
+import processPolyfill from "process";
 
 const g = globalThis as unknown as {
   Buffer?: unknown;
