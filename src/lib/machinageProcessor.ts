@@ -1,11 +1,19 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import MDBReader from "mdb-reader";
 import { Buffer as BufferPolyfill } from "buffer";
+import processPolyfill from "process";
 
 // mdb-reader's browser build still relies on the Node `Buffer` global. Expose it.
 if (typeof globalThis !== "undefined" && typeof (globalThis as unknown as { Buffer?: unknown }).Buffer === "undefined") {
   (globalThis as unknown as { Buffer: typeof BufferPolyfill }).Buffer = BufferPolyfill;
 }
+if (typeof globalThis !== "undefined") {
+  const g = globalThis as unknown as { process?: { version?: string; browser?: boolean; nextTick?: (cb: () => void) => void } };
+  if (!g.process) g.process = processPolyfill as unknown as typeof g.process;
+  if (g.process && !g.process.version) g.process.version = "v16.0.0";
+  if (g.process) g.process.browser = true;
+}
+// Import after polyfills so mdb-reader's transitive deps (readable-stream) see `process`.
+const { default: MDBReader } = await import("mdb-reader");
 
 export type MachinageRow = {
   id: string;
