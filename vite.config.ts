@@ -12,4 +12,11 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  vite: {
+    optimizeDeps: {
+      // mdb-reader ships separate node/browser builds; force esbuild's prebundle
+      // to use the browser entry so we don't pull in readable-stream/md5.js.
+      esbuildOptions: { conditions: ["browser", "module", "default"] },
+    },
+  },
 });
