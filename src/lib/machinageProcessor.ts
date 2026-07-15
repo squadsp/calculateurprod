@@ -84,9 +84,9 @@ export function extractMachinageRows(
     );
   }
 
-  const rows = table.getData<Record<string, unknown>>({
+  const rows = table.getData({
     columns: [...TARGET_COLUMNS],
-  });
+  }) as Array<Record<string, unknown>>;
 
   const kept: MachinageRow[] = [];
   for (const r of rows) {
