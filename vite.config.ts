@@ -12,4 +12,14 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  vite: {
+    resolve: {
+      alias: {
+        // Force the npm `buffer`/`process` polyfills instead of vite's browser-external stub,
+        // which is required by mdb-reader's readable-stream dependency.
+        buffer: "buffer/index.js",
+        process: "process/browser.js",
+      },
+    },
+  },
 });
