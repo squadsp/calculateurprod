@@ -1,5 +1,11 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import MDBReader from "mdb-reader";
+import { Buffer as BufferPolyfill } from "buffer";
+
+// mdb-reader's browser build still relies on the Node `Buffer` global. Expose it.
+if (typeof globalThis !== "undefined" && typeof (globalThis as unknown as { Buffer?: unknown }).Buffer === "undefined") {
+  (globalThis as unknown as { Buffer: typeof BufferPolyfill }).Buffer = BufferPolyfill;
+}
 
 export type MachinageRow = {
   id: string;
@@ -75,8 +81,8 @@ export function extractMachinageRows(
   fileBuffer: ArrayBuffer,
   targetDate: Date,
 ): MachinageRow[] {
-  const buf = Buffer.from(fileBuffer);
-  const reader = new MDBReader(buf);
+  const buf = BufferPolyfill.from(new Uint8Array(fileBuffer));
+  const reader = new MDBReader(buf as unknown as Buffer);
   const table = findMatchingTable(reader);
   if (!table) {
     throw new Error(
