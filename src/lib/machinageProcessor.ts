@@ -1,7 +1,5 @@
-import "./mdbPolyfills";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import MDBReader from "mdb-reader";
-import { Buffer as BufferPolyfill } from "buffer";
 
 export type MachinageRow = {
   id: string;
@@ -87,7 +85,9 @@ export function extractMachinageRows(
   fileBuffer: ArrayBuffer,
   targetDate: Date,
 ): MachinageRow[] {
-  const buf = BufferPolyfill.from(new Uint8Array(fileBuffer));
+  // mdb-reader's browser build accepts a Uint8Array; the declared `Buffer`
+  // type is only relevant for the Node build.
+  const buf = new Uint8Array(fileBuffer);
   const reader = new MDBReader(buf as unknown as Buffer);
   const table = findMatchingTable(reader);
   if (!table) {
