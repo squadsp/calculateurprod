@@ -1,11 +1,7 @@
+import "./mdbPolyfills";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import MDBReader from "mdb-reader";
 import { Buffer as BufferPolyfill } from "buffer";
-
-// mdb-reader's browser build still relies on the Node `Buffer` global. Expose it.
-if (typeof globalThis !== "undefined" && typeof (globalThis as unknown as { Buffer?: unknown }).Buffer === "undefined") {
-  (globalThis as unknown as { Buffer: typeof BufferPolyfill }).Buffer = BufferPolyfill;
-}
 
 export type MachinageRow = {
   id: string;
