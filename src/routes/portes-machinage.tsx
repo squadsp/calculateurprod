@@ -178,7 +178,7 @@ function PortesMachinagePage() {
       </header>
       <main className="max-w-6xl mx-auto px-6 py-10">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold tracking-tight">Extracteur — {name}</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{name}</h2>
           <p className="mt-2 text-muted-foreground">
             Déposez un fichier Access (.mdb) et choisissez une date pour extraire les lignes « Trous 3 1/4 ».
           </p>
