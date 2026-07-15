@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Settings as SettingsIcon, FileUp, Loader2, AlertCircle, Download, Printer, X, CalendarIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCalculatorName } from "@/lib/calculatorNames";
-import { extractMachinageRows, buildMachinagePdf, type MachinageRow } from "@/lib/machinageProcessor";
+import { processMachinageSources, type MachinageRow } from "@/lib/machinage.functions";
 
 export const Route = createFileRoute("/portes-machinage")({
   component: PortesMachinagePage,
@@ -17,7 +18,7 @@ type Result = {
   rows: MachinageRow[];
 };
 
-type Source = { id: string; name: string; buffer: ArrayBuffer };
+type Source = { id: string; name: string; base64: string };
 
 function todayIso() {
   const d = new Date();
@@ -25,7 +26,32 @@ function todayIso() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return window.btoa(binary);
+}
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return bytes;
+}
+
 function PortesMachinagePage() {
+  const processSources = useServerFn(processMachinageSources);
   const [name, setName] = useState("Machinage");
   useEffect(() => { setName(getCalculatorName("machinage")); }, []);
 
@@ -57,7 +83,7 @@ function PortesMachinagePage() {
       newSources.push({
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         name: file.name,
-        buffer: await file.arrayBuffer(),
+        base64: arrayBufferToBase64(await file.arrayBuffer()),
       });
     }
     setSources((prev) => [...prev, ...newSources]);
@@ -77,20 +103,19 @@ function PortesMachinagePage() {
     setError(null);
     (async () => {
       try {
-        const out: Result[] = [];
-        for (const s of sources) {
-          const rows = extractMachinageRows(s.buffer, targetDate);
-          const bytes = await buildMachinagePdf(rows, targetDate);
+        const response = await processSources({ data: { sources, date } });
+        const out = response.results.map((result): Result => {
+          const bytes = base64ToUint8Array(result.pdfBase64);
           const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
-          out.push({
-            id: s.id,
-            name: s.name,
+          return {
+            id: result.id,
+            name: result.name,
             url: URL.createObjectURL(blob),
-            count: rows.length,
+            count: result.count,
             bytes,
-            rows,
-          });
-        }
+            rows: result.rows,
+          };
+        });
         if (cancelled) {
           out.forEach((r) => URL.revokeObjectURL(r.url));
           return;
@@ -108,7 +133,7 @@ function PortesMachinagePage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [sources, targetDate]);
+  }, [sources, date, targetDate, processSources]);
 
   const downloadOne = (r: Result) => {
     const a = document.createElement("a");
