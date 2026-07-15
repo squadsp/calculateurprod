@@ -47,7 +47,17 @@ function matchesDate(cell: unknown, target: Date): boolean {
   const s = String(cell);
   const iso = `${y}-${pad2(m)}-${pad2(d)}`;
   if (s.includes(iso)) return true;
-  // Try parsing as Date
+  // DD/MM/YYYY or D/M/YY (also with '-' separator)
+  const dmy = s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (dmy) {
+    let [, dd, mm, yy] = dmy;
+    let year = parseInt(yy, 10);
+    if (year < 100) year += 2000;
+    if (parseInt(dd, 10) === d && parseInt(mm, 10) === m && year === y) return true;
+    // Also try MM/DD/YYYY interpretation
+    if (parseInt(mm, 10) === d && parseInt(dd, 10) === m && year === y) return true;
+  }
+  // Fallback: native Date parsing
   const parsed = new Date(s);
   if (!Number.isNaN(parsed.getTime())) {
     return (
@@ -93,7 +103,8 @@ export function extractMachinageRows(
   const kept: MachinageRow[] = [];
   for (const r of rows) {
     const opt3 = toStr(r.Opt3);
-    if (!/trous\s*3\s*1\/4/i.test(opt3)) continue;
+    // Match "3 1/4" with flexible spacing; the word "trous" is optional.
+    if (!/3\s*1\s*\/\s*4/i.test(opt3)) continue;
     if (!matchesDate(r.Ligne1, targetDate)) continue;
     kept.push({
       id: toStr(r.Code),
