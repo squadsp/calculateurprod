@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PortesPeintureRouteImport } from './routes/portes-peinture'
+import { Route as PortesMachinageRouteImport } from './routes/portes-machinage'
 import { Route as PortesJambagesRouteImport } from './routes/portes-jambages'
 import { Route as PortesAdminRouteImport } from './routes/portes-admin'
 import { Route as PortesRouteImport } from './routes/portes'
@@ -22,6 +23,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const PortesPeintureRoute = PortesPeintureRouteImport.update({
   id: '/portes-peinture',
   path: '/portes-peinture',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortesMachinageRoute = PortesMachinageRouteImport.update({
+  id: '/portes-machinage',
+  path: '/portes-machinage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortesJambagesRoute = PortesJambagesRouteImport.update({
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-jambages': typeof PortesJambagesRoute
+  '/portes-machinage': typeof PortesMachinageRoute
   '/portes-peinture': typeof PortesPeintureRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-jambages': typeof PortesJambagesRoute
+  '/portes-machinage': typeof PortesMachinageRoute
   '/portes-peinture': typeof PortesPeintureRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-jambages': typeof PortesJambagesRoute
+  '/portes-machinage': typeof PortesMachinageRoute
   '/portes-peinture': typeof PortesPeintureRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/portes'
     | '/portes-admin'
     | '/portes-jambages'
+    | '/portes-machinage'
     | '/portes-peinture'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/portes'
     | '/portes-admin'
     | '/portes-jambages'
+    | '/portes-machinage'
     | '/portes-peinture'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/portes'
     | '/portes-admin'
     | '/portes-jambages'
+    | '/portes-machinage'
     | '/portes-peinture'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   PortesRoute: typeof PortesRoute
   PortesAdminRoute: typeof PortesAdminRoute
   PortesJambagesRoute: typeof PortesJambagesRoute
+  PortesMachinageRoute: typeof PortesMachinageRoute
   PortesPeintureRoute: typeof PortesPeintureRoute
 }
 
@@ -154,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/portes-peinture'
       fullPath: '/portes-peinture'
       preLoaderRoute: typeof PortesPeintureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portes-machinage': {
+      id: '/portes-machinage'
+      path: '/portes-machinage'
+      fullPath: '/portes-machinage'
+      preLoaderRoute: typeof PortesMachinageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portes-jambages': {
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortesRoute: PortesRoute,
   PortesAdminRoute: PortesAdminRoute,
   PortesJambagesRoute: PortesJambagesRoute,
+  PortesMachinageRoute: PortesMachinageRoute,
   PortesPeintureRoute: PortesPeintureRoute,
 }
 export const routeTree = rootRouteImport
