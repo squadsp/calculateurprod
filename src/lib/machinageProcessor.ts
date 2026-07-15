@@ -108,10 +108,11 @@ export function extractMachinageRows(
     if (!/3\s*1\s*\/\s*4/i.test(opt3)) continue;
     opt3Hits++;
     if (!matchesDate(r.Ligne1, targetDate)) continue;
+    // Always show the selected date only (formatted), never the raw Ligne1 value.
     kept.push({
       id: toStr(r.Code),
       sequence: toStr(r.Sequence),
-      date: toStr(r.Ligne1),
+      date: formatDate(targetDate),
       machinage: opt3,
     });
   }
