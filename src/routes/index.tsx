@@ -81,7 +81,7 @@ function HomePage() {
 
           <Link
             to="/portes"
-            className="group rounded-2xl border-2 border-border bg-card p-8 hover:border-primary hover:shadow-lg transition-all flex flex-col items-center text-center gap-4"
+            className="group rounded-2xl border-2 border-foreground/40 bg-card p-8 sm:p-10 hover:border-primary/80 hover:shadow-lg transition-all flex flex-col items-center text-center gap-5"
           >
             <div className="rounded-full bg-primary/10 p-5 group-hover:bg-primary/20 transition-colors">
               <DoorOpen className="h-10 w-10 text-primary" />
