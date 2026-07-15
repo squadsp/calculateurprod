@@ -1,7 +1,7 @@
 import "./mdbPolyfills";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import MDBReader from "mdb-reader";
-import { Buffer as BufferPolyfill } from "buffer";
+import { Buffer as BufferPolyfill } from "buffer/";
 
 export type MachinageRow = {
   id: string;
