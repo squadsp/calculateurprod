@@ -1,7 +1,7 @@
 import "./mdbPolyfills";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import MDBReader from "mdb-reader";
-import { Buffer as BufferPolyfill } from "buffer";
+import { Buffer as BufferPolyfill } from "buffer/";
 
 export type MachinageRow = {
   id: string;
@@ -47,7 +47,17 @@ function matchesDate(cell: unknown, target: Date): boolean {
   const s = String(cell);
   const iso = `${y}-${pad2(m)}-${pad2(d)}`;
   if (s.includes(iso)) return true;
-  // Try parsing as Date
+  // DD/MM/YYYY or D/M/YY (also with '-' separator)
+  const dmy = s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (dmy) {
+    let [, dd, mm, yy] = dmy;
+    let year = parseInt(yy, 10);
+    if (year < 100) year += 2000;
+    if (parseInt(dd, 10) === d && parseInt(mm, 10) === m && year === y) return true;
+    // Also try MM/DD/YYYY interpretation
+    if (parseInt(mm, 10) === d && parseInt(dd, 10) === m && year === y) return true;
+  }
+  // Fallback: native Date parsing
   const parsed = new Date(s);
   if (!Number.isNaN(parsed.getTime())) {
     return (
@@ -91,9 +101,12 @@ export function extractMachinageRows(
   }) as Array<Record<string, unknown>>;
 
   const kept: MachinageRow[] = [];
+  let opt3Hits = 0;
   for (const r of rows) {
     const opt3 = toStr(r.Opt3);
-    if (!/trous\s*3\s*1\/4/i.test(opt3)) continue;
+    // Match "3 1/4" with flexible spacing; the word "trous" is optional.
+    if (!/3\s*1\s*\/\s*4/i.test(opt3)) continue;
+    opt3Hits++;
     if (!matchesDate(r.Ligne1, targetDate)) continue;
     kept.push({
       id: toStr(r.Code),
@@ -101,6 +114,16 @@ export function extractMachinageRows(
       date: toStr(r.Ligne1),
       machinage: opt3,
     });
+  }
+  if (kept.length === 0) {
+    // Debug aid: log a few samples so we can diagnose format mismatches.
+    const sample = rows.slice(0, 5).map((r) => ({
+      Ligne1: r.Ligne1,
+      Ligne1_type: r.Ligne1 instanceof Date ? "Date" : typeof r.Ligne1,
+      Opt3: r.Opt3,
+    }));
+    // eslint-disable-next-line no-console
+    console.warn("[machinage] 0 rows kept. total=", rows.length, "opt3Hits=", opt3Hits, "target=", targetDate.toISOString(), "sample=", sample);
   }
   return kept;
 }
