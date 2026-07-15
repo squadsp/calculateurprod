@@ -87,10 +87,9 @@ export function extractMachinageRows(
   fileBuffer: ArrayBuffer,
   targetDate: Date,
 ): MachinageRow[] {
-  // mdb-reader's browser build accepts a Uint8Array; the declared `Buffer`
-  // type is only relevant for the Node build.
-  const buf = new Uint8Array(fileBuffer);
-  const reader = new MDBReader(buf as unknown as Buffer);
+  // Server runs in Node — mdb-reader's Node build requires a real Buffer.
+  const buf = Buffer.from(fileBuffer);
+  const reader = new MDBReader(buf);
   const table = findMatchingTable(reader);
   if (!table) {
     throw new Error(
