@@ -17,6 +17,8 @@ type Result = {
   rows: MachinageRow[];
 };
 
+type Source = { id: string; name: string; buffer: ArrayBuffer };
+
 function todayIso() {
   const d = new Date();
   const p = (n: number) => (n < 10 ? `0${n}` : `${n}`);
@@ -32,6 +34,7 @@ function PortesMachinagePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<Result[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
 
   useEffect(() => () => { results.forEach((r) => URL.revokeObjectURL(r.url)); },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -49,31 +52,63 @@ function PortesMachinagePage() {
       setError("Veuillez déposer un fichier .mdb ou .accdb.");
       return;
     }
-    setBusy(true);
-    try {
-      const out: Result[] = [];
-      for (const file of mdbs) {
-        const buf = await file.arrayBuffer();
-        const rows = extractMachinageRows(buf, targetDate);
-        const bytes = await buildMachinagePdf(rows, targetDate);
-        const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
-        out.push({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          name: file.name,
-          url: URL.createObjectURL(blob),
-          count: rows.length,
-          bytes,
-          rows,
-        });
-      }
-      setResults((prev) => [...prev, ...out]);
-    } catch (e) {
-      console.error(e);
-      setError(e instanceof Error ? e.message : "Erreur lors du traitement du fichier");
-    } finally {
-      setBusy(false);
+    const newSources: Source[] = [];
+    for (const file of mdbs) {
+      newSources.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        name: file.name,
+        buffer: await file.arrayBuffer(),
+      });
     }
-  }, [targetDate]);
+    setSources((prev) => [...prev, ...newSources]);
+  }, []);
+
+  // Reprocess all uploaded sources whenever the date (or the list of sources) changes.
+  useEffect(() => {
+    let cancelled = false;
+    if (sources.length === 0) {
+      setResults((prev) => {
+        prev.forEach((r) => URL.revokeObjectURL(r.url));
+        return [];
+      });
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    (async () => {
+      try {
+        const out: Result[] = [];
+        for (const s of sources) {
+          const rows = extractMachinageRows(s.buffer, targetDate);
+          const bytes = await buildMachinagePdf(rows, targetDate);
+          const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
+          out.push({
+            id: s.id,
+            name: s.name,
+            url: URL.createObjectURL(blob),
+            count: rows.length,
+            bytes,
+            rows,
+          });
+        }
+        if (cancelled) {
+          out.forEach((r) => URL.revokeObjectURL(r.url));
+          return;
+        }
+        setResults((prev) => {
+          prev.forEach((r) => URL.revokeObjectURL(r.url));
+          return out;
+        });
+      } catch (e) {
+        if (cancelled) return;
+        console.error(e);
+        setError(e instanceof Error ? e.message : "Erreur lors du traitement du fichier");
+      } finally {
+        if (!cancelled) setBusy(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sources, targetDate]);
 
   const downloadOne = (r: Result) => {
     const a = document.createElement("a");
@@ -100,11 +135,7 @@ function PortesMachinagePage() {
   };
 
   const removeOne = (id: string) => {
-    setResults((prev) => {
-      const t = prev.find((r) => r.id === id);
-      if (t) URL.revokeObjectURL(t.url);
-      return prev.filter((r) => r.id !== id);
-    });
+    setSources((prev) => prev.filter((s) => s.id !== id));
   };
 
   return (
