@@ -101,10 +101,12 @@ export function extractMachinageRows(
   }) as Array<Record<string, unknown>>;
 
   const kept: MachinageRow[] = [];
+  let opt3Hits = 0;
   for (const r of rows) {
     const opt3 = toStr(r.Opt3);
     // Match "3 1/4" with flexible spacing; the word "trous" is optional.
     if (!/3\s*1\s*\/\s*4/i.test(opt3)) continue;
+    opt3Hits++;
     if (!matchesDate(r.Ligne1, targetDate)) continue;
     kept.push({
       id: toStr(r.Code),
@@ -112,6 +114,16 @@ export function extractMachinageRows(
       date: toStr(r.Ligne1),
       machinage: opt3,
     });
+  }
+  if (kept.length === 0) {
+    // Debug aid: log a few samples so we can diagnose format mismatches.
+    const sample = rows.slice(0, 5).map((r) => ({
+      Ligne1: r.Ligne1,
+      Ligne1_type: r.Ligne1 instanceof Date ? "Date" : typeof r.Ligne1,
+      Opt3: r.Opt3,
+    }));
+    // eslint-disable-next-line no-console
+    console.warn("[machinage] 0 rows kept. total=", rows.length, "opt3Hits=", opt3Hits, "target=", targetDate.toISOString(), "sample=", sample);
   }
   return kept;
 }
