@@ -110,8 +110,8 @@ export function extractMachinageRows(
     opt3Hits++;
     if (!matchesDate(r.Ligne1, targetDate)) continue;
     const sequence = toStr(r.Sequence);
-    // Only keep rows whose sequence starts with "LA".
-    if (!sequence.toUpperCase().startsWith("LA")) continue;
+    // Keep sequences starting with LA or LB.
+    if (!/^L[AB]/i.test(sequence)) continue;
     // Always show the selected date only (formatted), never the raw Ligne1 value.
     kept.push({
       id: toStr(r.Code),
