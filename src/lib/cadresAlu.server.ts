@@ -340,13 +340,25 @@ const J_MARKER_RE = /^[\s.:,'"«»\-–]*(?:en\s*)?[«"']?\s*j\b/i;
 const J_DESCRIPTION_RE =
   /\b(?:avec|en)\s*[«"']?\s*j\s*[»"']?(?:\s+int[ée]gr[ée]?)?/i;
 
-/** Vrai si la ligne contient au moins une moulure à brique qui n'est PAS « en J ». */
+const NON_INSTALLE_RE = /non[\s\-]?install[ée]?/i;
+
+/** Vrai si « non installé » touche immédiatement la mention (avant ou après). */
+function isNonInstalleAdjacent(text: string, m: RegExpExecArray): boolean {
+  const before = text.slice(0, m.index);
+  const after = text.slice(m.index + m[0].length);
+  if (NON_INSTALLE_RE.test(before.slice(-20))) return true;
+  if (NON_INSTALLE_RE.test(after.slice(0, 20))) return true;
+  return false;
+}
+
+/** Vrai si la ligne contient au moins une moulure à brique qui n'est PAS « en J » ni « non installé ». */
 function hasMoulureBrique(value: string): boolean {
   const text = value ?? "";
   MOULURE_BRIQUE_RE.lastIndex = 0;
   let m: RegExpExecArray | null;
   let found = false;
   while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
+    if (isNonInstalleAdjacent(text, m)) continue;
     const after = text.slice(m.index + m[0].length);
     if (J_MARKER_RE.test(after) || J_DESCRIPTION_RE.test(after)) continue;
     found = true;
@@ -360,6 +372,7 @@ function hasMoulureBriqueEnJ(value: string): boolean {
   MOULURE_BRIQUE_RE.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
+    if (isNonInstalleAdjacent(text, m)) continue;
     const after = text.slice(m.index + m[0].length);
     if (J_MARKER_RE.test(after) || J_DESCRIPTION_RE.test(after)) return true;
   }
@@ -376,6 +389,7 @@ function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
     MOULURE_BRIQUE_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
+      if (isNonInstalleAdjacent(text, m)) continue;
       const after = text.slice(m.index + m[0].length);
       if (/non[\s-]*(standard|std)\b/i.test(after)) return true;
     }
