@@ -902,7 +902,8 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
         name.unshift(w);
       }
       if (name.length) return `${titleCase(name.join(" "))} ${code}`;
-      return code;
+      const ref = REF_BY_CODE.get(m[1]);
+      return ref ? `${ref.name} ${code}` : code;
     }
   }
 
