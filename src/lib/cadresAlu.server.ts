@@ -801,9 +801,55 @@ const titleCase = (s: string) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
 
+/** Texte normalisé pour comparer avec les clés de la liste de référence. */
+const normText = (s: string) =>
+  ` ${s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z ]/g, " ")
+    .replace(/\s+/g, " ")} `;
+
+// Index premier-mot → couleurs de référence (les plus longues d'abord).
+const REF_BY_FIRST_WORD = (() => {
+  const map = new Map<string, typeof COULEURS_REF>();
+  for (const ref of COULEURS_REF) {
+    const w = ref.key.split(" ")[0];
+    if (!w) continue;
+    const arr = map.get(w) ?? [];
+    arr.push(ref);
+    map.set(w, arr);
+  }
+  return map;
+})();
+
+/** Cherche une couleur connue de la liste de référence dans le texte. */
+function matchCouleurRef(text: string): string {
+  const t = normText(text);
+  if (t.length < 6) return "";
+  for (const word of t.split(" ").filter(Boolean)) {
+    const candidates = REF_BY_FIRST_WORD.get(word);
+    if (!candidates) continue;
+    for (const ref of candidates) {
+      if (ref.key.length < 4) continue;
+      if (!t.includes(ref.key)) continue;
+      return ref.code ? `${ref.name} ${ref.code}` : ref.name;
+    }
+  }
+  return "";
+}
+
 /** Couleur = nom + code, ex. « Noir P-525 » ou « Brun Commercial P-562 ». */
 function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
   const all = [aluCell, ...values, ...Object.values(row).map(toStr)].filter(Boolean);
+
+  // La description (aluCell) est vérifiée en premier, puis les options, puis
+  // le reste de la ligne : liste de référence des couleurs développées chez
+  // Laurentides.
+  for (const src of all) {
+    const hit = matchCouleurRef(src);
+    if (hit) return hit;
+  }
 
   // Cas particulier : « développement de couleur » — la vraie couleur se
   // trouve plus loin sous la forme « couleur spécial Gentek <nom> <code> ».
