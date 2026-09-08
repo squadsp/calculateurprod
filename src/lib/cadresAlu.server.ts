@@ -369,14 +369,13 @@ function hasMoulureBriqueEnJ(value: string): boolean {
  * mention « moulure à brique » (pas nécessairement collée à elle).
  */
 function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
-  const texts = [...allRowValues, allRowValues.join(" | ")];
-  return texts.some((v) => {
+  return allRowValues.some((v) => {
     const text = v ?? "";
     MOULURE_BRIQUE_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
       const after = text.slice(m.index + m[0].length);
-      if (/non[\s-]*std/i.test(after)) return true;
+      if (/non[\s-]*standard/i.test(after)) return true;
     }
     return false;
   });
