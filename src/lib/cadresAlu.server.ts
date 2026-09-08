@@ -314,6 +314,17 @@ function findDifferentColor(values: string[], mainColor: string): string {
 }
 
 const MEASURE_RE = /\d+\s+\d+\/\d+\s*"?|\d+\/\d+\s*"?|\d+\s*"/;
+/** Deux mesures reliées par « x » (ex. 10 1/2 x 30 1/4). */
+const DOUBLE_MEASURE_RE = new RegExp(
+  `(?:${MEASURE_RE.source})(?:\\s*[x×]\\s*(?:${MEASURE_RE.source}))+`,
+  "i",
+);
+function matchMesure(text: string): string {
+  const dbl = text.match(DOUBLE_MEASURE_RE);
+  if (dbl) return dbl[0].trim();
+  const single = text.match(MEASURE_RE);
+  return single ? single[0].trim() : "";
+}
 
 /** Toutes les mentions de moulure à brique (M.A.B), variantes incluses. */
 const MOULURE_BRIQUE_RE =
