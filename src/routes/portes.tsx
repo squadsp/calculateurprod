@@ -9,11 +9,11 @@ export const Route = createFileRoute("/portes")({
 
 function PortesHub() {
   const [portesName, setPortesName] = useState("Jambage");
-  const [peintureName, setPeintureName] = useState("Portes Peinture");
+  const [aluminiumName, setAluminiumName] = useState("Portes Aluminium");
   const [machinageName, setMachinageName] = useState("Machinage");
   useEffect(() => {
     setPortesName(getCalculatorName("portes_keywords"));
-    setPeintureName(getCalculatorName("peinture_keywords"));
+    setAluminiumName(getCalculatorName("aluminium_keywords"));
     setMachinageName(getCalculatorName("machinage"));
   }, []);
   return (
@@ -56,14 +56,14 @@ function PortesHub() {
           </Link>
 
           <Link
-            to="/portes-peinture"
+            to="/portes-aluminium"
             className="group rounded-2xl border-2 border-border bg-card p-8 hover:border-primary hover:shadow-lg transition-all flex flex-col items-center text-center gap-4"
           >
             <div className="rounded-full bg-primary/10 p-5 group-hover:bg-primary/20 transition-colors">
               <PaintBucket className="h-10 w-10 text-primary" />
             </div>
             <div>
-              <div className="text-xl font-semibold">{peintureName}</div>
+              <div className="text-xl font-semibold">{aluminiumName}</div>
             </div>
           </Link>
 

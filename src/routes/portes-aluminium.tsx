@@ -7,7 +7,7 @@ import { getCalculatorName } from "@/lib/calculatorNames";
 
 const EMPTY_KEYWORDS: PortesKeywords = { laminate: [], reject: [], keep: [] };
 
-export const Route = createFileRoute("/portes-peinture")({
+export const Route = createFileRoute("/portes-aluminium")({
   component: PortesPeinturePage,
 });
 

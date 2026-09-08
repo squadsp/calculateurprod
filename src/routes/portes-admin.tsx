@@ -100,8 +100,8 @@ function PortesAdminPage() {
             />
             <div className="my-10 border-t border-border" />
             <PortesSettingsEditor
-              heading="Mots-clés du traitement de la peinture"
-              storageKey="peinture_keywords"
+              heading="Mots-clés du traitement de l'aluminium"
+              storageKey="aluminium_keywords"
               defaultKeywords={EMPTY_KEYWORDS}
               showSpecialRule={false}
             />
