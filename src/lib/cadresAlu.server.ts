@@ -648,7 +648,8 @@ export function extractCadreAluRows(
     const allRowValues = Object.values(r).map(toStr).filter(Boolean);
     const dims = parseDimension(toStr(r.Dimension));
     const epaisseurs = extractEpaisseurs(values);
-    const epaisseurJambage = epaisseurs[0] ?? "";
+    const epaisseurJambage = extractPleineProfondeur(values) || epaisseurs[0] || "";
+    const hauteurJambage = extractPleineHauteur(values, dims.hauteur);
     const sens = extractSens(values);
 
     const couleur = extractCouleur(r, values, aluCell);
@@ -659,7 +660,7 @@ export function extractCadreAluRows(
       tete: extractTete(toStr(r.Dimension)),
       jambageLargeur: extractJambageLargeur(aluCell, values),
       jambageEpaisseur: epaisseurJambage,
-      jambageHauteur: dims.hauteur,
+      jambageHauteur: hauteurJambage,
       astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens, couleur),
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
