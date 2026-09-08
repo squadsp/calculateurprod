@@ -340,6 +340,18 @@ function hasMoulureBrique(value: string): boolean {
   return found;
 }
 
+/** Vrai si au moins une moulure à brique de la ligne est décrite comme étant en J. */
+function hasMoulureBriqueEnJ(value: string): boolean {
+  const text = value ?? "";
+  MOULURE_BRIQUE_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
+    const after = text.slice(m.index + m[0].length);
+    if (J_MARKER_RE.test(after) || J_DESCRIPTION_RE.test(after)) return true;
+  }
+  return false;
+}
+
 
 /**
  * Vrai seulement si les mots « moulure à brique non standard » font partie
@@ -394,13 +406,7 @@ function buildAstragaleDimMab(
   if (astragale) parts.push(astragale);
   const moulureTypes = new Set<string>();
   const wholeRow = allRowValues.join(" | ");
-  const hasJBrickDescription =
-    /(?:moulure|moul\.?)\s*(?:[àa]|de|d')?\s*brique|\bm\.?\s*a\.?\s*b\.?\b/i.test(wholeRow) &&
-    (J_MARKER_RE.test(
-      wholeRow.slice(
-        wholeRow.search(/(?:moulure|moul\.?)\s*(?:[àa]|de|d')?\s*brique|\bm\.?\s*a\.?\s*b\.?\b/i),
-      ),
-    ) || J_DESCRIPTION_RE.test(wholeRow));
+  const hasJBrickDescription = hasMoulureBriqueEnJ(wholeRow);
   for (const v of values) {
     if (/moulure\s+de\s+retenu/i.test(v)) moulureTypes.add("Moulure de retenu");
     // Toute description « avec J / J intégré » de la même ligne annule la moulure à brique.
