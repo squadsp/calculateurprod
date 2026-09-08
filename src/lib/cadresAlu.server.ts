@@ -1064,8 +1064,31 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
   // le mot-couleur puis les mots descriptifs qui suivent.
   if (!result) {
     const pickWord = (text: string): string => {
+      // 1) Nom de couleur en capitales : on capture tous les mots en
+      //    capitales qui suivent directement (ex. BLEU ARDOISE FONCE).
       for (const c of COLOR_WORDS) {
-        const m = text.match(new RegExp(`\\b${c}\\b([^\\d()]*)`, "i"));
+        const re = new RegExp(`\\b${escapeRe(c.toUpperCase())}\\b`, "i");
+        const m = re.exec(text);
+        if (!m) continue;
+        const start = m.index!;
+        const after = text.slice(start);
+        const seq = after.match(/^([A-ZÀ-Ÿ][A-ZÀ-Ÿ'’]*(?:\s+[A-ZÀ-Ÿ][A-ZÀ-Ÿ'’]*)*)/);
+        if (!seq) continue;
+        const captured = seq[1].trim();
+        const tail = after.slice(captured.length);
+        const codeM = tail.match(/^\s*(?:([A-Za-z]{1,3})\s*-\s*(\d{2,4})|([1-9]\d{2,3}))\b/);
+        if (codeM) {
+          const code = codeM[1]
+            ? `${codeM[1].toUpperCase()}-${codeM[2]}`
+            : codeM[3];
+          return `${titleCase(captured)} ${code}`;
+        }
+        return titleCase(captured);
+      }
+
+      // 2) Fallback : mot-couleur suivi de mots descriptifs (max 2).
+      for (const c of COLOR_WORDS) {
+        const m = text.match(new RegExp(`\\b${escapeRe(c)}\\b([^\\d()]*)`, "i"));
         if (!m) continue;
         const tail = (m[1] ?? "").match(/[A-Za-zÀ-ÿ']+/g) ?? [];
         const extra: string[] = [];
