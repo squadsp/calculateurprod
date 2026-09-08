@@ -281,6 +281,13 @@ const FIXED_CODES: Record<string, string> = {
   noir: "P-525",
 };
 
+/** Couleurs standards : le code est imposé, peu importe ce que dit la liste
+ *  de référence ou le texte du MDB (clé = nom complet normalisé). */
+const STANDARD_CODES: Record<string, string> = {
+  "noir": "P-525",
+  "brun commercial": "P-562",
+};
+
 function toStr(v: unknown): string {
   if (v === null || v === undefined) return "";
   if (v instanceof Date) return formatDate(v);
