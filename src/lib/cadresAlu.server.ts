@@ -385,6 +385,7 @@ export async function buildCadreAluPdf(
     [
       r.sequence,
       r.id,
+      r.sens,
       r.tete,
       r.jambageLargeur,
       r.jambageEpaisseur,
