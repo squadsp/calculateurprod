@@ -110,10 +110,40 @@ function listMesures(text: string): { value: string; index: number }[] {
   return out;
 }
 
+/** Convertit une mesure textuelle en valeur décimale (prend la 1re partie d'une mesure double). */
+function measureToDecimal(m: string): number | null {
+  const s = m.replace(/"|''/g, "").replace(/\s*(?:po|mm|cm|pouces?)\b/gi, "").trim();
+  const first = s.split(/[x×]/)[0].trim();
+  if (first.includes("/")) {
+    const parts = first.split(/\s+/);
+    let total = 0;
+    for (const p of parts) {
+      if (p.includes("/")) {
+        const [num, den] = p.split("/");
+        total += parseInt(num, 10) / parseInt(den, 10);
+      } else {
+        total += parseFloat(p.replace(",", ".")) || 0;
+      }
+    }
+    return total;
+  }
+  const n = parseFloat(first.replace(",", "."));
+  return isNaN(n) ? null : n;
+}
+
+/** Ignore les mesures de 0 à 1.9 (souvent la profondeur) et retourne la suivante. */
+function skipSmallMesures(mesures: { value: string; index: number }[]): { value: string; index: number }[] {
+  return mesures.filter((x) => {
+    const n = measureToDecimal(x.value);
+    return n === null || n > 1.9;
+  });
+}
+
 /**
  * Dans un segment « souffler ... », le texte mentionne d'abord la profondeur
  * (« mesure de profondeur X » ou « pleine profondeur ») puis, en 2e mesure,
- * la mesure réelle du soufflé.
+ * la mesure réelle du soufflé. Les mesures de 0 à 1.9 sont ignorées pour
+ * atteindre la vraie mesure du soufflé.
  */
 function parseSouffleSegment(after: string): { prof: string; mesure: string } {
   const pleine = /pleine\s+profondeur/i.exec(after);
@@ -121,7 +151,7 @@ function parseSouffleSegment(after: string): { prof: string; mesure: string } {
   const mesures = listMesures(after);
 
   if (pleine) {
-    const next = mesures.find((x) => x.index > pleine.index + pleine[0].length);
+    const next = skipSmallMesures(mesures).find((x) => x.index > pleine.index + pleine[0].length);
     return { prof: "pleine prof.", mesure: next?.value ?? "" };
   }
   if (prof) {
@@ -137,9 +167,12 @@ function parseSouffleSegment(after: string): { prof: string; mesure: string } {
     } else if (beforeProf.length > 0) {
       profVal = beforeProf[beforeProf.length - 1].value;
     }
-    return { prof: profVal ? `prof. ${profVal}` : "", mesure: rest[0]?.value ?? "" };
+    const real = skipSmallMesures(rest)[0]?.value ?? "";
+    return { prof: profVal ? `prof. ${profVal}` : "", mesure: real };
   }
-  return { prof: "", mesure: matchMesure(after) };
+  // Pas de mot profondeur : on ignore la première petite mesure et on prend la suivante.
+  const candidates = skipSmallMesures(mesures);
+  return { prof: "", mesure: candidates[0]?.value ?? matchMesure(after) };
 }
 
 function extractSouffle(allRowValues: string[]): string {
