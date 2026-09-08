@@ -1,6 +1,6 @@
 const NAME_KEYS = {
   portes_keywords: { storage: "portes_name", default: "Jambage" },
-  aluminium_keywords: { storage: "aluminium_name", default: "Portes Aluminium" },
+  
   machinage: { storage: "machinage_name", default: "Machinage" },
 } as const;
 
