@@ -8,6 +8,7 @@ import {
   normalizeCadreAluSettings,
   type CadreAluSettings,
 } from "@/lib/cadresAluSettings";
+import { COULEURS_REF } from "@/lib/couleursRef";
 
 function escapeRe(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
