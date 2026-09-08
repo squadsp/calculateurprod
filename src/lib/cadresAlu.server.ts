@@ -10,8 +10,38 @@ export type CadreAluRow = {
   jambageEpaisseur: string;
   jambageHauteur: string;
   astragale: string;
+  moustiquaire: string;
   couleur: string;
 };
+
+/**
+ * Détecte une mention de moustiquaires multiples :
+ * "attention 2ième moustiquaire", "moustiquaire double", "avec 2 moustiquaire",
+ * "deux moustiquaires", "moustiquaire x2", etc.
+ */
+function extractMoustiquaire(allRowValues: string[]): string {
+  const whole = allRowValues.join(" ");
+  if (!/moustiquaire/i.test(whole)) return "";
+
+  const patterns: RegExp[] = [
+    /(\d+)\s*(?:i[eè]me|e|ème)?\s*moustiquaire/i, // "2ième moustiquaire", "2 moustiquaire"
+    /moustiquaire\s*(?:x\s*|\*\s*)(\d+)/i, // "moustiquaire x2"
+    /deux\s+moustiquaire/i,
+    /moustiquaire\s+double/i,
+    /double\s+moustiquaire/i,
+    /moustiquaires?\s+en\s+double/i,
+  ];
+  for (const p of patterns) {
+    const m = whole.match(p);
+    if (!m) continue;
+    if (m[1]) {
+      const n = parseInt(m[1], 10);
+      if (n > 1) return `${n} moustiquaires`;
+    }
+    return "2 moustiquaires";
+  }
+  return "";
+}
 
 const COLOR_WORDS = [
   "Blanc",
