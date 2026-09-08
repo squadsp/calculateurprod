@@ -9,14 +9,15 @@ const tabs = [
   { to: "/delays-admin", label: "Délais" },
 ] as const;
 
-export function SettingsNav() {
+export function SettingsNav({ role }: { role?: string | null }) {
+  const visible = role === "couleur_admin" ? tabs.filter((t) => t.to === "/couleurs-admin") : tabs;
   const path = useRouterState({
     select: (s) => s.location.pathname,
   });
 
   return (
     <nav className="flex gap-1 border-b border-border mb-6">
-      {tabs.map((tab) => {
+      {visible.map((tab) => {
         const active = path === tab.to;
         return (
           <Link
