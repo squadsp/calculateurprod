@@ -414,21 +414,57 @@ function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
   return allRowValues.some((v) => scan(v ?? "")) || scan(allRowValues.join(" | "));
 }
 
+/** Mesure « brute » : n'importe quel nombre/fraction, simple ou double. */
+const LOOSE_MEASURE_RE =
+  /\d+(?:[.,]\d+)?(?:\s*\d+\s*\/\s*\d+)?(?:\s*(?:"|''|po|pouces?|mm|cm)\b)?(?:\s*(?:x|×|par)\s*\d+(?:[.,]\d+)?(?:\s*\d+\s*\/\s*\d+)?(?:\s*(?:"|''|po|pouces?|mm|cm)\b)?)?/i;
+
 /**
  * Mesure d'une MAB non standard : on cherche la mention « commentaire »
  * (peu importe la colonne) et on prend la première mesure qui la suit.
+ * Plusieurs niveaux de repli pour ne jamais rater la mesure.
  */
 function findNonStandardMabMesure(allRowValues: string[]): string {
   const whole = allRowValues.join(" | ");
+
+  // 1) Mesure qualifiée juste après « commentaire ».
   const re = /commentaires?/gi;
+  const afterComments: string[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(whole)) !== null) {
     const after = whole.slice(m.index + m[0].length);
+    afterComments.push(after);
     const mesure = matchMesure(after);
     if (mesure) return mesure;
   }
+
+  // 2) Mesure « brute » après « commentaire ».
+  for (const after of afterComments) {
+    const loose = after.match(LOOSE_MEASURE_RE);
+    if (loose) return loose[0].trim().replace(/\s+/g, " ");
+  }
+
+  // 3) Mesure après la mention « non standard ».
+  const ns = whole.match(/non[\s-]*(?:standard|std)\b/i);
+  if (ns) {
+    const after = whole.slice((ns.index ?? 0) + ns[0].length);
+    const mesure = matchMesure(after) || (after.match(LOOSE_MEASURE_RE)?.[0] ?? "");
+    if (mesure) return mesure.trim().replace(/\s+/g, " ");
+  }
+
+  // 4) Première cellule non vide qui suit la cellule contenant « commentaire ».
+  const idx = allRowValues.findIndex((v) => /commentaires?/i.test(v ?? ""));
+  if (idx >= 0) {
+    for (let i = idx + 1; i < allRowValues.length; i++) {
+      const cell = (allRowValues[i] ?? "").trim();
+      if (!cell) continue;
+      if (!/\d/.test(cell)) continue;
+      const loose = cell.match(LOOSE_MEASURE_RE);
+      if (loose) return loose[0].trim().replace(/\s+/g, " ");
+    }
+  }
   return "";
 }
+
 
 
 
