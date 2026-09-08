@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PortesMachinageRouteImport } from './routes/portes-machinage'
 import { Route as PortesJambagesRouteImport } from './routes/portes-jambages'
+import { Route as PortesCadresAluRouteImport } from './routes/portes-cadres-alu'
 import { Route as PortesAluminiumRouteImport } from './routes/portes-aluminium'
 import { Route as PortesAdminRouteImport } from './routes/portes-admin'
 import { Route as PortesRouteImport } from './routes/portes'
@@ -28,6 +29,11 @@ const PortesMachinageRoute = PortesMachinageRouteImport.update({
 const PortesJambagesRoute = PortesJambagesRouteImport.update({
   id: '/portes-jambages',
   path: '/portes-jambages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortesCadresAluRoute = PortesCadresAluRouteImport.update({
+  id: '/portes-cadres-alu',
+  path: '/portes-cadres-alu',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortesAluminiumRoute = PortesAluminiumRouteImport.update({
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-aluminium': typeof PortesAluminiumRoute
+  '/portes-cadres-alu': typeof PortesCadresAluRoute
   '/portes-jambages': typeof PortesJambagesRoute
   '/portes-machinage': typeof PortesMachinageRoute
 }
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-aluminium': typeof PortesAluminiumRoute
+  '/portes-cadres-alu': typeof PortesCadresAluRoute
   '/portes-jambages': typeof PortesJambagesRoute
   '/portes-machinage': typeof PortesMachinageRoute
 }
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-aluminium': typeof PortesAluminiumRoute
+  '/portes-cadres-alu': typeof PortesCadresAluRoute
   '/portes-jambages': typeof PortesJambagesRoute
   '/portes-machinage': typeof PortesMachinageRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/portes'
     | '/portes-admin'
     | '/portes-aluminium'
+    | '/portes-cadres-alu'
     | '/portes-jambages'
     | '/portes-machinage'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/portes'
     | '/portes-admin'
     | '/portes-aluminium'
+    | '/portes-cadres-alu'
     | '/portes-jambages'
     | '/portes-machinage'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/portes'
     | '/portes-admin'
     | '/portes-aluminium'
+    | '/portes-cadres-alu'
     | '/portes-jambages'
     | '/portes-machinage'
   fileRoutesById: FileRoutesById
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   PortesRoute: typeof PortesRoute
   PortesAdminRoute: typeof PortesAdminRoute
   PortesAluminiumRoute: typeof PortesAluminiumRoute
+  PortesCadresAluRoute: typeof PortesCadresAluRoute
   PortesJambagesRoute: typeof PortesJambagesRoute
   PortesMachinageRoute: typeof PortesMachinageRoute
 }
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       path: '/portes-jambages'
       fullPath: '/portes-jambages'
       preLoaderRoute: typeof PortesJambagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portes-cadres-alu': {
+      id: '/portes-cadres-alu'
+      path: '/portes-cadres-alu'
+      fullPath: '/portes-cadres-alu'
+      preLoaderRoute: typeof PortesCadresAluRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portes-aluminium': {
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortesRoute: PortesRoute,
   PortesAdminRoute: PortesAdminRoute,
   PortesAluminiumRoute: PortesAluminiumRoute,
+  PortesCadresAluRoute: PortesCadresAluRoute,
   PortesJambagesRoute: PortesJambagesRoute,
   PortesMachinageRoute: PortesMachinageRoute,
 }

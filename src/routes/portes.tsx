@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Settings as SettingsIcon, DoorOpen, PaintBucket, Cog } from "lucide-react";
+import { ArrowLeft, Settings as SettingsIcon, DoorOpen, PaintBucket, Cog, Layers } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCalculatorName } from "@/lib/calculatorNames";
 
@@ -69,7 +69,7 @@ function PortesHub() {
 
           <Link
             to="/portes-machinage"
-            className="group rounded-2xl border-2 border-border bg-card p-8 hover:border-primary hover:shadow-lg transition-all flex flex-col items-center text-center gap-4 sm:col-span-2"
+            className="group rounded-2xl border-2 border-border bg-card p-8 hover:border-primary hover:shadow-lg transition-all flex flex-col items-center text-center gap-4"
           >
             <div className="rounded-full bg-primary/10 p-5 group-hover:bg-primary/20 transition-colors">
               <Cog className="h-10 w-10 text-primary" />
@@ -78,6 +78,19 @@ function PortesHub() {
               <div className="text-xl font-semibold">{machinageName}</div>
             </div>
           </Link>
+
+          <Link
+            to="/portes-cadres-alu"
+            className="group rounded-2xl border-2 border-border bg-card p-8 hover:border-primary hover:shadow-lg transition-all flex flex-col items-center text-center gap-4"
+          >
+            <div className="rounded-full bg-primary/10 p-5 group-hover:bg-primary/20 transition-colors">
+              <Layers className="h-10 w-10 text-primary" />
+            </div>
+            <div>
+              <div className="text-xl font-semibold">Cadres Aluminium</div>
+            </div>
+          </Link>
+
         </div>
       </main>
     </div>
