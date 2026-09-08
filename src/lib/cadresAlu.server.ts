@@ -56,10 +56,11 @@ function extractSouffle(allRowValues: string[]): string {
     || /\b(largeur|large)\b[^.;|]{0,40}souffl/i.test(whole);
   const deux = /souffl\w*[^.;|]{0,40}\b(2|deux|les\s*2|both)\s*(c[oô]t[ée]s?|sens|directions?)?/i.test(whole);
 
-  if ((hauteur && largeur) || deux) return "Hauteur + Largeur";
+  if ((hauteur && largeur) || deux) return "Haut. + Larg.";
   if (hauteur) return "Hauteur";
   if (largeur) return "Largeur";
-  return "Oui";
+  // Direction inconnue : on ne devine pas — la cellule reste vide.
+  return "";
 }
 
 
@@ -391,7 +392,6 @@ export async function buildCadreAluPdf(
   const ratios = [0.055, 0.08, 0.045, 0.085, 0.095, 0.095, 0.09, 0.155, 0.05, 0.095, 0.075, 0.08];
 
   const widths = ratios.map((r) => usableWidth * r);
-  const rowHeight = 18;
   const headerHeight = 24;
 
   let page = doc.addPage([pageWidth, pageHeight]);
@@ -413,11 +413,25 @@ export async function buildCadreAluPdf(
     y -= headerHeight;
   };
 
-  const truncate = (text: string, maxWidth: number, size: number) => {
-    if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
-    let t = text;
-    while (t.length > 1 && font.widthOfTextAtSize(`${t}…`, size) > maxWidth) t = t.slice(0, -1);
-    return `${t}…`;
+  const fontSize = 8.5;
+  const lineHeight = 11;
+
+  // Découpe un texte en plusieurs lignes qui tiennent dans la largeur donnée.
+  const wrap = (text: string, maxWidth: number): string[] => {
+    if (!text) return [""];
+    const lines: string[] = [];
+    let current = "";
+    for (const word of text.split(/\s+/)) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+        current = candidate;
+      } else {
+        if (current) lines.push(current);
+        current = word;
+      }
+    }
+    if (current) lines.push(current);
+    return lines.length > 0 ? lines : [""];
   };
 
   page.drawText("Cadres Aluminium", { x: margin, y: y - 14, size: 14, font: bold, color: rgb(0, 0, 0) });
@@ -439,22 +453,7 @@ export async function buildCadreAluPdf(
   }
 
   rows.forEach((r, idx) => {
-    if (y - rowHeight < margin) {
-      page = doc.addPage([pageWidth, pageHeight]);
-      y = pageHeight - margin;
-      drawHeader();
-    }
-    if (idx % 2 === 1) {
-      page.drawRectangle({
-        x: margin,
-        y: y - rowHeight,
-        width: usableWidth,
-        height: rowHeight,
-        color: rgb(0.97, 0.97, 0.97),
-      });
-    }
-    let x = margin;
-    [
+    const cells = [
       r.sequence,
       r.id,
       r.sens,
@@ -467,19 +466,39 @@ export async function buildCadreAluPdf(
       r.seuil,
       r.souffle,
       r.couleur,
+    ];
+    // Chaque cellule peut occuper plusieurs lignes (ex. « Moulure » sous l'astragale).
+    const wrapped = cells.map((v, i) => wrap(v, widths[i] - 8));
+    const height = Math.max(...wrapped.map((l) => l.length)) * lineHeight + 6;
 
-
-    ].forEach((v, i) => {
-      page.drawText(truncate(v, widths[i] - 8, 8.5), {
-        x: x + 4,
-        y: y - rowHeight + 5,
-        size: 8.5,
-        font,
-        color: rgb(0, 0, 0),
+    if (y - height < margin) {
+      page = doc.addPage([pageWidth, pageHeight]);
+      y = pageHeight - margin;
+      drawHeader();
+    }
+    if (idx % 2 === 1) {
+      page.drawRectangle({
+        x: margin,
+        y: y - height,
+        width: usableWidth,
+        height,
+        color: rgb(0.97, 0.97, 0.97),
+      });
+    }
+    let x = margin;
+    wrapped.forEach((lines, i) => {
+      lines.forEach((line, li) => {
+        page.drawText(line, {
+          x: x + 4,
+          y: y - 4 - (li + 1) * lineHeight + 3,
+          size: fontSize,
+          font,
+          color: rgb(0, 0, 0),
+        });
       });
       x += widths[i];
     });
-    y -= rowHeight;
+    y -= height;
   });
 
   return await doc.save();
