@@ -369,40 +369,30 @@ function hasMoulureBriqueEnJ(value: string): boolean {
  * mention « moulure à brique » (pas nécessairement collée à elle).
  */
 function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
-  const texts = [...allRowValues, allRowValues.join(" | ")];
-  return texts.some((v) => {
+  return allRowValues.some((v) => {
     const text = v ?? "";
     MOULURE_BRIQUE_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
       const after = text.slice(m.index + m[0].length);
-      if (/non[\s-]*std/i.test(after)) return true;
+      if (/non[\s-]*standard/i.test(after)) return true;
     }
     return false;
   });
 }
 
 /**
- * Mesure d'une MAB non standard : on repère la colonne qui mentionne
- * « commentaire », puis on prend la mesure dans la ou les colonnes suivantes.
+ * Mesure d'une MAB non standard : on cherche la mention « commentaire »
+ * (peu importe la colonne) et on prend la première mesure qui la suit.
  */
 function findNonStandardMabMesure(allRowValues: string[]): string {
-  for (let i = 0; i < allRowValues.length; i++) {
-    const v = allRowValues[i] ?? "";
-    if (!/commentaire/i.test(v)) continue;
-
-    // Mesure éventuellement écrite dans la même colonne après le mot.
-    const after = v.slice(v.search(/commentaire/i) + "commentaire".length);
-    const inline = matchMesure(after);
-    if (inline) return inline;
-
-    // Sinon, on regarde les colonnes suivantes.
-    for (let j = i + 1; j < allRowValues.length; j++) {
-      const next = allRowValues[j] ?? "";
-      if (!next.trim()) continue;
-      const mesure = matchMesure(next);
-      if (mesure) return mesure;
-    }
+  const whole = allRowValues.join(" | ");
+  const re = /commentaires?/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(whole)) !== null) {
+    const after = whole.slice(m.index + m[0].length);
+    const mesure = matchMesure(after);
+    if (mesure) return mesure;
   }
   return "";
 }
