@@ -311,33 +311,40 @@ function findDifferentColor(values: string[], mainColor: string): string {
   return "";
 }
 
+const MEASURE_RE = /\d+\s+\d+\/\d+\s*"?|\d+\/\d+\s*"?|\d+\s*"/;
+
 /** Vrai si la ligne mentionne une moulure à brique non standard. */
 function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
-  return allRowValues.some(
-    (v) =>
-      /moulure\s+[àa]\s+brique/i.test(v) &&
-      /non[\s-]*standard|non[\s-]*std|hors\s+standard/i.test(v),
-  ) ||
-    (allRowValues.some((v) => /moulure\s+[àa]\s+brique/i.test(v)) &&
-      allRowValues.some((v) => /non[\s-]*standard|non[\s-]*std/i.test(v)));
+  const whole = allRowValues.join(" | ");
+  return (
+    /moulure\s+[àa]\s+brique/i.test(whole) &&
+    /non[\s-]*standard|non[\s-]*std|hors[\s-]*standard|special|spécial/i.test(whole)
+  );
 }
 
-/** Mesure indiquée dans la section commentaires (ex. « 3 1/2 » ou « 4" »). */
+/** Mesure de la moulure à brique (souvent dans la section commentaires). */
 function findCommentaireMesure(allRowValues: string[]): string {
-  const measure = /(\d+\s*\d*\/?\d*\s*(?:\d+\/\d+)?\s*")|(\d+\s+\d+\/\d+)|(\d+\/\d+)/;
+  // 1. Mesure sur une ligne qui parle de moulure/brique.
+  for (const v of allRowValues) {
+    if (/brique|moulure/i.test(v)) {
+      const m = v.match(MEASURE_RE);
+      if (m) return m[0].trim();
+    }
+  }
+  // 2. Mesure dans la section commentaires.
   let inComments = false;
   for (const v of allRowValues) {
     const txt = (v ?? "").trim();
     if (!txt) continue;
     if (/commentaire/i.test(txt)) {
       inComments = true;
-      const after = txt.replace(/^[-\s]*commentaires?[-\s:]*/i, "");
-      const m = after.match(measure);
+      const after = txt.replace(/[-\s]*commentaires?[-\s:]*/i, "");
+      const m = after.match(MEASURE_RE);
       if (m) return m[0].trim();
       continue;
     }
     if (inComments) {
-      const m = txt.match(measure);
+      const m = txt.match(MEASURE_RE);
       if (m) return m[0].trim();
     }
   }
@@ -361,13 +368,17 @@ function buildAstragaleDimMab(
     if (/moulure\s+de\s+retenu/i.test(v)) moulureTypes.add("Moulure de retenu");
     if (/moulure\s+à\s+brique|moulure\s+a\s+brique/i.test(v)) moulureTypes.add("Moulure à brique");
   }
-  if (moulureTypes.has("Moulure à brique") && isMoulureBriqueNonStandard(allRowValues)) {
+  if (moulureTypes.has("Moulure à brique")) {
     const mesure = findCommentaireMesure(allRowValues);
-    moulureTypes.delete("Moulure à brique");
-    moulureTypes.add(
-      mesure ? `Moulure à brique non standard ${mesure}` : "Moulure à brique non standard",
-    );
+    const nonStd = isMoulureBriqueNonStandard(allRowValues);
+    if (nonStd || mesure) {
+      moulureTypes.delete("Moulure à brique");
+      moulureTypes.add(
+        [`Moulure à brique`, nonStd ? "non standard" : "", mesure].filter(Boolean).join(" "),
+      );
+    }
   }
+
   parts.push(...moulureTypes);
 
   if (values.some((v) => /jardin/i.test(v))) parts.push("Jardin");
