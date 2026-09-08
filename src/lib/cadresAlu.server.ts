@@ -283,6 +283,35 @@ function extractEpaisseurs(values: string[]): string[] {
   return out;
 }
 
+/**
+ * Détecte une mention de pleine profondeur ou de profondeur explicite.
+ * "pleine profondeur 1 1/4" -> "Pleine profondeur 1 1/4"
+ * "profond 1 1/4" -> "1 1/4"
+ */
+function extractPleineProfondeur(values: string[]): string {
+  const whole = values.join(" ");
+  const pleine = whole.match(/pleine\s+profondeur(?:\s+(\d+(?:[-\s]\d+\/\d+)?)\s*''?)?/i);
+  if (pleine) {
+    return pleine[1] ? `Pleine profondeur ${normalizeFraction(pleine[1])}` : "Pleine profondeur";
+  }
+  const prof = whole.match(/\bprofond(?:eur)?\s+(\d+(?:[-\s]\d+\/\d+)?)\s*''?/i);
+  if (prof) return normalizeFraction(prof[1]);
+  return "";
+}
+
+/**
+ * Détecte une mention de pleine hauteur. Si une mesure suit, elle est ajoutée.
+ * Sinon on retourne la hauteur par défaut (issue de la dimension).
+ */
+function extractPleineHauteur(values: string[], defaultHauteur: string): string {
+  const whole = values.join(" ");
+  const pleine = whole.match(/pleine\s+hauteur(?:\s+(\d+(?:[-\s]\d+\/\d+)?)\s*''?)?/i);
+  if (pleine) {
+    return pleine[1] ? `Pleine hauteur ${normalizeFraction(pleine[1])}` : "Pleine hauteur";
+  }
+  return defaultHauteur;
+}
+
 /** Opening direction of the door: Fixe / Gauche / Droite. */
 function extractSens(values: string[]): string {
   for (const v of values) {
