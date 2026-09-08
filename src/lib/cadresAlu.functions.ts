@@ -11,6 +11,7 @@ export type CadreAluRow = {
   jambageHauteur: string;
   astragale: string;
   moustiquaire: string;
+  seuil: string;
   couleur: string;
 };
 
