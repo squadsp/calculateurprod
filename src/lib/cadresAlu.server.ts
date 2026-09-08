@@ -324,6 +324,10 @@ const MOULURE_BRIQUE_RE =
 /** Marqueur « en J » (en J, «J», -J, J tout seul) juste après la mention. */
 const J_MARKER_RE = /^[\s.:,'"«»\-–]*(?:en\s*)?[«"']?\s*j\b/i;
 
+/** Variantes descriptives telles que « Tout P.V.C. avec "J" intégré ». */
+const J_DESCRIPTION_RE =
+  /\b(?:avec|en)\s*[«"']?\s*j\s*[»"']?\b(?:\s+int[ée]gr[ée]?)?/i;
+
 /** Vrai si la ligne contient au moins une moulure à brique qui n'est PAS « en J ». */
 function hasMoulureBrique(value: string): boolean {
   const text = value ?? "";
@@ -331,8 +335,8 @@ function hasMoulureBrique(value: string): boolean {
   let m: RegExpExecArray | null;
   let found = false;
   while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
-    const after = text.slice(m.index + m[0].length, m.index + m[0].length + 20);
-    if (J_MARKER_RE.test(after)) continue; // moulure à brique en J -> ignorée
+    const after = text.slice(m.index + m[0].length);
+    if (J_MARKER_RE.test(after) || J_DESCRIPTION_RE.test(after)) continue;
     found = true;
   }
   return found;
