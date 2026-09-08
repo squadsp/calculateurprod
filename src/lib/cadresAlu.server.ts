@@ -855,8 +855,29 @@ function matchCouleurRef(text: string): string {
   return "";
 }
 
+/** Normalise le résultat couleur : supprime les préfixes « Couleur » et
+ *  applique les codes fixes connus (ex. Noir → Noir P-525). */
+function normalizeCouleurResult(result: string): string {
+  if (!result) return result;
+  let cleaned = result.replace(/^couleur[\s\-–:]+/i, "").replace(/[\s.]+$/, "").trim();
+  const words = cleaned.split(/\s+/);
+  const first = words[0];
+  if (!first) return cleaned;
+  const lower = norm(first);
+  const fixed = FIXED_CODES[lower];
+  if (!fixed) return cleaned;
+  // Si le résultat est exactement la couleur, ou couleur + code numérique seul,
+  // on normalise avec le code fixe. On ne touche pas aux noms composés
+  // (ex. « Noir Grand Manan » reste inchangé).
+  if (words.length === 1 || (words.length === 2 && /^\d{2,4}$/.test(words[1]))) {
+    return `${titleCase(first)} ${fixed}`;
+  }
+  return cleaned;
+}
+
 /** Couleur = nom + code, ex. « Noir P-525 » ou « Brun Commercial P-562 ». */
 function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
+  let result = "";
   const all = [aluCell, ...values, ...Object.values(row).map(toStr)].filter(Boolean);
 
   // La description (aluCell) est vérifiée en premier, puis les options, puis
@@ -864,12 +885,15 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
   // Laurentides.
   for (const src of all) {
     const hit = matchCouleurRef(src);
-    if (hit) return hit;
+    if (hit) {
+      result = hit;
+      break;
+    }
   }
 
   // Cas particulier : « développement de couleur » — la vraie couleur se
   // trouve plus loin sous la forme « couleur spécial Gentek <nom> <code> ».
-  if (all.some((v) => /d[ée]veloppement\s+de\s+couleur/i.test(v))) {
+  if (!result && all.some((v) => /d[ée]veloppement\s+de\s+couleur/i.test(v))) {
     for (const v of all) {
       const m = v.match(/couleur\s+sp[ée]cial[e]?(?:\s+gentek)?[\s\-–:]*(.+)$/i);
       if (!m) continue;
@@ -885,132 +909,164 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
         if (COLOR_STOPWORDS.has(norm(w))) break;
         name.unshift(w);
       }
-      if (name.length && codeM) return `${titleCase(name.join(" "))} ${codeM[1].toUpperCase()}${codeM[1] ? "-" : ""}${codeM[2]}`;
-      if (name.length) return titleCase(name.join(" "));
-      if (codeM) return codeM[1] ? `${codeM[1].toUpperCase()}-${codeM[2]}` : codeM[2];
+      if (name.length && codeM) {
+        result = `${titleCase(name.join(" "))} ${codeM[1].toUpperCase()}${codeM[1] ? "-" : ""}${codeM[2]}`;
+        break;
+      }
+      if (name.length) {
+        result = titleCase(name.join(" "));
+        break;
+      }
+      if (codeM) {
+        result = codeM[1] ? `${codeM[1].toUpperCase()}-${codeM[2]}` : codeM[2];
+        break;
+      }
     }
   }
 
-  const codeRe = /(?:^|[^A-Za-z0-9])P\s*-\s*(\d{2,4})\b/gi;
-
-  for (const v of all) {
-    codeRe.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = codeRe.exec(v)) !== null) {
-      const code = `P-${m[1]}`;
-      const before = v.slice(0, m.index).replace(/[\s(\-–:"']+$/, "");
-      const words = before.match(/[A-Za-zÀ-ÿ']+/g) ?? [];
-      const name: string[] = [];
-      for (let i = words.length - 1; i >= 0 && name.length < 3; i--) {
-        const w = words[i];
-        if (COLOR_STOPWORDS.has(norm(w))) break;
-        name.unshift(w);
+  if (!result) {
+    const codeRe = /(?:^|[^A-Za-z0-9])P\s*-\s*(\d{2,4})\b/gi;
+    for (const v of all) {
+      codeRe.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = codeRe.exec(v)) !== null) {
+        const code = `P-${m[1]}`;
+        const before = v.slice(0, m.index).replace(/[\s(\-–:"']+$/, "");
+        const words = before.match(/[A-Za-zÀ-ÿ']+/g) ?? [];
+        const name: string[] = [];
+        for (let i = words.length - 1; i >= 0 && name.length < 3; i--) {
+          const w = words[i];
+          if (COLOR_STOPWORDS.has(norm(w))) break;
+          name.unshift(w);
+        }
+        if (name.length) {
+          result = `${titleCase(name.join(" "))} ${code}`;
+          break;
+        }
+        const ref = REF_BY_CODE.get(m[1]);
+        result = ref ? `${ref.name} ${code}` : code;
+        break;
       }
-      if (name.length) return `${titleCase(name.join(" "))} ${code}`;
-      const ref = REF_BY_CODE.get(m[1]);
-      return ref ? `${ref.name} ${code}` : code;
+      if (result) break;
     }
   }
 
   // Codes de peinture de marque, ex. « BENJAMIN MOORE Luzule des bois HC-126 ».
   // Un code seul sans nom (ex. « T30 », un code de profil) n'est PAS une couleur.
-  const brandRe = /(?:^|[^A-Za-z0-9])([A-Z]{2,3})\s*-\s*(\d{2,4})\b/g;
-  const BRANDS = new Set([
-    "benjamin", "moore", "sico", "sherwin", "williams", "behr", "dulux",
-    "cil", "para", "rona", "betonel",
-  ]);
-  for (const v of all) {
-    brandRe.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = brandRe.exec(v)) !== null) {
-      const code = `${m[1].toUpperCase()}-${m[2]}`;
-      const before = v.slice(0, m.index).replace(/[\s(\-–:"']+$/, "");
-      const words = before.match(/[A-Za-zÀ-ÿ']+/g) ?? [];
-      const name: string[] = [];
-      for (let i = words.length - 1; i >= 0 && name.length < 5; i--) {
-        const w = words[i];
-        const n = norm(w);
-        if (BRANDS.has(n)) break;
-        if (COLOR_STOPWORDS.has(n) && !name.length) break;
-        if (COLOR_STOPWORDS.has(n) && !["de", "du", "des", "la", "le", "les", "et"].includes(n)) break;
-        name.unshift(w);
+  if (!result) {
+    const brandRe = /(?:^|[^A-Za-z0-9])([A-Z]{2,3})\s*-\s*(\d{2,4})\b/g;
+    const BRANDS = new Set([
+      "benjamin", "moore", "sico", "sherwin", "williams", "behr", "dulux",
+      "cil", "para", "rona", "betonel",
+    ]);
+    for (const v of all) {
+      brandRe.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = brandRe.exec(v)) !== null) {
+        const code = `${m[1].toUpperCase()}-${m[2]}`;
+        const before = v.slice(0, m.index).replace(/[\s(\-–:"']+$/, "");
+        const words = before.match(/[A-Za-zÀ-ÿ']+/g) ?? [];
+        const name: string[] = [];
+        for (let i = words.length - 1; i >= 0 && name.length < 5; i--) {
+          const w = words[i];
+          const n = norm(w);
+          if (BRANDS.has(n)) break;
+          if (COLOR_STOPWORDS.has(n) && !name.length) break;
+          if (COLOR_STOPWORDS.has(n) && !["de", "du", "des", "la", "le", "les", "et"].includes(n)) break;
+          name.unshift(w);
+        }
+        while (name.length && ["de", "du", "des", "la", "le", "les", "et"].includes(norm(name[0]))) name.shift();
+        if (name.length) {
+          result = `${titleCase(name.join(" "))} ${code}`;
+          break;
+        }
       }
-      while (name.length && ["de", "du", "des", "la", "le", "les", "et"].includes(norm(name[0]))) name.shift();
-      if (name.length) return `${titleCase(name.join(" "))} ${code}`;
+      if (result) break;
     }
   }
 
   // Couleurs avec code numérique sans « P- », ex. « Sauge 517 » :
   // nom (1 à 3 mots) suivi d'un nombre de 3 à 4 chiffres.
-  const BARE_CODE_REJECT = new Set([
-    ...COLOR_STOPWORDS,
-    "hauteur", "largeur", "profondeur", "profond", "souffle", "souffler",
-    "soufflage", "mesure", "dimension", "epaisseur", "sequence", "code",
-    "ligne", "option", "opt", "pleine", "plein", "moustiquaire", "astragale",
-    "slab", "acier", "cadre", "jambage",
-    "promotion", "promo", "novatech", "serie", "series", "modele", "edition",
-    "limitee", "speciale", "offre", "rabais", "annee", "saison", "collection",
-    "prix", "special",
-  ]);
-  const bareCodeRe = /([A-Za-zÀ-ÿ']+(?:\s+[A-Za-zÀ-ÿ']+){0,2})\s+(\d{3,4})\b/g;
-  for (const v of all) {
-    bareCodeRe.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = bareCodeRe.exec(v)) !== null) {
-      const name = m[1].trim();
-      const words = name.split(/\s+/);
-      if (words.some((w) => BARE_CODE_REJECT.has(norm(w)))) continue;
-      return `${titleCase(name)} ${m[2]}`;
+  if (!result) {
+    const BARE_CODE_REJECT = new Set([
+      ...COLOR_STOPWORDS,
+      "hauteur", "largeur", "profondeur", "profond", "souffle", "souffler",
+      "soufflage", "mesure", "dimension", "epaisseur", "sequence", "code",
+      "ligne", "option", "opt", "pleine", "plein", "moustiquaire", "astragale",
+      "slab", "acier", "cadre", "jambage",
+      "promotion", "promo", "novatech", "serie", "series", "modele", "edition",
+      "limitee", "speciale", "offre", "rabais", "annee", "saison", "collection",
+      "prix", "special",
+    ]);
+    const bareCodeRe = /([A-Za-zÀ-ÿ']+(?:\s+[A-Za-zÀ-ÿ']+){0,2})\s+(\d{3,4})\b/g;
+    for (const v of all) {
+      bareCodeRe.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = bareCodeRe.exec(v)) !== null) {
+        const name = m[1].trim();
+        const words = name.split(/\s+/);
+        if (words.some((w) => BARE_CODE_REJECT.has(norm(w)))) continue;
+        result = `${titleCase(name)} ${m[2]}`;
+        break;
+      }
+      if (result) break;
     }
   }
-
-  // Codes fixes connus : « noir » est toujours 525 / P-525, etc.
-  const FIXED_CODES: Record<string, string> = {
-    noir: "P-525",
-  };
 
   // Repli : nom de couleur connu sans code. Le nom peut comporter
   // plusieurs mots (ex. « rouge vif », « brun commercial ») : on capture
   // le mot-couleur puis les mots descriptifs qui suivent.
-  const pickWord = (text: string): string => {
-    for (const c of COLOR_WORDS) {
-      const m = text.match(new RegExp(`\\b${c}\\b([^\\d()]*)`, "i"));
-      if (!m) continue;
-      const tail = (m[1] ?? "").match(/[A-Za-zÀ-ÿ']+/g) ?? [];
-      const extra: string[] = [];
-      for (const w of tail) {
-        if (extra.length >= 2) break;
-        if (COLOR_STOPWORDS.has(norm(w))) break;
-        if (COLOR_WORDS.some((cw) => norm(cw) === norm(w))) break;
-        extra.push(w);
+  if (!result) {
+    const pickWord = (text: string): string => {
+      for (const c of COLOR_WORDS) {
+        const m = text.match(new RegExp(`\\b${c}\\b([^\\d()]*)`, "i"));
+        if (!m) continue;
+        const tail = (m[1] ?? "").match(/[A-Za-zÀ-ÿ']+/g) ?? [];
+        const extra: string[] = [];
+        for (const w of tail) {
+          if (extra.length >= 2) break;
+          if (COLOR_STOPWORDS.has(norm(w))) break;
+          if (COLOR_WORDS.some((cw) => norm(cw) === norm(w))) break;
+          extra.push(w);
+        }
+        const label = titleCase([c, ...extra].join(" "));
+        const fixed = extra.length === 0 ? FIXED_CODES[norm(c)] : undefined;
+        return fixed ? `${label} ${fixed}` : label;
       }
-      const label = titleCase([c, ...extra].join(" "));
-      const fixed = extra.length === 0 ? FIXED_CODES[norm(c)] : undefined;
-      return fixed ? `${label} ${fixed}` : label;
-    }
-    return "";
-  };
-  const afterCouleur = aluCell.match(/couleur\s+(.+)$/i);
-  const fromAluCell = pickWord(afterCouleur ? afterCouleur[1] : "") || pickWord(aluCell);
-  if (fromAluCell) return fromAluCell;
+      return "";
+    };
+    const afterCouleur = aluCell.match(/couleur\s+(.+)$/i);
+    result = pickWord(afterCouleur ? afterCouleur[1] : "") || pickWord(aluCell);
 
-  // Pas trouvé dans la Description : on regarde plus loin,
-  // Opt4/Opt5 (puis les autres options) contiennent souvent la couleur.
-  for (const optKey of Object.keys(row)
-    .filter((k) => /^opt\d+$/i.test(k))
-    .sort((a, b) => {
-      const rank = (k: string) => (/^opt4$/i.test(k) ? 0 : /^opt5$/i.test(k) ? 1 : 2);
-      const r = rank(a) - rank(b);
-      return r !== 0 ? r : a.localeCompare(b);
-    })) {
-    const w = pickWord(toStr(row[optKey]));
-    if (w) return w;
+    if (!result) {
+      // Pas trouvé dans la Description : on regarde plus loin,
+      // Opt4/Opt5 (puis les autres options) contiennent souvent la couleur.
+      for (const optKey of Object.keys(row)
+        .filter((k) => /^opt\d+$/i.test(k))
+        .sort((a, b) => {
+          const rank = (k: string) => (/^opt4$/i.test(k) ? 0 : /^opt5$/i.test(k) ? 1 : 2);
+          const r = rank(a) - rank(b);
+          return r !== 0 ? r : a.localeCompare(b);
+        })) {
+        const w = pickWord(toStr(row[optKey]));
+        if (w) {
+          result = w;
+          break;
+        }
+      }
+    }
+    if (!result) {
+      for (const v of values) {
+        const w = pickWord(v);
+        if (w) {
+          result = w;
+          break;
+        }
+      }
+    }
   }
-  for (const v of values) {
-    const w = pickWord(v);
-    if (w) return w;
-  }
-  return "";
+
+  return normalizeCouleurResult(result);
 }
 
 
