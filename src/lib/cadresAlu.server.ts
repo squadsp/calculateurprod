@@ -344,6 +344,7 @@ export const CADRE_ALU_HEADERS = [
   "HAUTEUR JAMBAGE",
   "ASTRAGALE DIM M.A.B INT",
   "MOUSTIQUAIRE",
+  "SEUIL",
   "COULEUR",
 ];
 
@@ -363,7 +364,7 @@ export async function buildCadreAluPdf(
   const usableWidth = pageWidth - margin * 2;
 
   const headers = CADRE_ALU_HEADERS;
-  const ratios = [0.08, 0.11, 0.06, 0.09, 0.1, 0.1, 0.1, 0.16, 0.1, 0.1];
+  const ratios = [0.07, 0.1, 0.06, 0.08, 0.09, 0.09, 0.09, 0.14, 0.09, 0.09, 0.1];
   const widths = ratios.map((r) => usableWidth * r);
   const rowHeight = 18;
   const headerHeight = 24;
@@ -438,6 +439,7 @@ export async function buildCadreAluPdf(
       r.jambageHauteur,
       r.astragale,
       r.moustiquaire,
+      r.seuil,
       r.couleur,
     ].forEach((v, i) => {
       page.drawText(truncate(v, widths[i] - 8, 8.5), {
