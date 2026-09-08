@@ -408,7 +408,7 @@ export const CADRE_ALU_HEADERS = [
   "ÉPAISSEUR JAMBAGE",
   "HAUTEUR JAMBAGE",
   "ASTRAGALE DIM M.A.B INT",
-  "MOUST.",
+  "MST",
   "SEUIL",
   "SOUFFLÉ",
   "DUMMY",
@@ -436,7 +436,7 @@ export async function buildCadreAluPdf(
   const headers = CADRE_ALU_HEADERS;
   // Largeurs ajustées pour 15 colonnes : Moust./Seuil ne se touchent plus.
   const ratios = [
-    0.05, 0.07, 0.04, 0.07, 0.07, 0.07, 0.065, 0.175, 0.035, 0.075, 0.06, 0.06, 0.045, 0.045, 0.07,
+    0.05, 0.07, 0.04, 0.07, 0.07, 0.07, 0.065, 0.165, 0.03, 0.085, 0.06, 0.06, 0.045, 0.045, 0.08,
   ];
 
   const widths = ratios.map((r) => usableWidth * r);
