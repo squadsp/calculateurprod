@@ -311,6 +311,7 @@ export function extractCadreAluRows(
       jambageEpaisseur: epaisseurJambage,
       jambageHauteur: dims.hauteur,
       astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens),
+      moustiquaire: extractMoustiquaire(allRowValues),
       couleur: extractCouleur(r, values, aluCell),
     });
   }
@@ -328,6 +329,7 @@ export const CADRE_ALU_HEADERS = [
   "ÉPAISSEUR JAMBAGE",
   "HAUTEUR JAMBAGE",
   "ASTRAGALE DIM M.A.B INT",
+  "MOUSTIQUAIRE",
   "COULEUR",
 ];
 
