@@ -281,6 +281,13 @@ const FIXED_CODES: Record<string, string> = {
   noir: "P-525",
 };
 
+/** Couleurs standards : le code est imposé, peu importe ce que dit la liste
+ *  de référence ou le texte du MDB (clé = nom complet normalisé). */
+const STANDARD_CODES: Record<string, string> = {
+  "noir": "P-525",
+  "brun commercial": "P-562",
+};
+
 function toStr(v: unknown): string {
   if (v === null || v === undefined) return "";
   if (v instanceof Date) return formatDate(v);
@@ -874,6 +881,14 @@ function matchCouleurRef(text: string): string {
 function normalizeCouleurResult(result: string): string {
   if (!result) return result;
   let cleaned = result.replace(/^couleur[\s\-–:]+/i, "").replace(/[\s.]+$/, "").trim();
+
+  // Couleur standard : on impose le code officiel, quel que soit le code trouvé.
+  const withoutCode = cleaned
+    .replace(/\s*(?:[A-Za-z]{1,3}\s*-\s*[\dA-Za-z-]+|#\s*\d{2,6}|\b\d{2,6}\b)\s*$/i, "")
+    .trim();
+  const std = STANDARD_CODES[norm(withoutCode)];
+  if (std) return `${titleCase(withoutCode)} ${std}`;
+
   const words = cleaned.split(/\s+/);
   const first = words[0];
   if (!first) return cleaned;
@@ -1029,7 +1044,7 @@ function pickCouleurAfterKeyword(text: string): string {
  *  retrouver dans la liste de référence; sinon on rejette les noms trop
  *  génériques (ex. « Bleu » seul). */
 function finalizeCouleur(result: string): string {
-  const value = (result || "").trim();
+  const value = normalizeCouleurResult((result || "").trim());
   if (!value) return "";
   const hasCode = /(?:[A-Za-z]{1,3}\s*-\s*\d{2,6}|#\s*\d{2,4}|\b[1-9]\d{2,3}\b)\s*$/.test(value);
   if (hasCode) return value;
