@@ -294,8 +294,17 @@ function CadresAluPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-muted">
                     <tr>
-                      {["ID", "Séquence", "Tête", "Jambage", "Astragale", "Couleur"].map((h) => (
-                        <th key={h} className="px-3 py-2 text-left font-semibold">
+                      {[
+                        "SA-PA",
+                        "ID",
+                        "Mesure tête",
+                        "Largeur jambage",
+                        "Épaisseur jambage",
+                        "Hauteur jambage",
+                        "Astragale dim m.a.b int",
+                        "Couleur",
+                      ].map((h) => (
+                        <th key={h} className="px-3 py-2 text-left font-semibold whitespace-nowrap">
                           {h}
                         </th>
                       ))}
@@ -304,16 +313,19 @@ function CadresAluPage() {
                   <tbody>
                     {r.rows.map((row, i) => (
                       <tr key={`${row.id}-${row.sequence}-${i}`} className="border-t border-border">
-                        <td className="px-3 py-1.5 font-mono text-xs">{row.id}</td>
                         <td className="px-3 py-1.5">{row.sequence}</td>
+                        <td className="px-3 py-1.5 font-mono text-xs">{row.id}</td>
                         <td className="px-3 py-1.5">{row.tete}</td>
-                        <td className="px-3 py-1.5">{row.jambage}</td>
+                        <td className="px-3 py-1.5">{row.jambageLargeur}</td>
+                        <td className="px-3 py-1.5">{row.jambageEpaisseur}</td>
+                        <td className="px-3 py-1.5">{row.jambageHauteur}</td>
                         <td className="px-3 py-1.5">{row.astragale}</td>
                         <td className="px-3 py-1.5">{row.couleur}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+
               </div>
             )}
           </div>

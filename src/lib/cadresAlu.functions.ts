@@ -2,10 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 export type CadreAluRow = {
-  id: string;
   sequence: string;
+  id: string;
   tete: string;
-  jambage: string;
+  jambageLargeur: string;
+  jambageEpaisseur: string;
+  jambageHauteur: string;
   astragale: string;
   couleur: string;
 };
