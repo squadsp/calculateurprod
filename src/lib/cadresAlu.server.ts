@@ -839,6 +839,16 @@ const REF_BY_CODE = (() => {
   return map;
 })();
 
+/** Un code de couleur valide est soit préfixé de lettres (P-525, HC-126),
+ *  soit un nombre de 3 ou 4 chiffres ne commençant pas par 0. Les nombres
+ *  courts (« 80 », « 30 ») ne sont pas des codes de couleur. */
+function isValidCouleurCode(code: string | null | undefined): boolean {
+  if (!code) return false;
+  const c = code.trim();
+  if (/^[A-Za-z]{1,3}-?\d{2,6}(-\d+)*$/.test(c)) return true;
+  return /^[1-9]\d{2,3}$/.test(c);
+}
+
 /** Cherche une couleur connue de la liste de référence dans le texte. */
 function matchCouleurRef(text: string): string {
   const t = normText(text);
@@ -852,11 +862,12 @@ function matchCouleurRef(text: string): string {
       // Ignore les entrées-notes du type « Couleur Noir » qui ne sont pas
       // des noms de couleur réels.
       if (/^couleur\s+/i.test(ref.name)) continue;
-      return ref.code ? `${ref.name} ${ref.code}` : ref.name;
+      return isValidCouleurCode(ref.code) ? `${ref.name} ${ref.code}` : ref.name;
     }
   }
   return "";
 }
+
 
 /** Normalise le résultat couleur : supprime les préfixes « Couleur » et
  *  applique les codes fixes connus (ex. Noir → Noir P-525). */
