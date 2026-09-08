@@ -4,6 +4,7 @@ import MDBReader from "mdb-reader";
 export type CadreAluRow = {
   sequence: string;
   id: string;
+  sens: string;
   tete: string;
   jambageLargeur: string;
   jambageEpaisseur: string;
