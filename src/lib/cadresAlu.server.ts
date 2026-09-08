@@ -788,25 +788,7 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
 
   const all = [aluCell, ...values, ...Object.values(row).map(toStr)].filter(Boolean);
 
-  // 1) « ... aluminium de couleur X » : X est la vraie couleur (texte libre).
-  for (const v of all) {
-    const m = v.match(/alumin\w*\s+de\s+couleur\s*(.+)$/i);
-    if (m) {
-      const c = cleanColorText(m[1]);
-      if (c) return c;
-    }
-  }
-
-  // 2) Ligne « <couleur> extérieur » (ex. « Charcoil #49 Kaycan extérieur »).
-  for (const v of all) {
-    const m = v.match(/^(.{2,60}?)\s+ext[ée]rieur\s*$/i);
-    if (m && !/porte\(s\)|moulure\(s\)|recouvrement|cadre|seuil|ouverture/i.test(m[1])) {
-      const c = cleanColorText(m[1]);
-      if (c) return c;
-    }
-  }
-
-  // 3) Repli : code P- et/ou mot-couleur connu.
+  // Code P- et/ou mot-couleur connu uniquement (pas de texte libre).
   let code = "";
   for (const v of all) {
     const m = v.match(/\(\s*(P-\s*\d{2,4})\s*\)/i);
