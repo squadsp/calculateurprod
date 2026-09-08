@@ -431,8 +431,9 @@ function extractJambageLargeur(aluCell: string, allValues: string[]): string {
   let souf = 0;
   for (const v of allValues) {
     if (cadreDim === null) {
-      const m = v.match(new RegExp(String.raw`cadre\s+dimensions?\s*(?:de\s*)?(${M})`, "i"));
+      const m = v.match(new RegExp(String.raw`cadre\s+dimensions?\s*(?:de\s*)?(?:\([^)]*\)\s*)?(${M})\s*''`, "i"));
       if (m) cadreDim = measureToDecimal(normalizeFraction(m[1]));
+
     }
     const s = v.match(new RegExp(String.raw`souf(?:f|\.)?\w*\.?\s*(?:ext[ée]rieur|int[ée]rieur)?\s*(${M})`, "i"));
     if (s) souf = Math.max(souf, measureToDecimal(normalizeFraction(s[1])) ?? 0);
