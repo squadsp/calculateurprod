@@ -824,6 +824,34 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
     }
   }
 
+  // Codes de peinture de marque, ex. « BENJAMIN MOORE Luzule des bois HC-126 ».
+  const brandRe = /(?:^|[^A-Za-z0-9])([A-Z]{1,3})\s*-\s*(\d{2,4})\b/g;
+  const BRANDS = new Set([
+    "benjamin", "moore", "sico", "sherwin", "williams", "behr", "dulux",
+    "cil", "para", "rona", "betonel",
+  ]);
+  for (const v of all) {
+    brandRe.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = brandRe.exec(v)) !== null) {
+      const code = `${m[1].toUpperCase()}-${m[2]}`;
+      const before = v.slice(0, m.index).replace(/[\s(\-–:"']+$/, "");
+      const words = before.match(/[A-Za-zÀ-ÿ']+/g) ?? [];
+      const name: string[] = [];
+      for (let i = words.length - 1; i >= 0 && name.length < 5; i--) {
+        const w = words[i];
+        const n = norm(w);
+        if (BRANDS.has(n)) break;
+        if (COLOR_STOPWORDS.has(n) && !name.length) break;
+        if (COLOR_STOPWORDS.has(n) && !["de", "du", "des", "la", "le", "les", "et"].includes(n)) break;
+        name.unshift(w);
+      }
+      while (name.length && ["de", "du", "des", "la", "le", "les", "et"].includes(norm(name[0]))) name.shift();
+      if (name.length) return `${titleCase(name.join(" "))} ${code}`;
+      return code;
+    }
+  }
+
   // Repli : nom de couleur connu sans code. Le nom peut comporter
   // plusieurs mots (ex. « rouge vif », « brun commercial ») : on capture
   // le mot-couleur puis les mots descriptifs qui suivent.
