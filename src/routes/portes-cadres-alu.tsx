@@ -297,6 +297,7 @@ function CadresAluPage() {
                       {[
                         "SA-PA",
                         "ID",
+                        "Sens",
                         "Mesure tête",
                         "Largeur jambage",
                         "Épaisseur jambage",
