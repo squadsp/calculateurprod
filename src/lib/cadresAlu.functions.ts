@@ -19,6 +19,8 @@ export const processCadreAluSources = createServerFn({ method: "POST" })
   .inputValidator((data) => RequestSchema.parse(data))
   .handler(async ({ data }) => {
     const { extractCadreAluRows, buildCadreAluPdf } = await import("@/lib/cadresAlu.server");
+    const { listCouleurs } = await import("@/lib/couleurs.server");
+    const couleurs = await listCouleurs();
 
     const target = data.date ? new Date(`${data.date}T00:00:00`) : null;
 
@@ -26,7 +28,7 @@ export const processCadreAluSources = createServerFn({ method: "POST" })
       data.sources.map(async (source) => {
         const bin = Buffer.from(source.base64, "base64");
         const ab = bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength) as ArrayBuffer;
-        const rows = extractCadreAluRows(ab, target, data.settings);
+        const rows = extractCadreAluRows(ab, target, data.settings, couleurs);
         const pdf = await buildCadreAluPdf(rows, target, data.settings);
 
         return {

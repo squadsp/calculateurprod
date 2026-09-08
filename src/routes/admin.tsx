@@ -29,7 +29,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Role = "super_admin" | "admin";
+type Role = "super_admin" | "admin" | "couleur_admin";
 
 function AdminPage() {
   const [authed, setAuthed] = useState(false);
@@ -96,9 +96,17 @@ function AdminPage() {
       <main className="max-w-5xl mx-auto px-6 py-10">
         {authed ? (
           <div className="space-y-12">
-            <SettingsNav />
-            <SettingsEditor role={role} />
-            {role === "super_admin" && <UsersManager />}
+            <SettingsNav role={role} />
+            {role === "couleur_admin" ? (
+              <p className="text-sm text-muted-foreground">
+                Votre compte gère uniquement la liste des couleurs.
+              </p>
+            ) : (
+              <>
+                <SettingsEditor role={role} />
+                {role === "super_admin" && <UsersManager />}
+              </>
+            )}
           </div>
         ) : (
           <LoginForm
@@ -551,6 +559,7 @@ function UsersManager() {
           >
             <option value="admin">Admin</option>
             <option value="super_admin">Super admin</option>
+            <option value="couleur_admin">Gestion des couleurs</option>
           </select>
           <button
             type="submit"
@@ -604,7 +613,11 @@ function UsersManager() {
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      {u.role === "super_admin" ? "Super admin" : "Admin"}
+                      {u.role === "super_admin"
+                        ? "Super admin"
+                        : u.role === "couleur_admin"
+                          ? "Gestion des couleurs"
+                          : "Admin"}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-muted-foreground">

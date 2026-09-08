@@ -10,14 +10,17 @@ export function AdminSettingsShell({
   title,
   backTo,
   backLabel,
+  allowCouleurAdmin = false,
   children,
 }: {
   title: string;
   backTo: "/portes" | "/fenetres" | "/";
   backLabel: string;
+  allowCouleurAdmin?: boolean;
   children: ReactNode;
 }) {
   const [authed, setAuthed] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
 
   const getSess = useServerFn(getSession);
@@ -28,7 +31,10 @@ export function AdminSettingsShell({
     (async () => {
       try {
         const res = await getSess({ data: undefined });
-        if (mounted && res.session) setAuthed(true);
+        if (mounted && res.session) {
+          setAuthed(true);
+          setRole(res.session.role);
+        }
       } finally {
         if (mounted) setChecking(false);
       }
@@ -45,6 +51,7 @@ export function AdminSettingsShell({
       // ignore
     }
     setAuthed(false);
+    setRole(null);
   };
 
   if (checking) {
@@ -78,8 +85,14 @@ export function AdminSettingsShell({
       <main className="max-w-4xl mx-auto px-6 py-10">
         {authed ? (
           <>
-            <SettingsNav />
-            {children}
+            <SettingsNav role={role} />
+            {role === "couleur_admin" && !allowCouleurAdmin ? (
+              <p className="text-sm text-muted-foreground">
+                Votre compte gère uniquement la liste des couleurs.
+              </p>
+            ) : (
+              children
+            )}
           </>
         ) : (
           <LoginForm onSuccess={() => setAuthed(true)} />

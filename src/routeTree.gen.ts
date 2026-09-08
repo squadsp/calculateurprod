@@ -18,6 +18,7 @@ import { Route as MachinageAdminRouteImport } from './routes/machinage-admin'
 import { Route as FenetresRouteImport } from './routes/fenetres'
 import { Route as DelaysAdminRouteImport } from './routes/delays-admin'
 import { Route as DelaysRouteImport } from './routes/delays'
+import { Route as CouleursAdminRouteImport } from './routes/couleurs-admin'
 import { Route as CadresAluAdminRouteImport } from './routes/cadres-alu-admin'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -67,6 +68,11 @@ const DelaysRoute = DelaysRouteImport.update({
   path: '/delays',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CouleursAdminRoute = CouleursAdminRouteImport.update({
+  id: '/couleurs-admin',
+  path: '/couleurs-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CadresAluAdminRoute = CadresAluAdminRouteImport.update({
   id: '/cadres-alu-admin',
   path: '/cadres-alu-admin',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/cadres-alu-admin': typeof CadresAluAdminRoute
+  '/couleurs-admin': typeof CouleursAdminRoute
   '/delays': typeof DelaysRoute
   '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/cadres-alu-admin': typeof CadresAluAdminRoute
+  '/couleurs-admin': typeof CouleursAdminRoute
   '/delays': typeof DelaysRoute
   '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/cadres-alu-admin': typeof CadresAluAdminRoute
+  '/couleurs-admin': typeof CouleursAdminRoute
   '/delays': typeof DelaysRoute
   '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/cadres-alu-admin'
+    | '/couleurs-admin'
     | '/delays'
     | '/delays-admin'
     | '/fenetres'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/cadres-alu-admin'
+    | '/couleurs-admin'
     | '/delays'
     | '/delays-admin'
     | '/fenetres'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/cadres-alu-admin'
+    | '/couleurs-admin'
     | '/delays'
     | '/delays-admin'
     | '/fenetres'
@@ -175,6 +187,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   CadresAluAdminRoute: typeof CadresAluAdminRoute
+  CouleursAdminRoute: typeof CouleursAdminRoute
   DelaysRoute: typeof DelaysRoute
   DelaysAdminRoute: typeof DelaysAdminRoute
   FenetresRoute: typeof FenetresRoute
@@ -251,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DelaysRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/couleurs-admin': {
+      id: '/couleurs-admin'
+      path: '/couleurs-admin'
+      fullPath: '/couleurs-admin'
+      preLoaderRoute: typeof CouleursAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cadres-alu-admin': {
       id: '/cadres-alu-admin'
       path: '/cadres-alu-admin'
@@ -279,6 +299,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   CadresAluAdminRoute: CadresAluAdminRoute,
+  CouleursAdminRoute: CouleursAdminRoute,
   DelaysRoute: DelaysRoute,
   DelaysAdminRoute: DelaysAdminRoute,
   FenetresRoute: FenetresRoute,
