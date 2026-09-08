@@ -7,13 +7,13 @@ import { getCalculatorName } from "@/lib/calculatorNames";
 
 const EMPTY_KEYWORDS: PortesKeywords = { laminate: [], reject: [], keep: [] };
 
-export const Route = createFileRoute("/portes-peinture")({
-  component: PortesPeinturePage,
+export const Route = createFileRoute("/portes-aluminium")({
+  component: PortesAluminiumPage,
 });
 
-function PortesPeinturePage() {
-  const [name, setName] = useState("Portes Peinture");
-  useEffect(() => { setName(getCalculatorName("peinture_keywords")); }, []);
+function PortesAluminiumPage() {
+  const [name, setName] = useState("Portes Aluminium");
+  useEffect(() => { setName(getCalculatorName("aluminium_keywords")); }, []);
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -35,7 +35,7 @@ function PortesPeinturePage() {
         <PortesCalculator
           title={`Calculateur — ${name}`}
           subtitle="Déposez un ou plusieurs PDF"
-          storageKey="peinture_keywords"
+          storageKey="aluminium_keywords"
           defaultKeywords={EMPTY_KEYWORDS}
           categorize={false}
         />
