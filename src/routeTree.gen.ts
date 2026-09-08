@@ -18,6 +18,7 @@ import { Route as MachinageAdminRouteImport } from './routes/machinage-admin'
 import { Route as FenetresRouteImport } from './routes/fenetres'
 import { Route as DelaysAdminRouteImport } from './routes/delays-admin'
 import { Route as DelaysRouteImport } from './routes/delays'
+import { Route as CadresAluAdminRouteImport } from './routes/cadres-alu-admin'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -66,6 +67,11 @@ const DelaysRoute = DelaysRouteImport.update({
   path: '/delays',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CadresAluAdminRoute = CadresAluAdminRouteImport.update({
+  id: '/cadres-alu-admin',
+  path: '/cadres-alu-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -80,6 +86,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/cadres-alu-admin': typeof CadresAluAdminRoute
   '/delays': typeof DelaysRoute
   '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/cadres-alu-admin': typeof CadresAluAdminRoute
   '/delays': typeof DelaysRoute
   '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/cadres-alu-admin': typeof CadresAluAdminRoute
   '/delays': typeof DelaysRoute
   '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/cadres-alu-admin'
     | '/delays'
     | '/delays-admin'
     | '/fenetres'
@@ -135,6 +145,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/cadres-alu-admin'
     | '/delays'
     | '/delays-admin'
     | '/fenetres'
@@ -148,6 +159,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/cadres-alu-admin'
     | '/delays'
     | '/delays-admin'
     | '/fenetres'
@@ -162,6 +174,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  CadresAluAdminRoute: typeof CadresAluAdminRoute
   DelaysRoute: typeof DelaysRoute
   DelaysAdminRoute: typeof DelaysAdminRoute
   FenetresRoute: typeof FenetresRoute
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DelaysRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cadres-alu-admin': {
+      id: '/cadres-alu-admin'
+      path: '/cadres-alu-admin'
+      fullPath: '/cadres-alu-admin'
+      preLoaderRoute: typeof CadresAluAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -258,6 +278,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  CadresAluAdminRoute: CadresAluAdminRoute,
   DelaysRoute: DelaysRoute,
   DelaysAdminRoute: DelaysAdminRoute,
   FenetresRoute: FenetresRoute,
