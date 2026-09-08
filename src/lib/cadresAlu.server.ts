@@ -529,6 +529,9 @@ export async function buildCadreAluPdf(
       r.moustiquaire,
       r.seuil,
       r.souffle,
+      r.dummy,
+      r.enfigure,
+      r.acier,
       r.couleur,
     ];
     // Chaque cellule peut occuper plusieurs lignes (ex. « Moulure » sous l'astragale).
