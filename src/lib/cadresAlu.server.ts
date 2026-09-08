@@ -860,6 +860,9 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
     "soufflage", "mesure", "dimension", "epaisseur", "sequence", "code",
     "ligne", "option", "opt", "pleine", "plein", "moustiquaire", "astragale",
     "slab", "acier", "cadre", "jambage",
+    "promotion", "promo", "novatech", "serie", "series", "modele", "edition",
+    "limitee", "speciale", "offre", "rabais", "annee", "saison", "collection",
+    "prix", "special",
   ]);
   const bareCodeRe = /([A-Za-zÀ-ÿ']+(?:\s+[A-Za-zÀ-ÿ']+){0,2})\s+(\d{3,4})\b/g;
   for (const v of all) {
@@ -869,6 +872,7 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
       const name = m[1].trim();
       const words = name.split(/\s+/);
       if (words.some((w) => BARE_CODE_REJECT.has(norm(w)))) continue;
+      if (/^(19|20)\d{2}$/.test(m[2])) continue; // année, pas un code couleur
       return `${titleCase(name)} ${m[2]}`;
     }
   }
@@ -893,11 +897,26 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
     return "";
   };
   const afterCouleur = aluCell.match(/couleur\s+(.+)$/i);
-  return (
-    pickWord(afterCouleur ? afterCouleur[1] : "") ||
-    pickWord(aluCell) ||
-    pickWord(toStr(row.Opt1))
-  );
+  const fromAluCell = pickWord(afterCouleur ? afterCouleur[1] : "") || pickWord(aluCell);
+  if (fromAluCell) return fromAluCell;
+
+  // Pas trouvé dans la Description : on regarde plus loin,
+  // Opt4/Opt5 (puis les autres options) contiennent souvent la couleur.
+  for (const optKey of Object.keys(row)
+    .filter((k) => /^opt\d+$/i.test(k))
+    .sort((a, b) => {
+      const rank = (k: string) => (/^opt4$/i.test(k) ? 0 : /^opt5$/i.test(k) ? 1 : 2);
+      const r = rank(a) - rank(b);
+      return r !== 0 ? r : a.localeCompare(b);
+    })) {
+    const w = pickWord(toStr(row[optKey]));
+    if (w) return w;
+  }
+  for (const v of values) {
+    const w = pickWord(v);
+    if (w) return w;
+  }
+  return "";
 }
 
 
