@@ -140,23 +140,59 @@ function extractEpaisseurs(values: string[]): string[] {
   return out;
 }
 
-/** Grosse (Astragale-G) / petite (Astragale-P) astragale when present. */
-function extractAstragale(values: string[]): string {
+/** Opening direction of the door: Fixe / Gauche / Droite. */
+function extractSens(values: string[]): string {
   for (const v of values) {
-    if (!/astragal/i.test(v)) continue;
-    if (/\bgrosse?\b|\blarge\b|\b-g\b/i.test(v)) return "Astragale-G";
-    if (/\bpetite?\b|\bmince\b|\b-p\b/i.test(v)) return "Astragale-P";
-    const dim = v.match(/(\d+(?:[-\s]\d+\/\d+)?)\s*''/);
-    if (dim) return `Astragale ${normalizeFraction(dim[1])}`;
-    return "Astragale";
+    if (/\bfixe\b/i.test(v)) return "Fixe";
+  }
+  for (const v of values) {
+    const m = v.match(/\b(gauche|droite)\b/i);
+    if (m) return m[1].toLowerCase() === "gauche" ? "Gauche" : "Droite";
   }
   return "";
 }
 
+/**
+ * Astragale: look at every column of the row. Size (grosse/petite) can be
+ * mentioned anywhere on the line, and the side is Fixe > Gauche/Droite.
+ */
+function extractAstragale(allRowValues: string[], sensRow: string): string {
+  const lines = allRowValues.filter((v) => /astragal/i.test(v));
+  if (lines.length === 0) return "";
+
+  const scope = lines.join(" ");
+  const whole = allRowValues.join(" ");
+
+  let size = "";
+  if (/astragale?\s*[-\s]*g\b|\bgrosse?\b|\blarge\b/i.test(scope)) size = "Astragale-G";
+  else if (/astragale?\s*[-\s]*p\b|\bpetite?\b|\bmince\b/i.test(scope)) size = "Astragale-P";
+  else if (/\bgrosse?\b/i.test(whole)) size = "Astragale-G";
+  else if (/\bpetite?\b/i.test(whole)) size = "Astragale-P";
+  else {
+    const dim = scope.match(/(\d+(?:[-\s]\d+\/\d+)?)\s*''/);
+    size = dim ? `Astragale ${normalizeFraction(dim[1])}` : "Astragale";
+  }
+
+  let sens = "";
+  if (/\bfixe\b/i.test(scope)) sens = "Fixe";
+  else {
+    const m = scope.match(/\b(gauche|droite)\b/i);
+    if (m) sens = m[1].toLowerCase() === "gauche" ? "Gauche" : "Droite";
+    else if (sensRow) sens = sensRow;
+  }
+
+  return sens ? `${size} ${sens}` : size;
+}
+
 /** Astragale / Moulure / Jardin / head thickness note, combined in one column. */
-function buildAstragaleDimMab(values: string[], epaisseurJambage: string): string {
+function buildAstragaleDimMab(
+  values: string[],
+  allRowValues: string[],
+  epaisseurJambage: string,
+  sensRow: string,
+): string {
   const parts: string[] = [];
-  const astragale = extractAstragale(values);
+  const astragale = extractAstragale(allRowValues, sensRow);
   if (astragale) parts.push(astragale);
   if (values.some((v) => /moulure/i.test(v))) parts.push("Moulure");
   if (values.some((v) => /jardin/i.test(v))) parts.push("Jardin");
@@ -167,6 +203,7 @@ function buildAstragaleDimMab(values: string[], epaisseurJambage: string): strin
   }
   return parts.join(" • ");
 }
+
 
 function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
   const pickWord = (text: string) =>
