@@ -1025,6 +1025,29 @@ function pickCouleurAfterKeyword(text: string): string {
 }
 
 
+/** Un résultat couleur doit porter un code. Sans code, on tente de le
+ *  retrouver dans la liste de référence; sinon on rejette les noms trop
+ *  génériques (ex. « Bleu » seul). */
+function finalizeCouleur(result: string): string {
+  const value = (result || "").trim();
+  if (!value) return "";
+  const hasCode = /(?:[A-Za-z]{1,3}\s*-\s*\d{2,6}|#\s*\d{2,4}|\b[1-9]\d{2,3}\b)\s*$/.test(value);
+  if (hasCode) return value;
+
+  const key = norm(value);
+  const exact = COULEURS_REF.find((ref) => norm(ref.name) === key);
+  if (exact?.code) return `${exact.name} ${exact.code}`;
+
+  const fixed = FIXED_CODES[key];
+  if (fixed) return `${titleCase(value)} ${fixed}`;
+
+  // Nom composé sans code connu : on le garde. Un seul mot générique
+  // (« Bleu », « Vert »…) n'est pas une couleur exploitable.
+  const words = value.split(/\s+/).filter(Boolean);
+  if (words.length < 2) return "";
+  return value;
+}
+
 function extractCouleur(row: Record<string, unknown>, _values: string[], _aluCell: string): string {
   const optKeys = Object.keys(row)
     .map((k) => ({ k, n: /^opt(\d+)$/i.test(k) ? parseInt(k.replace(/^opt/i, ""), 10) : -1 }))
@@ -1032,18 +1055,19 @@ function extractCouleur(row: Record<string, unknown>, _values: string[], _aluCel
     .sort((a, b) => a.n - b.n);
   for (const { k } of optKeys) {
     const text = toStr(row[k]);
-    // 1) Après les mots-clés « peinture » ou « couleur ».
-    const hit = pickCouleurAfterKeyword(text);
-    if (hit) return hit;
-    // 2) N'importe quel motif « Nom P-xxx / #xxx » dans la cellule.
-    const literal = findLiteralCouleur(text);
+    // 1) Motif littéral « Nom P-xxx / #xxx » : prioritaire, il porte un code.
+    const literal = finalizeCouleur(findLiteralCouleur(text));
     if (literal) return literal;
+    // 2) Après les mots-clés « peinture » ou « couleur ».
+    const hit = finalizeCouleur(pickCouleurAfterKeyword(text));
+    if (hit) return hit;
     // 3) Code seul P-xxx / #xxx / xxx.
-    const standalone = findStandaloneCouleurCode(text);
+    const standalone = finalizeCouleur(findStandaloneCouleurCode(text));
     if (standalone) return standalone;
   }
   return "";
 }
+
 
 
 function findTable(reader: MDBReader) {
