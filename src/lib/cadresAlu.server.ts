@@ -13,8 +13,38 @@ export type CadreAluRow = {
   moustiquaire: string;
   seuil: string;
   souffle: string;
+  dummy: string;
+  enfigure: string;
+  acier: string;
   couleur: string;
 };
+
+/** « Dummy » avec sa mesure si elle est mentionnée sur la ligne. */
+function extractDummy(allRowValues: string[]): string {
+  const whole = allRowValues.join(" | ");
+  if (!/\bdummy\b/i.test(whole)) return "";
+  const patterns: RegExp[] = [
+    /\bdummy\b[^|]{0,30}?(\d+(?:\s*[-\s]\s*\d+\/\d+)?)\s*(?:''|"|”|po\b|pouces?\b)/i,
+    /(\d+(?:\s*[-\s]\s*\d+\/\d+)?)\s*(?:''|"|”)[^|]{0,20}?\bdummy\b/i,
+    /\bdummy\b[^|]{0,20}?(\d+(?:\s*[-\s]\s*\d+\/\d+)?)\b/i,
+  ];
+  for (const p of patterns) {
+    const m = whole.match(p);
+    if (m && m[1]) return `Dummy ${normalizeFraction(m[1])}`;
+  }
+  return "Dummy";
+}
+
+/** Seuil / pièce enfiguré : Oui ou Non. */
+function extractEnfigure(allRowValues: string[]): string {
+  return /enfigur[ée]/i.test(allRowValues.join(" ")) ? "Oui" : "Non";
+}
+
+/** Précise s'il s'agit d'une porte d'acier. */
+function extractAcier(allRowValues: string[]): string {
+  return /porte\s*d?\s*['’]?\s*acier/i.test(allRowValues.join(" ")) ? "Acier" : "";
+}
+
 
 /**
  * Détecte une mention de moustiquaires multiples :
