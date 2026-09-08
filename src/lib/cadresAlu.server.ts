@@ -140,12 +140,12 @@ function extractEpaisseurs(values: string[]): string[] {
   return out;
 }
 
-/** Grosse / petite astragale when present. */
+/** Grosse (Astragale-G) / petite (Astragale-P) astragale when present. */
 function extractAstragale(values: string[]): string {
   for (const v of values) {
     if (!/astragal/i.test(v)) continue;
-    if (/\bgrosse?\b|\blarge\b/i.test(v)) return "Grosse astragale";
-    if (/\bpetite?\b|\bmince\b/i.test(v)) return "Petite astragale";
+    if (/\bgrosse?\b|\blarge\b|\b-g\b/i.test(v)) return "Astragale-G";
+    if (/\bpetite?\b|\bmince\b|\b-p\b/i.test(v)) return "Astragale-P";
     const dim = v.match(/(\d+(?:[-\s]\d+\/\d+)?)\s*''/);
     if (dim) return `Astragale ${normalizeFraction(dim[1])}`;
     return "Astragale";
@@ -219,7 +219,11 @@ export function extractCadreAluRows(
     if (!/^(LA|LB|SA|PA)/i.test(sequence)) continue;
     if (targetDate && !matchesDate(r.Ligne1, targetDate)) continue;
 
-    const values = Object.values(r).map(toStr).filter(Boolean);
+    // Only option/description fields count — never Client or other free-text columns.
+    const values = Object.entries(r)
+      .filter(([key]) => /^(opt\d+|description|code)$/i.test(key))
+      .map(([, v]) => toStr(v))
+      .filter(Boolean);
     const aluCell = findAluCell(values);
     if (!aluCell) continue;
     if (isExcluded(values)) continue;
