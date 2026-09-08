@@ -306,6 +306,9 @@ function CadresAluPage() {
                         "Moust.",
                         "Seuil",
                         "Soufflé",
+                        "Dummy",
+                        "Enfig.",
+                        "Type",
                         "Couleur",
                       ].map((h) => (
                         <th key={h} className="px-2 py-2 text-left font-semibold whitespace-nowrap">
