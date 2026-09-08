@@ -11,7 +11,7 @@ export const Route = createFileRoute("/portes-admin")({
   component: PortesAdminPage,
 });
 
-const EMPTY_KEYWORDS: PortesKeywords = { laminate: [], reject: [], keep: [] };
+
 
 function loadKeywords(storageKey: string, fallback: PortesKeywords): PortesKeywords {
   if (typeof window === "undefined") return fallback;
@@ -99,14 +99,9 @@ function PortesAdminPage() {
               showSpecialRule
             />
             <div className="my-10 border-t border-border" />
-            <PortesSettingsEditor
-              heading="Mots-clés du traitement de l'aluminium"
-              storageKey="aluminium_keywords"
-              defaultKeywords={EMPTY_KEYWORDS}
-              showSpecialRule={false}
-            />
-            <div className="my-10 border-t border-border" />
             <MachinageNameEditor />
+            <div className="my-10 border-t border-border" />
+            <CadresAluSettingsEditor />
           </>
         ) : (
           <LoginForm onSuccess={() => setAuthed(true)} />
