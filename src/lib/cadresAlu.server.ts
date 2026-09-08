@@ -369,16 +369,18 @@ function hasMoulureBriqueEnJ(value: string): boolean {
  * mention « moulure à brique » (pas nécessairement collée à elle).
  */
 function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
-  return allRowValues.some((v) => {
-    const text = v ?? "";
+  const scan = (text: string) => {
     MOULURE_BRIQUE_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
       const after = text.slice(m.index + m[0].length);
-      if (/non[\s-]*standard/i.test(after)) return true;
+      if (/non[\s-]*(standard|std)\b/i.test(after)) return true;
     }
     return false;
-  });
+  };
+  // Par cellule, puis sur la ligne entière (la mention peut être répartie
+  // sur deux colonnes consécutives).
+  return allRowValues.some((v) => scan(v ?? "")) || scan(allRowValues.join(" | "));
 }
 
 /**
