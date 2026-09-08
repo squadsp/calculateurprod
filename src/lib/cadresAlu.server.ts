@@ -890,8 +890,9 @@ function normalizeCouleurResult(result: string): string {
 }
 
 /** Cherche « <nom> P-562 » ou « <nom> #562 » écrit littéralement dans le texte
- *  et le renvoie exactement tel quel (ex. « Brun Commercial P-562 »,
- *  « Noir P-525 », « BLEU ARDOISE #525 »). Accepte aussi les codes seuls. */
+ *  et ne garde que le nom de couleur proprement dit (ex. « Brun Commercial P-562 »,
+ *  « Noir P-525 », « BLEU ARDOISE #525 »). Les mots parasites comme
+ *  « barrotin extérieur » avant « noir » sont ignorés. */
 function findLiteralCouleur(text: string): string {
   const re = /([A-Za-zÀ-ÿ'’]+(?:[\s-]+[A-Za-zÀ-ÿ'’]+){0,5})\s*[\s-]\s*((?:[A-Za-z]{1,3}\s*-\s*\d{2,4})|(?:#\s*\d{2,4})|(?:\b[1-9]\d{2,3}\b))/g;
   let m: RegExpExecArray | null;
@@ -899,13 +900,27 @@ function findLiteralCouleur(text: string): string {
     const rawName = m[1].trim();
     const code = m[2].replace(/\s*-\s*/, "-").replace(/\s+/g, "").toUpperCase();
     const words = rawName.split(/[\s-]+/).filter(Boolean);
-    const name: string[] = [];
-    for (let i = words.length - 1; i >= 0 && name.length < 6; i--) {
-      if (COLOR_STOPWORDS.has(norm(words[i]))) break;
-      name.unshift(words[i]);
+
+    // On remonte depuis le code pour ne garder que le suffixe qui correspond
+    // à un nom de couleur connu. Ex. "barrotin extérieur noir P-525" -> "noir".
+    let startIdx = -1;
+    for (let i = words.length - 1; i >= 0; i--) {
+      const suffix = words.slice(i).join(" ").toLowerCase();
+      const isKnownSuffix = COULEURS_REF.some((ref) => {
+        const refName = norm(ref.name);
+        return refName === suffix || refName.endsWith(" " + suffix);
+      });
+      const isColorWord = COLOR_WORDS.some((c) => norm(c) === norm(words[i]));
+      if (isKnownSuffix) {
+        startIdx = i;
+      } else if (i === words.length - 1 && isColorWord) {
+        // Le mot juste avant le code est un mot-couleur isolé.
+        startIdx = i;
+      }
     }
-    if (!name.length) continue;
-    // Il faut au moins un vrai mot-couleur pour éviter les faux positifs.
+
+    if (startIdx < 0) continue;
+    const name = words.slice(startIdx);
     if (!name.some((w) => COLOR_WORDS.some((c) => norm(c) === norm(w)))) continue;
     return `${titleCase(name.join(" "))} ${code}`;
   }
@@ -915,15 +930,14 @@ function findLiteralCouleur(text: string): string {
 /** Cherche un code couleur seul (P-525, #525, 525) et tente de retrouver
  *  le nom dans la liste de référence. */
 function findStandaloneCouleurCode(text: string): string {
-  const re = /\b(P\s*-\s*\d{2,4}|#\s*\d{2,4})\b/gi;
+  const re = /\b(P\s*-\s*\d{3,4}|#\s*\d{3,4})\b/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     const raw = m[1].replace(/\s+/g, "").toUpperCase();
     const digits = raw.replace(/^#/, "").replace(/^[A-Z]+-?/i, "");
     const ref = REF_BY_CODE.get(digits);
     if (ref) return `${ref.name} ${raw}`;
-    // Pas de référence connue : on retourne le code brut.
-    return raw;
+    if (isValidCouleurCode(raw)) return raw;
   }
   // Code numérique seul de 3 ou 4 chiffres (ex. « 525 »).
   const numRe = /\b([1-9]\d{2,3})\b/g;
