@@ -123,7 +123,11 @@ function CadresAluPage() {
     (async () => {
       try {
         const response = await processSources({
-          data: { sources, date: useDate ? date : null, settings },
+          data: {
+            sources,
+            date: useDate ? date : null,
+            settings: { ...settings, sortColumn, sortDir },
+          },
         });
         const out = response.results.map((result): Result => {
           const bytes = base64ToUint8Array(result.pdfBase64);
@@ -155,7 +159,7 @@ function CadresAluPage() {
     return () => {
       cancelled = true;
     };
-  }, [sources, date, useDate, processSources, settings]);
+  }, [sources, date, useDate, processSources, settings, sortColumn, sortDir]);
 
   const downloadOne = (r: Result) => {
     const a = document.createElement("a");
