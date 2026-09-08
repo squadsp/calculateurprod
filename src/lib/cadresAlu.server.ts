@@ -411,6 +411,7 @@ export function extractCadreAluRows(
     const epaisseurJambage = epaisseurs[0] ?? "";
     const sens = extractSens(values);
 
+    const couleur = extractCouleur(r, values, aluCell);
     kept.push({
       sequence,
       id: extractId(toStr(r.Code)),
@@ -419,14 +420,13 @@ export function extractCadreAluRows(
       jambageLargeur: extractJambageLargeur(aluCell, values),
       jambageEpaisseur: epaisseurJambage,
       jambageHauteur: dims.hauteur,
-      astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens),
+      astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens, couleur),
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
       souffle: extractSouffle(allRowValues),
       dummy: extractDummy(allRowValues),
       enfigure: extractEnfigure(allRowValues),
-      
-      couleur: extractCouleur(r, values, aluCell),
+      couleur,
     });
   }
 
