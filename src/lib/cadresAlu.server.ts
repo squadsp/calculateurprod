@@ -919,10 +919,22 @@ function findLiteralCouleur(text: string): string {
       }
     }
 
+    // Repli : aucun suffixe connu (ex. « bleu wedge wood P-535 »). On part du
+    // dernier mot-couleur trouvé et on garde tout jusqu'au code.
+    if (startIdx < 0) {
+      for (let i = words.length - 1; i >= 0; i--) {
+        if (COLOR_WORDS.some((c) => norm(c) === norm(words[i]))) {
+          if (words.length - i <= 4) startIdx = i;
+          break;
+        }
+      }
+    }
+
     if (startIdx < 0) continue;
     const name = words.slice(startIdx);
     if (!name.some((w) => COLOR_WORDS.some((c) => norm(c) === norm(w)))) continue;
     return `${titleCase(name.join(" "))} ${code}`;
+
   }
   return "";
 }
