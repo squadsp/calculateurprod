@@ -160,22 +160,15 @@ function parseSouffleSegment(after: string): { prof: string; mesure: string } {
   }
   if (prof) {
     const end = prof.index + prof[0].length;
-    // mesure de profondeur : la plus proche (avant ou après le mot)
+    // La mesure réelle se trouve juste avant « de profondeur / profondeur »,
+    // la mesure après est la profondeur.
     const afterProf = mesures.filter((x) => x.index > end);
     const beforeProf = mesures.filter((x) => x.index < prof.index);
-    let profVal = "";
-    let real = "";
-    if (afterProf.length > 0) {
-      profVal = afterProf[0].value;
-      // La vraie mesure est la suivante, peu importe sa valeur.
-      real = afterProf[1]?.value ?? "";
-    } else if (beforeProf.length > 0) {
-      profVal = beforeProf[beforeProf.length - 1].value;
-    }
+    let profVal = afterProf[0]?.value ?? "";
+    let real = beforeProf[beforeProf.length - 1]?.value ?? "";
     if (!real) {
-      // Dernier recours : première mesure du segment différente de la profondeur.
-      const profIdx = mesures.findIndex((x) => x.value === profVal);
-      real = mesures.find((_, i) => i !== profIdx)?.value ?? "";
+      // Dernier recours : première mesure disponible différente de la profondeur.
+      real = mesures.find((x) => x.value !== profVal)?.value ?? "";
     }
     return { prof: profVal ? `prof. ${profVal}` : "", mesure: real };
   }
