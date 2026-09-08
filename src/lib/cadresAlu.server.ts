@@ -804,6 +804,30 @@ const titleCase = (s: string) =>
 function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
   const all = [aluCell, ...values, ...Object.values(row).map(toStr)].filter(Boolean);
 
+  // Cas particulier : « développement de couleur » — la vraie couleur se
+  // trouve plus loin sous la forme « couleur spécial Gentek <nom> <code> ».
+  if (all.some((v) => /d[ée]veloppement\s+de\s+couleur/i.test(v))) {
+    for (const v of all) {
+      const m = v.match(/couleur\s+sp[ée]cial[e]?(?:\s+gentek)?[\s\-–:]*(.+)$/i);
+      if (!m) continue;
+      const tail = m[1].trim();
+      const codeM = tail.match(/([A-Za-z]{0,2})\s*-?\s*(\d{2,4})\b/);
+      const rawName = (codeM ? tail.slice(0, codeM.index) : tail)
+        .replace(/[\s(\-–:"']+$/, "")
+        .trim();
+      const words = rawName.match(/[A-Za-zÀ-ÿ']+/g) ?? [];
+      const name: string[] = [];
+      for (let i = words.length - 1; i >= 0 && name.length < 4; i--) {
+        const w = words[i];
+        if (COLOR_STOPWORDS.has(norm(w))) break;
+        name.unshift(w);
+      }
+      if (name.length && codeM) return `${titleCase(name.join(" "))} ${codeM[1].toUpperCase()}${codeM[1] ? "-" : ""}${codeM[2]}`;
+      if (name.length) return titleCase(name.join(" "));
+      if (codeM) return codeM[1] ? `${codeM[1].toUpperCase()}-${codeM[2]}` : codeM[2];
+    }
+  }
+
   const codeRe = /(?:^|[^A-Za-z0-9])P\s*-\s*(\d{2,4})\b/gi;
 
   for (const v of all) {
