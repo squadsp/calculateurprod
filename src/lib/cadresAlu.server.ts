@@ -897,11 +897,36 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
     return "";
   };
   const afterCouleur = aluCell.match(/couleur\s+(.+)$/i);
-  return (
-    pickWord(afterCouleur ? afterCouleur[1] : "") ||
-    pickWord(aluCell) ||
-    pickWord(toStr(row.Opt1))
-  );
+  const fromAluCell = pickWord(afterCouleur ? afterCouleur[1] : "") || pickWord(aluCell);
+  if (fromAluCell) return fromAluCell;
+
+  // Pas trouvé dans la Description : on regarde plus loin,
+  // Opt4/Opt5 (puis les autres options) contiennent souvent la couleur.
+  const ordered: string[] = [];
+  for (const key of Object.keys(row).sort()) {
+    if (!/^opt\d+$/i.test(key)) continue;
+    ordered.push(toStr(row[key]));
+  }
+  ordered.sort((a, b) => {
+    const rank = (s: string) =>
+      /opt4/i.test(s) ? 0 : /opt5/i.test(s) ? 1 : 2;
+    return 0 || a.localeCompare(b);
+  });
+  for (const optKey of Object.keys(row)
+    .filter((k) => /^opt\d+$/i.test(k))
+    .sort((a, b) => {
+      const rank = (k: string) => (/^opt4$/i.test(k) ? 0 : /^opt5$/i.test(k) ? 1 : 2);
+      const r = rank(a) - rank(b);
+      return r !== 0 ? r : a.localeCompare(b);
+    })) {
+    const w = pickWord(toStr(row[optKey]));
+    if (w) return w;
+  }
+  for (const v of values) {
+    const w = pickWord(v);
+    if (w) return w;
+  }
+  return "";
 }
 
 
