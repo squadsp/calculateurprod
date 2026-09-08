@@ -736,6 +736,7 @@ function buildAstragaleDimMab(
   epaisseurJambage: string,
   sensRow: string,
   couleur: string,
+  catalogue: CouleurCatalogue,
 ): string {
   const parts: string[] = [];
   const astragale = extractAstragale(allRowValues, sensRow);
