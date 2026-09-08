@@ -881,6 +881,14 @@ function matchCouleurRef(text: string): string {
 function normalizeCouleurResult(result: string): string {
   if (!result) return result;
   let cleaned = result.replace(/^couleur[\s\-–:]+/i, "").replace(/[\s.]+$/, "").trim();
+
+  // Couleur standard : on impose le code officiel, quel que soit le code trouvé.
+  const withoutCode = cleaned
+    .replace(/\s*(?:[A-Za-z]{1,3}\s*-\s*[\dA-Za-z-]+|#\s*\d{2,6}|\b\d{2,6}\b)\s*$/i, "")
+    .trim();
+  const std = STANDARD_CODES[norm(withoutCode)];
+  if (std) return `${titleCase(withoutCode)} ${std}`;
+
   const words = cleaned.split(/\s+/);
   const first = words[0];
   if (!first) return cleaned;
