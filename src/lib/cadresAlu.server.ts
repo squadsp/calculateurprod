@@ -322,10 +322,13 @@ const DOUBLE_MEASURE_RE = new RegExp(
   `(?:${MEASURE_RE.source})(?:\\s*[x×]\\s*(?:${MEASURE_RE.source}))+`,
   "i",
 );
+/** Une mesure « crédible » : double, ou avec fraction/décimale/unité. */
+const QUALIFIED_MEASURE_RE =
+  /\d+(?:[.,]\d+)(?:\s*(?:"|''|po\b|mm\b))?|\d+[\s-]+\d+\/\d+\s*(?:"|''|po\b|mm\b)?|\d+\/\d+\s*(?:"|''|po\b|mm\b)?|\d+\s*(?:"|''|po\b|mm\b)/i;
 function matchMesure(text: string): string {
   const dbl = text.match(DOUBLE_MEASURE_RE);
   if (dbl) return dbl[0].trim();
-  const single = text.match(MEASURE_RE);
+  const single = text.match(QUALIFIED_MEASURE_RE);
   return single ? single[0].trim() : "";
 }
 
@@ -346,10 +349,21 @@ const NON_INSTALLE_RE = /non[\s\-]?install[ée]?/i;
 function isNonInstalleAdjacent(text: string, m: RegExpExecArray): boolean {
   const before = text.slice(0, m.index);
   const after = text.slice(m.index + m[0].length);
-  if (NON_INSTALLE_RE.test(before.slice(-20))) return true;
-  if (NON_INSTALLE_RE.test(after.slice(0, 20))) return true;
+  if (NON_INSTALLE_RE.test(before.slice(-60))) return true;
+  if (NON_INSTALLE_RE.test(after.slice(0, 60))) return true;
   return false;
 }
+
+/** Vrai si une mention « non installé » côtoie une moulure à brique n'importe où dans la ligne. */
+function hasNonInstalleMab(wholeRow: string): boolean {
+  MOULURE_BRIQUE_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = MOULURE_BRIQUE_RE.exec(wholeRow)) !== null) {
+    if (isNonInstalleAdjacent(wholeRow, m)) return true;
+  }
+  return false;
+}
+
 
 /** Vrai si la ligne contient au moins une moulure à brique qui n'est PAS « en J » ni « non installé ». */
 function hasMoulureBrique(value: string): boolean {
@@ -434,10 +448,12 @@ function buildAstragaleDimMab(
   const moulureTypes = new Set<string>();
   const wholeRow = allRowValues.join(" | ");
   const hasJBrickDescription = hasMoulureBriqueEnJ(wholeRow);
+  const nonInstalle = hasNonInstalleMab(wholeRow);
   for (const v of values) {
     if (/moulure\s+de\s+retenu/i.test(v)) moulureTypes.add("Moulure de retenu");
-    // Toute description « avec J / J intégré » de la même ligne annule la moulure à brique.
-    if (!hasJBrickDescription && hasMoulureBrique(v)) moulureTypes.add("Moulure à brique");
+    // Toute description « avec J / J intégré » ou « non installé » de la même ligne annule la moulure à brique.
+    if (!hasJBrickDescription && !nonInstalle && hasMoulureBrique(v))
+      moulureTypes.add("Moulure à brique");
   }
 
 
