@@ -823,6 +823,17 @@ const REF_BY_FIRST_WORD = (() => {
   return map;
 })();
 
+// Index code numérique → couleur de référence (ex. « 525 » → Noir).
+const REF_BY_CODE = (() => {
+  const map = new Map<string, (typeof COULEURS_REF)[number]>();
+  for (const ref of COULEURS_REF) {
+    if (!ref.code) continue;
+    const digits = ref.code.replace(/^[A-Z]+-?/i, "");
+    if (/^\d{3,4}$/.test(digits) && !map.has(digits)) map.set(digits, ref);
+  }
+  return map;
+})();
+
 /** Cherche une couleur connue de la liste de référence dans le texte. */
 function matchCouleurRef(text: string): string {
   const t = normText(text);
