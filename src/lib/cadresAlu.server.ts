@@ -824,9 +824,25 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
     }
   }
 
-  // Repli : mot-couleur connu sans code.
-  const pickWord = (text: string) =>
-    COLOR_WORDS.find((c) => new RegExp(`\\b${c}\\b`, "i").test(text)) ?? "";
+  // Repli : nom de couleur connu sans code. Le nom peut comporter
+  // plusieurs mots (ex. « rouge vif », « brun commercial ») : on capture
+  // le mot-couleur puis les mots descriptifs qui suivent.
+  const pickWord = (text: string): string => {
+    for (const c of COLOR_WORDS) {
+      const m = text.match(new RegExp(`\\b${c}\\b([^\\d()]*)`, "i"));
+      if (!m) continue;
+      const tail = (m[1] ?? "").match(/[A-Za-zÀ-ÿ']+/g) ?? [];
+      const extra: string[] = [];
+      for (const w of tail) {
+        if (extra.length >= 2) break;
+        if (COLOR_STOPWORDS.has(norm(w))) break;
+        if (COLOR_WORDS.some((cw) => norm(cw) === norm(w))) break;
+        extra.push(w);
+      }
+      return titleCase([c, ...extra].join(" "));
+    }
+    return "";
+  };
   const afterCouleur = aluCell.match(/couleur\s+(.+)$/i);
   return (
     pickWord(afterCouleur ? afterCouleur[1] : "") ||
