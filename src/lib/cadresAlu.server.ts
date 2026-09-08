@@ -1104,13 +1104,13 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
       }
       return "";
     };
-    // On cherche d'abord la couleur dans Opt4, puis Opt5, puis Opt6.
+    // On cherche d'abord la couleur dans Opt4 à Opt8 (jamais Opt2/Opt3).
     const optKeys = Object.keys(row)
-      .filter((k) => /^opt[456]$/i.test(k))
+      .filter((k) => /^opt[4-8]$/i.test(k))
       .sort((a, b) => {
-        const rank = (k: string) => (/^opt4$/i.test(k) ? 0 : /^opt5$/i.test(k) ? 1 : 2);
-        const r = rank(a) - rank(b);
-        return r !== 0 ? r : a.localeCompare(b);
+        const nA = parseInt(a.replace(/^opt/i, ""), 10);
+        const nB = parseInt(b.replace(/^opt/i, ""), 10);
+        return nA - nB;
       });
     for (const optKey of optKeys) {
       const w = pickWord(toStr(row[optKey]));
@@ -1126,9 +1126,9 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
     }
 
     if (!result) {
-      // Dernier recours : les autres options et les autres valeurs de la ligne.
+      // Dernier recours : les autres options (sauf Opt2/Opt3) et les autres valeurs de la ligne.
       for (const optKey of Object.keys(row)
-        .filter((k) => /^opt\d+$/i.test(k) && !/^opt[456]$/i.test(k))
+        .filter((k) => /^opt\d+$/i.test(k) && !/^opt[2-8]$/i.test(k))
         .sort((a, b) => a.localeCompare(b))) {
         const w = pickWord(toStr(row[optKey]));
         if (w) {
