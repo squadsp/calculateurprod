@@ -317,6 +317,28 @@ function findDifferentColor(values: string[], mainColor: string): string {
 
 const MEASURE_RE = /\d+\s+\d+\/\d+\s*"?|\d+\/\d+\s*"?|\d+\s*"/;
 
+/** Toutes les mentions de moulure à brique (M.A.B), variantes incluses. */
+const MOULURE_BRIQUE_RE =
+  /(?:moulure|moul\.?)\s*(?:[àa]|de|d')?\s*brique|\bm\.?\s*a\.?\s*b\.?\b/gi;
+
+/** Marqueur « en J » (en J, «J», -J, J tout seul) juste après la mention. */
+const J_MARKER_RE = /^[\s.:,'"«»\-–]*(?:en\s*)?[«"']?\s*j\b/i;
+
+/** Vrai si la ligne contient au moins une moulure à brique qui n'est PAS « en J ». */
+function hasMoulureBrique(value: string): boolean {
+  const text = value ?? "";
+  MOULURE_BRIQUE_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  let found = false;
+  while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
+    const after = text.slice(m.index + m[0].length, m.index + m[0].length + 20);
+    if (J_MARKER_RE.test(after)) continue; // moulure à brique en J -> ignorée
+    found = true;
+  }
+  return found;
+}
+
+
 /** Vrai si la ligne mentionne une moulure à brique non standard. */
 function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
   const whole = allRowValues.join(" | ");
@@ -370,14 +392,10 @@ function buildAstragaleDimMab(
   const moulureTypes = new Set<string>();
   for (const v of values) {
     if (/moulure\s+de\s+retenu/i.test(v)) moulureTypes.add("Moulure de retenu");
-    // On ignore les moulures à brique « en J ».
-    if (
-      /moulure\s+[àa]\s+brique/i.test(v) &&
-      !/moulure\s+[àa]\s+brique\s*(?:en\s*)?[-]?\s*j\b/i.test(v)
-    ) {
-      moulureTypes.add("Moulure à brique");
-    }
+    // On ignore toutes les moulures à brique « en J ».
+    if (hasMoulureBrique(v)) moulureTypes.add("Moulure à brique");
   }
+
 
   if (moulureTypes.has("Moulure à brique")) {
     const nonStd = isMoulureBriqueNonStandard(allRowValues);
