@@ -959,6 +959,11 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
     }
   }
 
+  // Codes fixes connus : « noir » est toujours 525 / P-525, etc.
+  const FIXED_CODES: Record<string, string> = {
+    noir: "P-525",
+  };
+
   // Repli : nom de couleur connu sans code. Le nom peut comporter
   // plusieurs mots (ex. « rouge vif », « brun commercial ») : on capture
   // le mot-couleur puis les mots descriptifs qui suivent.
@@ -974,7 +979,9 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
         if (COLOR_WORDS.some((cw) => norm(cw) === norm(w))) break;
         extra.push(w);
       }
-      return titleCase([c, ...extra].join(" "));
+      const label = titleCase([c, ...extra].join(" "));
+      const fixed = extra.length === 0 ? FIXED_CODES[norm(c)] : undefined;
+      return fixed ? `${label} ${fixed}` : label;
     }
     return "";
   };
