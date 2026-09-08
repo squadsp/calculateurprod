@@ -387,7 +387,7 @@ export function extractCadreAluRows(
       souffle: extractSouffle(allRowValues),
       dummy: extractDummy(allRowValues),
       enfigure: extractEnfigure(allRowValues),
-      acier: extractAcier(allRowValues),
+      
       couleur: extractCouleur(r, values, aluCell),
     });
   }
@@ -539,7 +539,7 @@ export async function buildCadreAluPdf(
       r.souffle,
       r.dummy,
       r.enfigure,
-      r.acier,
+      
       r.couleur,
     ];
     // Chaque cellule peut occuper plusieurs lignes (ex. « Moulure » sous l'astragale).
