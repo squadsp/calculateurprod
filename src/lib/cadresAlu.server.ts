@@ -1005,8 +1005,16 @@ function extractCouleur(row: Record<string, unknown>, _values: string[], _aluCel
     .filter((o) => o.n >= 4)
     .sort((a, b) => a.n - b.n);
   for (const { k } of optKeys) {
-    const hit = pickCouleurAfterKeyword(toStr(row[k]));
+    const text = toStr(row[k]);
+    // 1) Après les mots-clés « peinture » ou « couleur ».
+    const hit = pickCouleurAfterKeyword(text);
     if (hit) return hit;
+    // 2) N'importe quel motif « Nom P-xxx / #xxx » dans la cellule.
+    const literal = findLiteralCouleur(text);
+    if (literal) return literal;
+    // 3) Code seul P-xxx / #xxx / xxx.
+    const standalone = findStandaloneCouleurCode(text);
+    if (standalone) return standalone;
   }
   return "";
 }
