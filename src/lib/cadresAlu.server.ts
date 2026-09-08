@@ -825,7 +825,8 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
   }
 
   // Codes de peinture de marque, ex. « BENJAMIN MOORE Luzule des bois HC-126 ».
-  const brandRe = /(?:^|[^A-Za-z0-9])([A-Z]{1,3})\s*-\s*(\d{2,4})\b/g;
+  // Un code seul sans nom (ex. « T30 », un code de profil) n'est PAS une couleur.
+  const brandRe = /(?:^|[^A-Za-z0-9])([A-Z]{2,3})\s*-\s*(\d{2,4})\b/g;
   const BRANDS = new Set([
     "benjamin", "moore", "sico", "sherwin", "williams", "behr", "dulux",
     "cil", "para", "rona", "betonel",
@@ -848,7 +849,27 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
       }
       while (name.length && ["de", "du", "des", "la", "le", "les", "et"].includes(norm(name[0]))) name.shift();
       if (name.length) return `${titleCase(name.join(" "))} ${code}`;
-      return code;
+    }
+  }
+
+  // Couleurs avec code numérique sans « P- », ex. « Sauge 517 » :
+  // nom (1 à 3 mots) suivi d'un nombre de 3 à 4 chiffres.
+  const BARE_CODE_REJECT = new Set([
+    ...COLOR_STOPWORDS,
+    "hauteur", "largeur", "profondeur", "profond", "souffle", "souffler",
+    "soufflage", "mesure", "dimension", "epaisseur", "sequence", "code",
+    "ligne", "option", "opt", "pleine", "plein", "moustiquaire", "astragale",
+    "slab", "acier", "cadre", "jambage",
+  ]);
+  const bareCodeRe = /([A-Za-zÀ-ÿ']+(?:\s+[A-Za-zÀ-ÿ']+){0,2})\s+(\d{3,4})\b/g;
+  for (const v of all) {
+    bareCodeRe.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = bareCodeRe.exec(v)) !== null) {
+      const name = m[1].trim();
+      const words = name.split(/\s+/);
+      if (words.some((w) => BARE_CODE_REJECT.has(norm(w)))) continue;
+      return `${titleCase(name)} ${m[2]}`;
     }
   }
 
