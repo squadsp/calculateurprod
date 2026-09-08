@@ -10,6 +10,7 @@ import {
   Printer,
   X,
   CalendarIcon,
+  ArrowDownUp,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { processCadreAluSources, type CadreAluRow } from "@/lib/cadresAlu.functions";
@@ -266,6 +267,33 @@ function CadresAluPage() {
               onChange={(e) => setDate(e.target.value)}
               className="mt-3 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
             />
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 md:col-start-2">
+            <label className="text-sm font-semibold flex items-center gap-2">
+              <ArrowDownUp className="h-4 w-4 text-primary" /> Trier avant impression
+            </label>
+            <select
+              value={sortColumn}
+              onChange={(e) => setSortColumn(e.target.value as CadreAluSettings["sortColumn"])}
+              className="mt-3 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              aria-label="Colonne de tri"
+            >
+              {visibleColumns.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sortDir}
+              onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+              className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              aria-label="Ordre de tri"
+            >
+              <option value="asc">Croissant (A → Z)</option>
+              <option value="desc">Décroissant (Z → A)</option>
+            </select>
           </div>
         </div>
 
