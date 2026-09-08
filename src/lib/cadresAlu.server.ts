@@ -131,19 +131,23 @@ function measureToDecimal(m: string): number | null {
   return isNaN(n) ? null : n;
 }
 
-/** Ignore les mesures de 0 à 1.9 (souvent la profondeur) et retourne la suivante. */
-function skipSmallMesures(mesures: { value: string; index: number }[]): { value: string; index: number }[] {
-  return mesures.filter((x) => {
-    const n = measureToDecimal(x.value);
-    return n === null || n > 1.9;
-  });
+/** Ignore les mesures de 0 à 1.9 en début de liste (souvent la profondeur) et retourne la suivante. */
+function skipLeadingSmallMesures(mesures: { value: string; index: number }[]): { value: string; index: number }[] {
+  let i = 0;
+  while (i < mesures.length) {
+    const n = measureToDecimal(mesures[i].value);
+    if (n === null || n > 1.9) break;
+    i++;
+  }
+  return mesures.slice(i);
 }
 
 /**
  * Dans un segment « souffler ... », le texte mentionne d'abord la profondeur
  * (« mesure de profondeur X » ou « pleine profondeur ») puis, en 2e mesure,
- * la mesure réelle du soufflé. Les mesures de 0 à 1.9 sont ignorées pour
- * atteindre la vraie mesure du soufflé.
+ * la mesure réelle du soufflé. Les premières mesures de 0 à 1.9 sont ignorées
+ * pour atteindre la vraie mesure du soufflé. Si ce n'est pas « pleine profondeur »,
+ * la mesure réelle est toujours mentionnée.
  */
 function parseSouffleSegment(after: string): { prof: string; mesure: string } {
   const pleine = /pleine\s+profondeur/i.exec(after);
@@ -151,28 +155,28 @@ function parseSouffleSegment(after: string): { prof: string; mesure: string } {
   const mesures = listMesures(after);
 
   if (pleine) {
-    const next = skipSmallMesures(mesures).find((x) => x.index > pleine.index + pleine[0].length);
+    const next = skipLeadingSmallMesures(mesures.filter((x) => x.index > pleine.index + pleine[0].length))[0];
     return { prof: "pleine prof.", mesure: next?.value ?? "" };
   }
   if (prof) {
     const end = prof.index + prof[0].length;
-    // mesure de profondeur : la plus proche (avant ou après le mot)
+    // La mesure réelle se trouve juste avant « de profondeur / profondeur »,
+    // la mesure après est la profondeur.
     const afterProf = mesures.filter((x) => x.index > end);
     const beforeProf = mesures.filter((x) => x.index < prof.index);
-    let profVal = "";
-    let rest = afterProf;
-    if (afterProf.length > 0) {
-      profVal = afterProf[0].value;
-      rest = afterProf.slice(1);
-    } else if (beforeProf.length > 0) {
-      profVal = beforeProf[beforeProf.length - 1].value;
+    let profVal = afterProf[0]?.value ?? "";
+    let real = beforeProf[beforeProf.length - 1]?.value ?? "";
+    if (!real) {
+      // Dernier recours : première mesure disponible différente de la profondeur.
+      real = mesures.find((x) => x.value !== profVal)?.value ?? "";
     }
-    const real = skipSmallMesures(rest)[0]?.value ?? "";
     return { prof: profVal ? `prof. ${profVal}` : "", mesure: real };
   }
   // Pas de mot profondeur : on ignore la première petite mesure et on prend la suivante.
-  const candidates = skipSmallMesures(mesures);
-  return { prof: "", mesure: candidates[0]?.value ?? matchMesure(after) };
+  const candidates = skipLeadingSmallMesures(mesures);
+  let mesure = candidates[0]?.value ?? "";
+  if (!mesure) mesure = matchMesure(after);
+  return { prof: "", mesure };
 }
 
 function extractSouffle(allRowValues: string[]): string {
