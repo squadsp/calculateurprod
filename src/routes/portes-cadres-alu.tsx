@@ -318,17 +318,19 @@ function CadresAluPage() {
                   <tbody>
                     {r.rows.map((row, i) => (
                       <tr key={`${row.id}-${row.sequence}-${i}`} className="border-t border-border">
-                        <td className="px-3 py-1.5">{row.sequence}</td>
-                        <td className="px-3 py-1.5 font-mono text-xs">{row.id}</td>
-                        <td className="px-3 py-1.5">{row.sens}</td>
-                        <td className="px-3 py-1.5">{row.tete}</td>
-                        <td className="px-3 py-1.5">{row.jambageLargeur}</td>
-                        <td className="px-3 py-1.5">{row.jambageEpaisseur}</td>
-                        <td className="px-3 py-1.5">{row.jambageHauteur}</td>
-                        <td className="px-3 py-1.5">{row.astragale}</td>
-                        <td className="px-3 py-1.5">{row.moustiquaire}</td>
-                        <td className="px-3 py-1.5">{row.seuil}</td>
-                        <td className="px-3 py-1.5">{row.couleur}</td>
+                        <td className="px-2 py-1.5 whitespace-nowrap">{row.sequence}</td>
+                        <td className="px-2 py-1.5 font-mono text-xs whitespace-nowrap">{row.id}</td>
+                        <td className="px-2 py-1.5">{row.sens}</td>
+                        <td className="px-2 py-1.5">{row.tete}</td>
+                        <td className="px-2 py-1.5">{row.jambageLargeur}</td>
+                        <td className="px-2 py-1.5">{row.jambageEpaisseur}</td>
+                        <td className="px-2 py-1.5">{row.jambageHauteur}</td>
+                        <td className="px-2 py-1.5">{row.astragale}</td>
+                        <td className="px-2 py-1.5 text-center">{row.moustiquaire}</td>
+                        <td className="px-2 py-1.5">{row.seuil}</td>
+                        <td className="px-2 py-1.5">{row.souffle}</td>
+                        <td className="px-2 py-1.5">{row.couleur}</td>
+
                       </tr>
                     ))}
                   </tbody>
