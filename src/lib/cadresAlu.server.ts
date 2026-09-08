@@ -425,6 +425,22 @@ function extractJambageLargeur(aluCell: string, allValues: string[]): string {
     const m = v.match(/Cadre\s*(\d+(?:[-\s]\d+\/\d+)?)\s*''/i);
     if (m) return normalizeFraction(m[1]);
   }
+  // Repli : « Cadre dimension X '' » moins la profondeur du soufflage (« Souf. extérieur Y '' »).
+  const M = String.raw`\d+\s+\d+\/\d+|\d+-\d+\/\d+|\d+\/\d+|\d+`;
+  let cadreDim: number | null = null;
+  let souf = 0;
+  for (const v of allValues) {
+    if (cadreDim === null) {
+      const m = v.match(new RegExp(String.raw`cadre\s+dimensions?\s*(?:de\s*)?(${M})`, "i"));
+      if (m) cadreDim = measureToDecimal(normalizeFraction(m[1]));
+    }
+    const s = v.match(new RegExp(String.raw`souf(?:f|\.)?\w*\.?\s*(?:ext[ée]rieur|int[ée]rieur)?\s*(${M})`, "i"));
+    if (s) souf = Math.max(souf, measureToDecimal(normalizeFraction(s[1])) ?? 0);
+  }
+  if (cadreDim !== null && cadreDim > 0) {
+    const result = cadreDim - souf;
+    if (result > 0) return decimalToMeasure(result);
+  }
   // Repli : profondeur/dimension du cadre moins la profondeur du soufflage.
   const cadre = extractCadreProfondeur(allValues);
   if (cadre !== null) {
@@ -432,6 +448,7 @@ function extractJambageLargeur(aluCell: string, allValues: string[]): string {
     const result = cadre - souffle;
     if (result > 0) return decimalToMeasure(result);
   }
+
   return "";
 }
 
