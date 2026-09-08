@@ -872,6 +872,7 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
       const name = m[1].trim();
       const words = name.split(/\s+/);
       if (words.some((w) => BARE_CODE_REJECT.has(norm(w)))) continue;
+      if (/^(19|20)\d{2}$/.test(m[2])) continue; // année, pas un code couleur
       return `${titleCase(name)} ${m[2]}`;
     }
   }
