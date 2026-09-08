@@ -8,6 +8,7 @@ import {
   normalizeCadreAluSettings,
   type CadreAluSettings,
 } from "@/lib/cadresAluSettings";
+import { COULEURS_REF } from "@/lib/couleursRef";
 
 function escapeRe(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -800,9 +801,90 @@ const titleCase = (s: string) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
 
+/** Texte normalisé pour comparer avec les clés de la liste de référence. */
+const normText = (s: string) =>
+  ` ${s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z ]/g, " ")
+    .replace(/\s+/g, " ")} `;
+
+// Index premier-mot → couleurs de référence (les plus longues d'abord).
+const REF_BY_FIRST_WORD = (() => {
+  const map = new Map<string, typeof COULEURS_REF>();
+  for (const ref of COULEURS_REF) {
+    const w = ref.key.split(" ")[0];
+    if (!w) continue;
+    const arr = map.get(w) ?? [];
+    arr.push(ref);
+    map.set(w, arr);
+  }
+  return map;
+})();
+
+// Index code numérique → couleur de référence (ex. « 525 » → Noir).
+const REF_BY_CODE = (() => {
+  const map = new Map<string, (typeof COULEURS_REF)[number]>();
+  for (const ref of COULEURS_REF) {
+    if (!ref.code) continue;
+    const digits = ref.code.replace(/^[A-Z]+-?/i, "");
+    if (/^\d{3,4}$/.test(digits) && !map.has(digits)) map.set(digits, ref);
+  }
+  return map;
+})();
+
+/** Cherche une couleur connue de la liste de référence dans le texte. */
+function matchCouleurRef(text: string): string {
+  const t = normText(text);
+  if (t.length < 6) return "";
+  for (const word of t.split(" ").filter(Boolean)) {
+    const candidates = REF_BY_FIRST_WORD.get(word);
+    if (!candidates) continue;
+    for (const ref of candidates) {
+      if (ref.key.length < 4) continue;
+      if (!t.includes(ref.key)) continue;
+      return ref.code ? `${ref.name} ${ref.code}` : ref.name;
+    }
+  }
+  return "";
+}
+
 /** Couleur = nom + code, ex. « Noir P-525 » ou « Brun Commercial P-562 ». */
 function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
   const all = [aluCell, ...values, ...Object.values(row).map(toStr)].filter(Boolean);
+
+  // La description (aluCell) est vérifiée en premier, puis les options, puis
+  // le reste de la ligne : liste de référence des couleurs développées chez
+  // Laurentides.
+  for (const src of all) {
+    const hit = matchCouleurRef(src);
+    if (hit) return hit;
+  }
+
+  // Cas particulier : « développement de couleur » — la vraie couleur se
+  // trouve plus loin sous la forme « couleur spécial Gentek <nom> <code> ».
+  if (all.some((v) => /d[ée]veloppement\s+de\s+couleur/i.test(v))) {
+    for (const v of all) {
+      const m = v.match(/couleur\s+sp[ée]cial[e]?(?:\s+gentek)?[\s\-–:]*(.+)$/i);
+      if (!m) continue;
+      const tail = m[1].trim();
+      const codeM = tail.match(/([A-Za-z]{0,2})\s*-?\s*(\d{2,4})\b/);
+      const rawName = (codeM ? tail.slice(0, codeM.index) : tail)
+        .replace(/[\s(\-–:"']+$/, "")
+        .trim();
+      const words = rawName.match(/[A-Za-zÀ-ÿ']+/g) ?? [];
+      const name: string[] = [];
+      for (let i = words.length - 1; i >= 0 && name.length < 4; i--) {
+        const w = words[i];
+        if (COLOR_STOPWORDS.has(norm(w))) break;
+        name.unshift(w);
+      }
+      if (name.length && codeM) return `${titleCase(name.join(" "))} ${codeM[1].toUpperCase()}${codeM[1] ? "-" : ""}${codeM[2]}`;
+      if (name.length) return titleCase(name.join(" "));
+      if (codeM) return codeM[1] ? `${codeM[1].toUpperCase()}-${codeM[2]}` : codeM[2];
+    }
+  }
 
   const codeRe = /(?:^|[^A-Za-z0-9])P\s*-\s*(\d{2,4})\b/gi;
 
@@ -820,7 +902,8 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
         name.unshift(w);
       }
       if (name.length) return `${titleCase(name.join(" "))} ${code}`;
-      return code;
+      const ref = REF_BY_CODE.get(m[1]);
+      return ref ? `${ref.name} ${code}` : code;
     }
   }
 
@@ -872,10 +955,14 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
       const name = m[1].trim();
       const words = name.split(/\s+/);
       if (words.some((w) => BARE_CODE_REJECT.has(norm(w)))) continue;
-      if (/^(19|20)\d{2}$/.test(m[2])) continue; // année, pas un code couleur
       return `${titleCase(name)} ${m[2]}`;
     }
   }
+
+  // Codes fixes connus : « noir » est toujours 525 / P-525, etc.
+  const FIXED_CODES: Record<string, string> = {
+    noir: "P-525",
+  };
 
   // Repli : nom de couleur connu sans code. Le nom peut comporter
   // plusieurs mots (ex. « rouge vif », « brun commercial ») : on capture
@@ -892,7 +979,9 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
         if (COLOR_WORDS.some((cw) => norm(cw) === norm(w))) break;
         extra.push(w);
       }
-      return titleCase([c, ...extra].join(" "));
+      const label = titleCase([c, ...extra].join(" "));
+      const fixed = extra.length === 0 ? FIXED_CODES[norm(c)] : undefined;
+      return fixed ? `${label} ${fixed}` : label;
     }
     return "";
   };
