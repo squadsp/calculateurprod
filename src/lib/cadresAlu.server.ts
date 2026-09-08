@@ -89,23 +89,56 @@ function extractMoustiquaire(allRowValues: string[]): string {
   return "";
 }
 
-/** Détecte si le cadre est soufflé en hauteur, en largeur ou les deux. */
+/**
+ * Détecte si le cadre est soufflé en hauteur, en largeur ou les deux,
+ * avec la mesure associée. Les mentions « soufflage » sont ignorées :
+ * le texte doit dire « soufflé / soufflée / soufflés ».
+ */
+const SOUFFLE_WORD_RE = /souffl[ée]e?s?\b/gi;
+
 function extractSouffle(allRowValues: string[]): string {
   const whole = allRowValues.join(" ");
-  if (!/souffl/i.test(whole)) return "";
+  SOUFFLE_WORD_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  let hauteur = "";
+  let largeur = "";
+  let hauteurFound = false;
+  let largeurFound = false;
+  let deux = false;
 
-  const hauteur = /souffl\w*[^.;|]{0,40}\b(hauteur|haut\b|htr)/i.test(whole)
-    || /\b(hauteur|haut)\b[^.;|]{0,40}souffl/i.test(whole);
-  const largeur = /souffl\w*[^.;|]{0,40}\b(largeur|large\b|lrg)/i.test(whole)
-    || /\b(largeur|large)\b[^.;|]{0,40}souffl/i.test(whole);
-  const deux = /souffl\w*[^.;|]{0,40}\b(2|deux|les\s*2|both)\s*(c[oô]t[ée]s?|sens|directions?)?/i.test(whole);
+  while ((m = SOUFFLE_WORD_RE.exec(whole)) !== null) {
+    const before = whole.slice(Math.max(0, m.index - 60), m.index);
+    const after = whole.slice(m.index + m[0].length, m.index + m[0].length + 60);
+    const ctx = `${before} ${after}`;
 
-  if ((hauteur && largeur) || deux) return "Haut. + Larg.";
-  if (hauteur) return "Hauteur";
-  if (largeur) return "Largeur";
+    const isH = /\b(hauteur|haut|htr)\b/i.test(ctx);
+    const isL = /\b(largeur|large|lrg)\b/i.test(ctx);
+    if (/\b(2|deux|les\s*2)\s*(c[oô]t[ée]s?|sens|directions?)?/i.test(after)) deux = true;
+
+    const mesure = matchMesure(after) || matchMesure(before);
+    if (isH) {
+      hauteurFound = true;
+      if (mesure && !hauteur) hauteur = mesure;
+    }
+    if (isL) {
+      largeurFound = true;
+      if (mesure && !largeur) largeur = mesure;
+    }
+  }
+
+  const label = (name: string, mes: string) => (mes ? `${name} ${mes}` : name);
+  if ((hauteurFound && largeurFound) || deux) {
+    const parts: string[] = [];
+    if (hauteurFound || hauteur) parts.push(label("Haut.", hauteur));
+    if (largeurFound || largeur) parts.push(label("Larg.", largeur));
+    return parts.length ? parts.join(" + ") : "Haut. + Larg.";
+  }
+  if (hauteurFound) return label("Hauteur", hauteur);
+  if (largeurFound) return label("Largeur", largeur);
   // Direction inconnue : on ne devine pas — la cellule reste vide.
   return "";
 }
+
 
 
 /** Type de seuil : Sans seuil / Seuil adapté AC5 / Seuil adapté / Seuil AC5. */
