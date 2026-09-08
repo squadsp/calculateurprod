@@ -56,10 +56,11 @@ function extractSouffle(allRowValues: string[]): string {
     || /\b(largeur|large)\b[^.;|]{0,40}souffl/i.test(whole);
   const deux = /souffl\w*[^.;|]{0,40}\b(2|deux|les\s*2|both)\s*(c[oô]t[ée]s?|sens|directions?)?/i.test(whole);
 
-  if ((hauteur && largeur) || deux) return "Hauteur + Largeur";
+  if ((hauteur && largeur) || deux) return "Haut. + Larg.";
   if (hauteur) return "Hauteur";
   if (largeur) return "Largeur";
-  return "Oui";
+  // Direction inconnue : on ne devine pas — la cellule reste vide.
+  return "";
 }
 
 
