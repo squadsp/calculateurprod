@@ -493,8 +493,17 @@ function extractPleineHauteur(values: string[], defaultHauteur: string): string 
   return defaultHauteur;
 }
 
-/** Opening direction of the door: Fixe / Gauche / Droite. */
+/** Opening direction: keep the full parenthesis content (ex "(gauche int #1)"). */
 function extractSens(values: string[]): string {
+  for (const v of values) {
+    const parens = [...v.matchAll(/\(([^()]*)\)/g)];
+    for (const p of parens) {
+      const inner = p[1].trim();
+      if (/gauche|droite|fixe/i.test(inner) && inner) {
+        return inner.charAt(0).toUpperCase() + inner.slice(1);
+      }
+    }
+  }
   for (const v of values) {
     if (/\bfixe\b/i.test(v)) return "Fixe";
   }
