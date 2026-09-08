@@ -936,7 +936,9 @@ export function extractCadreAluRows(
   fileBuffer: ArrayBuffer,
   targetDate: Date | null,
   rawSettings?: unknown,
+  couleurs: CouleurEntry[] = [],
 ): CadreAluRow[] {
+  const catalogue = buildCouleurCatalogue(couleurs);
   const settings: CadreAluSettings = rawSettings
     ? normalizeCadreAluSettings(rawSettings)
     : DEFAULT_CADRE_ALU_SETTINGS;
