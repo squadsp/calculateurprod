@@ -29,7 +29,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Role = "super_admin" | "admin";
+type Role = "super_admin" | "admin" | "couleur_admin";
 
 function AdminPage() {
   const [authed, setAuthed] = useState(false);
