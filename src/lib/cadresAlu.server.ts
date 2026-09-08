@@ -96,6 +96,52 @@ function extractMoustiquaire(allRowValues: string[]): string {
  */
 const SOUFFLE_WORD_RE = /souffl[ée]e?(?:s|r)?\b/gi;
 
+/** Toutes les mesures d'un texte, dans l'ordre, avec leur position. */
+const ANY_MEASURE_G =
+  /\d+\s*\d+\/\d+|\d+-\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?/g;
+
+function listMesures(text: string): { value: string; index: number }[] {
+  const out: { value: string; index: number }[] = [];
+  ANY_MEASURE_G.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = ANY_MEASURE_G.exec(text)) !== null) {
+    out.push({ value: m[0].replace(/\s+/g, " ").trim(), index: m.index });
+  }
+  return out;
+}
+
+/**
+ * Dans un segment « souffler ... », le texte mentionne d'abord la profondeur
+ * (« mesure de profondeur X » ou « pleine profondeur ») puis, en 2e mesure,
+ * la mesure réelle du soufflé.
+ */
+function parseSouffleSegment(after: string): { prof: string; mesure: string } {
+  const pleine = /pleine\s+profondeur/i.exec(after);
+  const prof = /profond(?:eur)?/i.exec(after);
+  const mesures = listMesures(after);
+
+  if (pleine) {
+    const next = mesures.find((x) => x.index > pleine.index + pleine[0].length);
+    return { prof: "pleine prof.", mesure: next?.value ?? "" };
+  }
+  if (prof) {
+    const end = prof.index + prof[0].length;
+    // mesure de profondeur : la plus proche (avant ou après le mot)
+    const afterProf = mesures.filter((x) => x.index > end);
+    const beforeProf = mesures.filter((x) => x.index < prof.index);
+    let profVal = "";
+    let rest = afterProf;
+    if (afterProf.length > 0) {
+      profVal = afterProf[0].value;
+      rest = afterProf.slice(1);
+    } else if (beforeProf.length > 0) {
+      profVal = beforeProf[beforeProf.length - 1].value;
+    }
+    return { prof: profVal ? `prof. ${profVal}` : "", mesure: rest[0]?.value ?? "" };
+  }
+  return { prof: "", mesure: matchMesure(after) };
+}
+
 function extractSouffle(allRowValues: string[]): string {
   const whole = allRowValues.join(" ");
   SOUFFLE_WORD_RE.lastIndex = 0;
@@ -104,40 +150,38 @@ function extractSouffle(allRowValues: string[]): string {
   let largeur = "";
   let hauteurFound = false;
   let largeurFound = false;
-  let deux = false;
 
   while ((m = SOUFFLE_WORD_RE.exec(whole)) !== null) {
     const before = whole.slice(Math.max(0, m.index - 60), m.index);
-    const after = whole.slice(m.index + m[0].length, m.index + m[0].length + 60);
+    const after = whole.slice(m.index + m[0].length, m.index + m[0].length + 120);
     const ctx = `${before} ${after}`;
 
     const isH = /\b(hauteur|haut|htr)\b/i.test(ctx);
     const isL = /\b(largeur|large|lrg)\b/i.test(ctx);
-    if (/\b(2|deux|les\s*2)\s*(c[oô]t[ée]s?|sens|directions?)?/i.test(after)) deux = true;
 
-    const mesure = matchMesure(after) || matchMesure(before);
+    const { prof, mesure } = parseSouffleSegment(after);
+    const txt = [mesure, prof ? `(${prof})` : ""].filter(Boolean).join(" ");
+
     if (isH) {
       hauteurFound = true;
-      if (mesure && !hauteur) hauteur = mesure;
+      if (txt && !hauteur) hauteur = txt;
     }
     if (isL) {
       largeurFound = true;
-      if (mesure && !largeur) largeur = mesure;
+      if (txt && !largeur) largeur = txt;
     }
   }
 
   const label = (name: string, mes: string) => (mes ? `${name} ${mes}` : name);
-  if ((hauteurFound && largeurFound) || deux) {
-    const parts: string[] = [];
-    if (hauteurFound || hauteur) parts.push(label("Haut.", hauteur));
-    if (largeurFound || largeur) parts.push(label("Larg.", largeur));
-    return parts.length ? parts.join(" + ") : "Haut. + Larg.";
+  if (hauteurFound && largeurFound) {
+    return `${label("Haut.", hauteur)} + ${label("Larg.", largeur)}`;
   }
   if (hauteurFound) return label("Hauteur", hauteur);
   if (largeurFound) return label("Largeur", largeur);
   // Direction inconnue : on ne devine pas — la cellule reste vide.
   return "";
 }
+
 
 
 
