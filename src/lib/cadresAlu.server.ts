@@ -195,16 +195,20 @@ function findAluCell(values: string[]): string | null {
   return null;
 }
 
-/** MAB en J, MAB J, or MAB alone next to a lone "J" -> excluded. */
+/** MAB en J, MAB J, or MAB alone next to a lone "J" -> excluded.
+ *  A line mentioning "moulure à brique en J" is also ignored entirely. */
 function isExcluded(values: string[]): boolean {
   for (const v of values) {
-    if (!/\bMAB\b/i.test(v)) continue;
-    if (/\bMAB\b\s*(en\s*)?J\b/i.test(v)) return true;
-    if (/\bJ\b/.test(v.replace(/J-\d+/g, ""))) return true;
-    return true; // any MAB mention on an alu line is excluded
+    if (/\bMAB\b/i.test(v)) {
+      if (/\bMAB\b\s*(en\s*)?J\b/i.test(v)) return true;
+      if (/\bJ\b/.test(v.replace(/J-\d+/g, ""))) return true;
+      return true; // any MAB mention on an alu line is excluded
+    }
+    if (/moulure\s+[àa]\s+brique\s*(?:en\s*)?[-]?\s*j\b/i.test(v)) return true;
   }
   return false;
 }
+
 
 function extractId(code: string): string {
   const m = code.match(/^([A-Za-z0-9]+-\d+)/);
