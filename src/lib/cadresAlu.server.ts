@@ -925,12 +925,22 @@ const COULEUR_FILLER = new Set([
 
 function pickCouleurAfterKeyword(text: string): string {
   if (!text) return "";
-  const re = /\b(peinture|peintur[eé](?:e|r)?|peint(?:e|ur)?|couleurs?)\b/gi;
+  // « peinture », « peinturé(e)(s) », « peinturer », « peint(s) », « couleur(s) »
+  const re = /\b(peintur\w*|peint(?:e|s|es)?|couleurs?)\b/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     let tail = text.slice(m.index + m[0].length);
-    // On coupe au premier séparateur fort.
     tail = tail.split(/[,;/|)]/)[0];
+
+    // 1) « Nom P-525 » écrit littéralement.
+    const literal = findLiteralCouleur(tail);
+    if (literal) return literal;
+
+    // 2) Couleur connue de la liste de référence.
+    const ref = matchCouleurRef(tail);
+    if (ref) return normalizeCouleurResult(ref);
+
+    // 3) Repli : mots plausibles suivis éventuellement d'un code.
     const tokens = tail.match(/[A-Za-zÀ-ÿ'’]+|[A-Za-z]{1,3}\s*-\s*\d{2,4}|\b\d{3,4}\b/g) ?? [];
     const name: string[] = [];
     let code = "";
@@ -945,18 +955,26 @@ function pickCouleurAfterKeyword(text: string): string {
         break;
       }
       const n = norm(t);
-      if (COULEUR_FILLER.has(n)) {
+      if (COULEUR_FILLER.has(n) || n.length < 3) {
         if (name.length) break;
         continue;
       }
       name.push(t);
-      if (name.length >= 4) break;
+      if (name.length >= 3) break;
     }
+    // Sans code, on n'accepte qu'un vrai mot-couleur connu.
     if (!name.length) continue;
-    return code ? `${titleCase(name.join(" "))} ${code}` : titleCase(name.join(" "));
+    const isKnown = name.some((w) =>
+      COLOR_WORDS.some((c) => norm(c) === norm(w)),
+    );
+    if (!code && !isKnown) continue;
+    return normalizeCouleurResult(
+      code ? `${titleCase(name.join(" "))} ${code}` : titleCase(name.join(" ")),
+    );
   }
   return "";
 }
+
 
 function extractCouleur(row: Record<string, unknown>, _values: string[], _aluCell: string): string {
   const optKeys = Object.keys(row)
