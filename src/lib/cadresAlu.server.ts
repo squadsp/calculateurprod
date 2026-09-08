@@ -322,10 +322,13 @@ const DOUBLE_MEASURE_RE = new RegExp(
   `(?:${MEASURE_RE.source})(?:\\s*[x×]\\s*(?:${MEASURE_RE.source}))+`,
   "i",
 );
+/** Une mesure « crédible » : double, ou avec fraction/décimale/unité. */
+const QUALIFIED_MEASURE_RE =
+  /\d+(?:[.,]\d+)(?:\s*(?:"|''|po\b|mm\b))?|\d+[\s-]+\d+\/\d+\s*(?:"|''|po\b|mm\b)?|\d+\/\d+\s*(?:"|''|po\b|mm\b)?|\d+\s*(?:"|''|po\b|mm\b)/i;
 function matchMesure(text: string): string {
   const dbl = text.match(DOUBLE_MEASURE_RE);
   if (dbl) return dbl[0].trim();
-  const single = text.match(MEASURE_RE);
+  const single = text.match(QUALIFIED_MEASURE_RE);
   return single ? single[0].trim() : "";
 }
 
