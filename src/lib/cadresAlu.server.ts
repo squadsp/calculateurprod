@@ -36,8 +36,9 @@ function extractDummy(allRowValues: string[]): string {
 }
 
 /**
- * Enfiguré : vide si la ligne ne mentionne pas « enfiguré ».
- * La mention « seuil en pin enfiguré » est ignorée pour cette détection.
+ * Enfiguré : détecté uniquement quand la ligne mentionne « cadre enfiguré »
+ * (ex. « tout cadre enfiguré »). La mention « seuil en pin enfiguré » est
+ * ignorée pour cette détection.
  * Sinon « Enfiguré », ou « Enfiguré porte d'acier » dès qu'une 2e slab est
  * mentionnée (« 2e slab », « 2 slab », « double slab », « slab x2 »).
  */
@@ -45,7 +46,7 @@ function extractEnfigure(allRowValues: string[]): string {
   const whole = allRowValues
     .join(" ")
     .replace(/seuil\s+en\s+pin\s+enfigur[eé]/gi, "");
-  if (!/enfigur/i.test(whole)) return "";
+  if (!/cadre\s+enfigur[eé]/i.test(whole)) return "";
   const deuxiemeSlab = [
     /\b(?:2|deux)\s*(?:e|i[eè]me|ème|nd)?\s*[-.]?\s*slabs?\b/i,
     /\bdouble\s+slabs?\b/i,
