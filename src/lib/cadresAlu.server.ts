@@ -311,7 +311,41 @@ function findDifferentColor(values: string[], mainColor: string): string {
   return "";
 }
 
+/** Vrai si la ligne mentionne une moulure à brique non standard. */
+function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
+  return allRowValues.some(
+    (v) =>
+      /moulure\s+[àa]\s+brique/i.test(v) &&
+      /non[\s-]*standard|non[\s-]*std|hors\s+standard/i.test(v),
+  ) ||
+    (allRowValues.some((v) => /moulure\s+[àa]\s+brique/i.test(v)) &&
+      allRowValues.some((v) => /non[\s-]*standard|non[\s-]*std/i.test(v)));
+}
+
+/** Mesure indiquée dans la section commentaires (ex. « 3 1/2 » ou « 4" »). */
+function findCommentaireMesure(allRowValues: string[]): string {
+  const measure = /(\d+\s*\d*\/?\d*\s*(?:\d+\/\d+)?\s*")|(\d+\s+\d+\/\d+)|(\d+\/\d+)/;
+  let inComments = false;
+  for (const v of allRowValues) {
+    const txt = (v ?? "").trim();
+    if (!txt) continue;
+    if (/commentaire/i.test(txt)) {
+      inComments = true;
+      const after = txt.replace(/^[-\s]*commentaires?[-\s:]*/i, "");
+      const m = after.match(measure);
+      if (m) return m[0].trim();
+      continue;
+    }
+    if (inComments) {
+      const m = txt.match(measure);
+      if (m) return m[0].trim();
+    }
+  }
+  return "";
+}
+
 /** Astragale / Moulure / Jardin / Modulaire / Alu int / head thickness note, combined in one column. */
+
 function buildAstragaleDimMab(
   values: string[],
   allRowValues: string[],
