@@ -377,7 +377,9 @@ export function extractCadreAluRows(
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
       souffle: extractSouffle(allRowValues),
-
+      dummy: extractDummy(allRowValues),
+      enfigure: extractEnfigure(allRowValues),
+      acier: extractAcier(allRowValues),
       couleur: extractCouleur(r, values, aluCell),
     });
   }
