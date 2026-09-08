@@ -365,13 +365,20 @@ function hasMoulureBriqueEnJ(value: string): boolean {
 
 
 /**
- * Vrai seulement si les mots « moulure à brique non standard » font partie
- * de la même mention. Un « non standard » ailleurs dans la commande ne compte pas.
+ * Vrai seulement si « non standard » apparaît plus loin dans le texte qu'une
+ * mention « moulure à brique » (pas nécessairement collée à elle).
  */
 function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
-  return allRowValues.some((v) =>
-    /moulure\s*[àa]\s*brique\s*(?:[:;,\-–]\s*)?non[\s-]*standard/i.test(v),
-  );
+  return allRowValues.some((v) => {
+    const text = v ?? "";
+    MOULURE_BRIQUE_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
+      const after = text.slice(m.index + m[0].length);
+      if (/non[\s-]*standard/i.test(after)) return true;
+    }
+    return false;
+  });
 }
 
 /**
