@@ -4,6 +4,7 @@ import MDBReader from "mdb-reader";
 export type CadreAluRow = {
   sequence: string;
   id: string;
+  sens: string;
   tete: string;
   jambageLargeur: string;
   jambageEpaisseur: string;
@@ -140,23 +141,59 @@ function extractEpaisseurs(values: string[]): string[] {
   return out;
 }
 
-/** Grosse (Astragale-G) / petite (Astragale-P) astragale when present. */
-function extractAstragale(values: string[]): string {
+/** Opening direction of the door: Fixe / Gauche / Droite. */
+function extractSens(values: string[]): string {
   for (const v of values) {
-    if (!/astragal/i.test(v)) continue;
-    if (/\bgrosse?\b|\blarge\b|\b-g\b/i.test(v)) return "Astragale-G";
-    if (/\bpetite?\b|\bmince\b|\b-p\b/i.test(v)) return "Astragale-P";
-    const dim = v.match(/(\d+(?:[-\s]\d+\/\d+)?)\s*''/);
-    if (dim) return `Astragale ${normalizeFraction(dim[1])}`;
-    return "Astragale";
+    if (/\bfixe\b/i.test(v)) return "Fixe";
+  }
+  for (const v of values) {
+    const m = v.match(/\b(gauche|droite)\b/i);
+    if (m) return m[1].toLowerCase() === "gauche" ? "Gauche" : "Droite";
   }
   return "";
 }
 
+/**
+ * Astragale: look at every column of the row. Size (grosse/petite) can be
+ * mentioned anywhere on the line, and the side is Fixe > Gauche/Droite.
+ */
+function extractAstragale(allRowValues: string[], sensRow: string): string {
+  const lines = allRowValues.filter((v) => /astragal/i.test(v));
+  if (lines.length === 0) return "";
+
+  const scope = lines.join(" ");
+  const whole = allRowValues.join(" ");
+
+  let size = "";
+  if (/astragale?\s*[-\s]*g\b|\bgrosse?\b|\blarge\b/i.test(scope)) size = "Astragale-G";
+  else if (/astragale?\s*[-\s]*p\b|\bpetite?\b|\bmince\b/i.test(scope)) size = "Astragale-P";
+  else if (/\bgrosse?\b/i.test(whole)) size = "Astragale-G";
+  else if (/\bpetite?\b/i.test(whole)) size = "Astragale-P";
+  else {
+    const dim = scope.match(/(\d+(?:[-\s]\d+\/\d+)?)\s*''/);
+    size = dim ? `Astragale ${normalizeFraction(dim[1])}` : "Astragale";
+  }
+
+  let sens = "";
+  if (/\bfixe\b/i.test(scope)) sens = "Fixe";
+  else {
+    const m = scope.match(/\b(gauche|droite)\b/i);
+    if (m) sens = m[1].toLowerCase() === "gauche" ? "Gauche" : "Droite";
+    else if (sensRow) sens = sensRow;
+  }
+
+  return sens ? `${size} ${sens}` : size;
+}
+
 /** Astragale / Moulure / Jardin / head thickness note, combined in one column. */
-function buildAstragaleDimMab(values: string[], epaisseurJambage: string): string {
+function buildAstragaleDimMab(
+  values: string[],
+  allRowValues: string[],
+  epaisseurJambage: string,
+  sensRow: string,
+): string {
   const parts: string[] = [];
-  const astragale = extractAstragale(values);
+  const astragale = extractAstragale(allRowValues, sensRow);
   if (astragale) parts.push(astragale);
   if (values.some((v) => /moulure/i.test(v))) parts.push("Moulure");
   if (values.some((v) => /jardin/i.test(v))) parts.push("Jardin");
@@ -167,6 +204,7 @@ function buildAstragaleDimMab(values: string[], epaisseurJambage: string): strin
   }
   return parts.join(" • ");
 }
+
 
 function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
   const pickWord = (text: string) =>
@@ -228,18 +266,21 @@ export function extractCadreAluRows(
     if (!aluCell) continue;
     if (isExcluded(values)) continue;
 
+    const allRowValues = Object.values(r).map(toStr).filter(Boolean);
     const dims = parseDimension(toStr(r.Dimension));
     const epaisseurs = extractEpaisseurs(values);
     const epaisseurJambage = epaisseurs[0] ?? "";
+    const sens = extractSens(values);
 
     kept.push({
       sequence,
       id: extractId(toStr(r.Code)),
+      sens,
       tete: extractTete(toStr(r.Dimension)),
       jambageLargeur: extractJambageLargeur(aluCell, values),
       jambageEpaisseur: epaisseurJambage,
       jambageHauteur: dims.hauteur,
-      astragale: buildAstragaleDimMab(values, epaisseurJambage),
+      astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens),
       couleur: extractCouleur(r, values, aluCell),
     });
   }
@@ -251,6 +292,7 @@ export function extractCadreAluRows(
 export const CADRE_ALU_HEADERS = [
   "SA-PA",
   "ID",
+  "SENS",
   "MESURE TÊTE",
   "LARGEUR JAMBAGE",
   "ÉPAISSEUR JAMBAGE",
@@ -258,6 +300,7 @@ export const CADRE_ALU_HEADERS = [
   "ASTRAGALE DIM M.A.B INT",
   "COULEUR",
 ];
+
 
 export async function buildCadreAluPdf(
   rows: CadreAluRow[],
@@ -274,7 +317,7 @@ export async function buildCadreAluPdf(
   const usableWidth = pageWidth - margin * 2;
 
   const headers = CADRE_ALU_HEADERS;
-  const ratios = [0.1, 0.13, 0.11, 0.12, 0.12, 0.12, 0.17, 0.13];
+  const ratios = [0.09, 0.12, 0.07, 0.1, 0.11, 0.11, 0.11, 0.17, 0.12];
   const widths = ratios.map((r) => usableWidth * r);
   const rowHeight = 18;
   const headerHeight = 24;
@@ -342,6 +385,7 @@ export async function buildCadreAluPdf(
     [
       r.sequence,
       r.id,
+      r.sens,
       r.tete,
       r.jambageLargeur,
       r.jambageEpaisseur,

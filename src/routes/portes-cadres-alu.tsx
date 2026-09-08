@@ -315,6 +315,7 @@ function CadresAluPage() {
                       <tr key={`${row.id}-${row.sequence}-${i}`} className="border-t border-border">
                         <td className="px-3 py-1.5">{row.sequence}</td>
                         <td className="px-3 py-1.5 font-mono text-xs">{row.id}</td>
+                        <td className="px-3 py-1.5">{row.sens}</td>
                         <td className="px-3 py-1.5">{row.tete}</td>
                         <td className="px-3 py-1.5">{row.jambageLargeur}</td>
                         <td className="px-3 py-1.5">{row.jambageEpaisseur}</td>
