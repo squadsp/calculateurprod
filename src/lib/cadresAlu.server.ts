@@ -2,10 +2,12 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import MDBReader from "mdb-reader";
 
 export type CadreAluRow = {
-  id: string;
   sequence: string;
+  id: string;
   tete: string;
-  jambage: string;
+  jambageLargeur: string;
+  jambageEpaisseur: string;
+  jambageHauteur: string;
   astragale: string;
   couleur: string;
 };
@@ -101,12 +103,24 @@ function extractId(code: string): string {
   return m ? m[1] : code;
 }
 
-function extractTete(description: string): string {
-  const m = description.match(/\bT-\s*(\d+(?:[\s./-]\d+\/\d+)?)/i);
-  return m ? normalizeFraction(m[1]) : "";
+/** Frame outer dimensions: "37 1/2 '' "X82 1/2 '' "" -> ["37 1/2", "82 1/2"] */
+function parseDimension(dimension: string): { largeur: string; hauteur: string } {
+  const cleaned = dimension.replace(/---.*$/, "").replace(/["”]/g, "'");
+  const parts = cleaned.split(/x/i);
+  const grab = (s: string | undefined) => {
+    if (!s) return "";
+    const m = s.match(/(\d+(?:\s+\d+\/\d+)?)/);
+    return m ? m[1].replace(/\s+/g, " ").trim() : "";
+  };
+  return { largeur: grab(parts[0]), hauteur: grab(parts[1]) };
 }
 
-function extractJambage(aluCell: string, allValues: string[]): string {
+/** Exact head measurement, e.g. "35 1/2" (frame width). */
+function extractTete(dimension: string): string {
+  return parseDimension(dimension).largeur;
+}
+
+function extractJambageLargeur(aluCell: string, allValues: string[]): string {
   const fromAlu = aluCell.match(/Cadre\s*(\d+(?:[-\s]\d+\/\d+)?)\s*''/i);
   if (fromAlu) return normalizeFraction(fromAlu[1]);
   for (const v of allValues) {
@@ -116,32 +130,66 @@ function extractJambage(aluCell: string, allValues: string[]): string {
   return "";
 }
 
+/** "Épaisseur de 1-1/2''" -> "1 1/2" */
+function extractEpaisseurs(values: string[]): string[] {
+  const out: string[] = [];
+  for (const v of values) {
+    const m = v.match(/[ÉEée]paisseur[^0-9]*(\d+(?:[-\s]\d+\/\d+)?)\s*''?/i);
+    if (m) out.push(normalizeFraction(m[1]));
+  }
+  return out;
+}
+
+/** Grosse / petite astragale when present. */
 function extractAstragale(values: string[]): string {
   for (const v of values) {
-    if (/astragal/i.test(v)) return "Oui";
-  }
-  for (const v of values) {
-    if (/porte[^,;]{0,20}\bdouble\b/i.test(v)) return "Oui";
+    if (!/astragal/i.test(v)) continue;
+    if (/\bgrosse?\b|\blarge\b/i.test(v)) return "Grosse astragale";
+    if (/\bpetite?\b|\bmince\b/i.test(v)) return "Petite astragale";
+    const dim = v.match(/(\d+(?:[-\s]\d+\/\d+)?)\s*''/);
+    if (dim) return `Astragale ${normalizeFraction(dim[1])}`;
+    return "Astragale";
   }
   return "";
 }
 
-function extractCouleur(row: Record<string, unknown>, aluCell: string): string {
-  const opt1 = toStr(row.Opt1);
-  const pick = (text: string): string => {
-    if (!text) return "";
-    const word = COLOR_WORDS.find((c) => new RegExp(`\\b${c}\\b`, "i").test(text));
-    const code = text.match(/\(([A-Za-z]?-?\d{3,4})\)/);
-    if (word && code) return `${word} (${code[1]})`;
-    if (word) return word;
-    if (code) return code[1];
-    return "";
-  };
-  // Door colour first (Opt1), then the aluminium frame line.
-  const fromDoor = pick(opt1);
-  if (fromDoor) return fromDoor;
+/** Astragale / Moulure / Jardin / head thickness note, combined in one column. */
+function buildAstragaleDimMab(values: string[], epaisseurJambage: string): string {
+  const parts: string[] = [];
+  const astragale = extractAstragale(values);
+  if (astragale) parts.push(astragale);
+  if (values.some((v) => /moulure/i.test(v))) parts.push("Moulure");
+  if (values.some((v) => /jardin/i.test(v))) parts.push("Jardin");
+
+  if (epaisseurJambage === "1 1/2") {
+    const teteEp = values.find((v) => /t[êe]te/i.test(v) && /1[-\s]1\/4/.test(v));
+    if (teteEp) parts.push("Tête 1 1/4");
+  }
+  return parts.join(" • ");
+}
+
+function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
+  const pickWord = (text: string) =>
+    COLOR_WORDS.find((c) => new RegExp(`\\b${c}\\b`, "i").test(text)) ?? "";
+
+  // Only P- codes are real colour codes (N600 & co. are door models).
+  let code = "";
+  for (const v of [aluCell, ...values]) {
+    const m = v.match(/\(\s*(P-\s*\d{2,4})\s*\)/i);
+    if (m) {
+      code = m[1].replace(/\s+/g, "").toUpperCase();
+      break;
+    }
+  }
+
   const afterCouleur = aluCell.match(/couleur\s+(.+)$/i);
-  return pick(afterCouleur ? afterCouleur[1] : aluCell);
+  const word =
+    pickWord(afterCouleur ? afterCouleur[1] : "") ||
+    pickWord(aluCell) ||
+    pickWord(toStr(row.Opt1));
+
+  if (word && code) return `${word} (${code})`;
+  return word || code;
 }
 
 function findTable(reader: MDBReader) {
@@ -176,19 +224,36 @@ export function extractCadreAluRows(
     if (!aluCell) continue;
     if (isExcluded(values)) continue;
 
+    const dims = parseDimension(toStr(r.Dimension));
+    const epaisseurs = extractEpaisseurs(values);
+    const epaisseurJambage = epaisseurs[0] ?? "";
+
     kept.push({
-      id: extractId(toStr(r.Code)),
       sequence,
-      tete: extractTete(toStr(r.Description)),
-      jambage: extractJambage(aluCell, values),
-      astragale: extractAstragale(values),
-      couleur: extractCouleur(r, aluCell),
+      id: extractId(toStr(r.Code)),
+      tete: extractTete(toStr(r.Dimension)),
+      jambageLargeur: extractJambageLargeur(aluCell, values),
+      jambageEpaisseur: epaisseurJambage,
+      jambageHauteur: dims.hauteur,
+      astragale: buildAstragaleDimMab(values, epaisseurJambage),
+      couleur: extractCouleur(r, values, aluCell),
     });
   }
 
   kept.sort((a, b) => a.sequence.localeCompare(b.sequence, "fr", { numeric: true }));
   return kept;
 }
+
+export const CADRE_ALU_HEADERS = [
+  "SA-PA",
+  "ID",
+  "MESURE TÊTE",
+  "LARGEUR JAMBAGE",
+  "ÉPAISSEUR JAMBAGE",
+  "HAUTEUR JAMBAGE",
+  "ASTRAGALE DIM M.A.B INT",
+  "COULEUR",
+];
 
 export async function buildCadreAluPdf(
   rows: CadreAluRow[],
@@ -198,22 +263,17 @@ export async function buildCadreAluPdf(
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  const pageWidth = 612;
-  const pageHeight = 792;
-  const margin = 36;
+  // Landscape for the wider table.
+  const pageWidth = 792;
+  const pageHeight = 612;
+  const margin = 28;
   const usableWidth = pageWidth - margin * 2;
 
-  const headers = ["ID", "SEQUENCE", "TÊTE", "JAMBAGE", "ASTRAGALE", "COULEUR"];
-  const widths = [
-    usableWidth * 0.18,
-    usableWidth * 0.14,
-    usableWidth * 0.1,
-    usableWidth * 0.14,
-    usableWidth * 0.14,
-    usableWidth * 0.3,
-  ];
+  const headers = CADRE_ALU_HEADERS;
+  const ratios = [0.1, 0.13, 0.11, 0.12, 0.12, 0.12, 0.17, 0.13];
+  const widths = ratios.map((r) => usableWidth * r);
   const rowHeight = 18;
-  const headerHeight = 22;
+  const headerHeight = 24;
 
   let page = doc.addPage([pageWidth, pageHeight]);
   let y = pageHeight - margin;
@@ -228,7 +288,7 @@ export async function buildCadreAluPdf(
       color: rgb(0.92, 0.92, 0.95),
     });
     headers.forEach((h, i) => {
-      page.drawText(h, { x: x + 4, y: y - headerHeight + 7, size: 9, font: bold, color: rgb(0, 0, 0) });
+      page.drawText(h, { x: x + 4, y: y - headerHeight + 8, size: 7.5, font: bold, color: rgb(0, 0, 0) });
       x += widths[i];
     });
     y -= headerHeight;
@@ -275,11 +335,20 @@ export async function buildCadreAluPdf(
       });
     }
     let x = margin;
-    [r.id, r.sequence, r.tete, r.jambage, r.astragale, r.couleur].forEach((v, i) => {
-      page.drawText(truncate(v, widths[i] - 8, 9), {
+    [
+      r.sequence,
+      r.id,
+      r.tete,
+      r.jambageLargeur,
+      r.jambageEpaisseur,
+      r.jambageHauteur,
+      r.astragale,
+      r.couleur,
+    ].forEach((v, i) => {
+      page.drawText(truncate(v, widths[i] - 8, 8.5), {
         x: x + 4,
         y: y - rowHeight + 5,
-        size: 9,
+        size: 8.5,
         font,
         color: rgb(0, 0, 0),
       });
