@@ -771,7 +771,7 @@ function buildAstragaleDimMab(
 
   const aluInt = allRowValues.some((v) => /recouvrement\s+int[ée]rieur\s+aluminium/i.test(v));
   if (aluInt) {
-    const aluIntColor = findDifferentColor(allRowValues, couleur);
+    const aluIntColor = findDifferentColor(allRowValues, couleur, catalogue);
     parts.push(aluIntColor ? `Alu int ${aluIntColor}` : "Alu int");
   }
 
@@ -981,7 +981,7 @@ export function extractCadreAluRows(
       jambageLargeur: extractJambageLargeur(aluCell, values),
       jambageEpaisseur: epaisseurJambage,
       jambageHauteur: hauteurJambage,
-      astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens, couleur),
+      astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens, couleur, catalogue),
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
       souffle: extractSouffle(allRowValues),
