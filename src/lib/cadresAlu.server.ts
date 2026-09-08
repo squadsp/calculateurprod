@@ -382,24 +382,30 @@ function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
 }
 
 /**
- * Mesure de la moulure à brique non standard : on repère la colonne qui
- * mentionne « commentaire » et on prend la mesure dans la colonne suivante.
+ * Mesure d'une MAB non standard. On ignore toutes les mesures situées avant
+ * « moulure à brique … non standard », puis on cherche plus loin une mention
+ * « mesure MAB », « mesure moulure » ou « mesure moulure à brique ».
  */
-function findCommentaireMesure(allRowValues: string[]): string {
-  for (let i = 0; i < allRowValues.length; i++) {
-    const txt = (allRowValues[i] ?? "").trim();
-    if (!txt || !/commentaire/i.test(txt)) continue;
-    // mesure éventuellement collée après le mot « commentaire »
-    const after = txt.replace(/^.*commentaires?[\s:.\-–]*/i, "");
-    const inline = matchMesure(after);
-    if (inline) return inline;
-    // sinon, colonnes suivantes
-    for (let j = i + 1; j < allRowValues.length; j++) {
-      const next = (allRowValues[j] ?? "").trim();
-      if (!next) continue;
-      const m = matchMesure(next);
-      if (m) return m;
-      break;
+function findNonStandardMabMesure(allRowValues: string[]): string {
+  const whole = allRowValues.join(" | ");
+  MOULURE_BRIQUE_RE.lastIndex = 0;
+
+  let moulureMatch: RegExpExecArray | null;
+  while ((moulureMatch = MOULURE_BRIQUE_RE.exec(whole)) !== null) {
+    const afterMoulureIndex = moulureMatch.index + moulureMatch[0].length;
+    const afterMoulure = whole.slice(afterMoulureIndex);
+    const nonStandard = /non[\s-]*standard/i.exec(afterMoulure);
+    if (!nonStandard) continue;
+
+    const afterNonStandard = afterMoulure.slice(
+      nonStandard.index + nonStandard[0].length,
+    );
+    const measureLabel = /mesure\s+(?:de\s+(?:la\s+)?)?(?:m\.?\s*a\.?\s*b\.?|moulure(?:\s+[àa]\s+brique)?)/gi;
+    let labelMatch: RegExpExecArray | null;
+    while ((labelMatch = measureLabel.exec(afterNonStandard)) !== null) {
+      const afterLabel = afterNonStandard.slice(labelMatch.index + labelMatch[0].length);
+      const mesure = matchMesure(afterLabel);
+      if (mesure) return mesure;
     }
   }
   return "";
@@ -431,7 +437,7 @@ function buildAstragaleDimMab(
   if (moulureTypes.has("Moulure à brique")) {
     const nonStd = isMoulureBriqueNonStandard(allRowValues);
     if (nonStd) {
-      const mesure = findCommentaireMesure(allRowValues);
+      const mesure = findNonStandardMabMesure(allRowValues);
       moulureTypes.delete("Moulure à brique");
       moulureTypes.add(["MAB non std", mesure].filter(Boolean).join(" "));
     }
