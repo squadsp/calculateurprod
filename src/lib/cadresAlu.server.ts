@@ -15,7 +15,7 @@ export type CadreAluRow = {
   souffle: string;
   dummy: string;
   enfigure: string;
-  acier: string;
+  
   couleur: string;
 };
 
@@ -51,10 +51,7 @@ function extractEnfigure(allRowValues: string[]): string {
 }
 
 
-/** Précise s'il s'agit d'une porte d'acier. */
-function extractAcier(allRowValues: string[]): string {
-  return /porte\s*d?\s*['’]?\s*acier/i.test(allRowValues.join(" ")) ? "Acier" : "";
-}
+
 
 
 /**

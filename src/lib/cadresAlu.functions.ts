@@ -15,7 +15,7 @@ export type CadreAluRow = {
   souffle: string;
   dummy: string;
   enfigure: string;
-  acier: string;
+  
   couleur: string;
 };
 
