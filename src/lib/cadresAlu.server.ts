@@ -389,6 +389,7 @@ function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
     MOULURE_BRIQUE_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
+      if (isNonInstalleAdjacent(text, m)) continue;
       const after = text.slice(m.index + m[0].length);
       if (/non[\s-]*(standard|std)\b/i.test(after)) return true;
     }
