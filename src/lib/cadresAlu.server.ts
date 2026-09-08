@@ -92,9 +92,9 @@ function extractMoustiquaire(allRowValues: string[]): string {
 /**
  * Détecte si le cadre est soufflé en hauteur, en largeur ou les deux,
  * avec la mesure associée. Les mentions « soufflage » sont ignorées :
- * le texte doit dire « soufflé / soufflée / soufflés ».
+ * le texte doit dire « soufflé / soufflée / soufflés / souffler ».
  */
-const SOUFFLE_WORD_RE = /souffl[ée]e?s?\b/gi;
+const SOUFFLE_WORD_RE = /souffl[ée]e?(?:s|r)?\b/gi;
 
 function extractSouffle(allRowValues: string[]): string {
   const whole = allRowValues.join(" ");
@@ -281,6 +281,35 @@ function extractEpaisseurs(values: string[]): string[] {
     if (m) out.push(normalizeFraction(m[1]));
   }
   return out;
+}
+
+/**
+ * Détecte une mention de pleine profondeur ou de profondeur explicite.
+ * "pleine profondeur 1 1/4" -> "Pleine profondeur 1 1/4"
+ * "profond 1 1/4" -> "1 1/4"
+ */
+function extractPleineProfondeur(values: string[]): string {
+  const whole = values.join(" ");
+  const pleine = whole.match(/pleine\s+profondeur(?:\s+(\d+(?:[-\s]\d+\/\d+)?)\s*''?)?/i);
+  if (pleine) {
+    return pleine[1] ? `Pleine profondeur ${normalizeFraction(pleine[1])}` : "Pleine profondeur";
+  }
+  const prof = whole.match(/\bprofond(?:eur)?\s+(\d+(?:[-\s]\d+\/\d+)?)\s*''?/i);
+  if (prof) return normalizeFraction(prof[1]);
+  return "";
+}
+
+/**
+ * Détecte une mention de pleine hauteur. Si une mesure suit, elle est ajoutée.
+ * Sinon on retourne la hauteur par défaut (issue de la dimension).
+ */
+function extractPleineHauteur(values: string[], defaultHauteur: string): string {
+  const whole = values.join(" ");
+  const pleine = whole.match(/pleine\s+hauteur(?:\s+(\d+(?:[-\s]\d+\/\d+)?)\s*''?)?/i);
+  if (pleine) {
+    return pleine[1] ? `Pleine hauteur ${normalizeFraction(pleine[1])}` : "Pleine hauteur";
+  }
+  return defaultHauteur;
 }
 
 /** Opening direction of the door: Fixe / Gauche / Droite. */
@@ -619,7 +648,8 @@ export function extractCadreAluRows(
     const allRowValues = Object.values(r).map(toStr).filter(Boolean);
     const dims = parseDimension(toStr(r.Dimension));
     const epaisseurs = extractEpaisseurs(values);
-    const epaisseurJambage = epaisseurs[0] ?? "";
+    const epaisseurJambage = extractPleineProfondeur(values) || epaisseurs[0] || "";
+    const hauteurJambage = extractPleineHauteur(values, dims.hauteur);
     const sens = extractSens(values);
 
     const couleur = extractCouleur(r, values, aluCell);
@@ -630,7 +660,7 @@ export function extractCadreAluRows(
       tete: extractTete(toStr(r.Dimension)),
       jambageLargeur: extractJambageLargeur(aluCell, values),
       jambageEpaisseur: epaisseurJambage,
-      jambageHauteur: dims.hauteur,
+      jambageHauteur: hauteurJambage,
       astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens, couleur),
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
