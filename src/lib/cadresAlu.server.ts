@@ -409,8 +409,7 @@ export const CADRE_ALU_HEADERS = [
   "SEUIL",
   "SOUFFLÉ",
   "DUMMY",
-  "ENFIG.",
-  "TYPE",
+  "ENFIGURÉ",
   "COULEUR",
 ];
 
@@ -431,9 +430,9 @@ export async function buildCadreAluPdf(
   const usableWidth = pageWidth - margin * 2;
 
   const headers = CADRE_ALU_HEADERS;
-  // Largeurs ajustées pour 15 colonnes : Moust./Seuil ne se touchent plus.
+  // Largeurs ajustées pour 14 colonnes : Moust./Seuil ne se touchent plus.
   const ratios = [
-    0.05, 0.07, 0.04, 0.07, 0.07, 0.07, 0.065, 0.165, 0.03, 0.085, 0.06, 0.06, 0.045, 0.045, 0.08,
+    0.05, 0.07, 0.04, 0.07, 0.07, 0.07, 0.065, 0.155, 0.03, 0.085, 0.06, 0.06, 0.105, 0.07,
   ];
 
   const widths = ratios.map((r) => usableWidth * r);
