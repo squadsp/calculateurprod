@@ -414,11 +414,25 @@ export async function buildCadreAluPdf(
     y -= headerHeight;
   };
 
-  const truncate = (text: string, maxWidth: number, size: number) => {
-    if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
-    let t = text;
-    while (t.length > 1 && font.widthOfTextAtSize(`${t}…`, size) > maxWidth) t = t.slice(0, -1);
-    return `${t}…`;
+  const fontSize = 8.5;
+  const lineHeight = 11;
+
+  // Découpe un texte en plusieurs lignes qui tiennent dans la largeur donnée.
+  const wrap = (text: string, maxWidth: number): string[] => {
+    if (!text) return [""];
+    const lines: string[] = [];
+    let current = "";
+    for (const word of text.split(/\s+/)) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+        current = candidate;
+      } else {
+        if (current) lines.push(current);
+        current = word;
+      }
+    }
+    if (current) lines.push(current);
+    return lines.length > 0 ? lines : [""];
   };
 
   page.drawText("Cadres Aluminium", { x: margin, y: y - 14, size: 14, font: bold, color: rgb(0, 0, 0) });
