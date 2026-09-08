@@ -349,10 +349,21 @@ const NON_INSTALLE_RE = /non[\s\-]?install[ée]?/i;
 function isNonInstalleAdjacent(text: string, m: RegExpExecArray): boolean {
   const before = text.slice(0, m.index);
   const after = text.slice(m.index + m[0].length);
-  if (NON_INSTALLE_RE.test(before.slice(-20))) return true;
-  if (NON_INSTALLE_RE.test(after.slice(0, 20))) return true;
+  if (NON_INSTALLE_RE.test(before.slice(-60))) return true;
+  if (NON_INSTALLE_RE.test(after.slice(0, 60))) return true;
   return false;
 }
+
+/** Vrai si une mention « non installé » côtoie une moulure à brique n'importe où dans la ligne. */
+function hasNonInstalleMab(wholeRow: string): boolean {
+  MOULURE_BRIQUE_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = MOULURE_BRIQUE_RE.exec(wholeRow)) !== null) {
+    if (isNonInstalleAdjacent(wholeRow, m)) return true;
+  }
+  return false;
+}
+
 
 /** Vrai si la ligne contient au moins une moulure à brique qui n'est PAS « en J » ni « non installé ». */
 function hasMoulureBrique(value: string): boolean {
