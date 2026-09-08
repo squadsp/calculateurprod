@@ -92,9 +92,9 @@ function extractMoustiquaire(allRowValues: string[]): string {
 /**
  * Détecte si le cadre est soufflé en hauteur, en largeur ou les deux,
  * avec la mesure associée. Les mentions « soufflage » sont ignorées :
- * le texte doit dire « soufflé / soufflée / soufflés ».
+ * le texte doit dire « soufflé / soufflée / soufflés / souffler ».
  */
-const SOUFFLE_WORD_RE = /souffl[ée]e?s?\b/gi;
+const SOUFFLE_WORD_RE = /souffl[ée]e?(?:s|r)?\b/gi;
 
 function extractSouffle(allRowValues: string[]): string {
   const whole = allRowValues.join(" ");
