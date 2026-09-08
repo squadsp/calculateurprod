@@ -1012,7 +1012,7 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
       "limitee", "speciale", "offre", "rabais", "annee", "saison", "collection",
       "prix", "special",
     ]);
-    const bareCodeRe = /([A-Za-zÀ-ÿ']+(?:\s+[A-Za-zÀ-ÿ']+){0,2})\s+(\d{3,4})\b/g;
+    const bareCodeRe = /([A-Za-zÀ-ÿ']+(?:\s+[A-Za-zÀ-ÿ']+){0,2})\s+([1-9]\d{2,3})\b/g;
     for (const v of all) {
       bareCodeRe.lastIndex = 0;
       let m: RegExpExecArray | null;
