@@ -376,15 +376,16 @@ function buildAstragaleDimMab(
   }
 
   if (moulureTypes.has("Moulure à brique")) {
-    const mesure = findCommentaireMesure(allRowValues);
     const nonStd = isMoulureBriqueNonStandard(allRowValues);
-    if (nonStd || mesure) {
+    if (nonStd) {
+      const mesure = findCommentaireMesure(allRowValues);
       moulureTypes.delete("Moulure à brique");
       moulureTypes.add(
-        [`Moulure à brique`, nonStd ? "non standard" : "", mesure].filter(Boolean).join(" "),
+        ["Moulure à brique", "non standard", mesure].filter(Boolean).join(" "),
       );
     }
   }
+
 
   parts.push(...moulureTypes);
 
