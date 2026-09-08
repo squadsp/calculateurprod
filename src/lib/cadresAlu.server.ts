@@ -375,7 +375,7 @@ function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
     let m: RegExpExecArray | null;
     while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
       const after = text.slice(m.index + m[0].length);
-      if (/non[\s-]*standard/i.test(after)) return true;
+      if (/non[\s-]*std(?:andard|\.)?/i.test(after)) return true;
     }
     return false;
   });
