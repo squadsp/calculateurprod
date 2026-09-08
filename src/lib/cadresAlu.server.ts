@@ -889,21 +889,53 @@ function normalizeCouleurResult(result: string): string {
   return cleaned;
 }
 
+/** Cherche « <nom> P-562 » écrit littéralement dans le texte et le renvoie
+ *  exactement tel quel (ex. « Brun Commercial P-562 », « Noir P-525 »). */
+function findLiteralCouleur(text: string): string {
+  const re = /([A-Za-zÀ-ÿ'’]+(?:[\s-]+[A-Za-zÀ-ÿ'’]+){0,3})\s*[\s-]\s*((?:[A-Za-z]{1,3}\s*-\s*\d{2,4})|(?:\b[1-9]\d{2,3}\b))/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const rawName = m[1].trim();
+    const code = m[2].replace(/\s*-\s*/, "-").replace(/\s+/g, "").toUpperCase();
+    const words = rawName.split(/[\s-]+/).filter(Boolean);
+    const name: string[] = [];
+    for (let i = words.length - 1; i >= 0 && name.length < 4; i--) {
+      if (COLOR_STOPWORDS.has(norm(words[i]))) break;
+      name.unshift(words[i]);
+    }
+    if (!name.length) continue;
+    // Il faut au moins un vrai mot-couleur pour éviter les faux positifs.
+    if (!name.some((w) => COLOR_WORDS.some((c) => norm(c) === norm(w)))) continue;
+    return `${titleCase(name.join(" "))} ${code}`;
+  }
+  return "";
+}
+
 /** Couleur = nom + code, ex. « Noir P-525 » ou « Brun Commercial P-562 ». */
 function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
   let result = "";
   const all = [aluCell, ...values, ...Object.values(row).map(toStr)].filter(Boolean);
 
-  // La description (aluCell) est vérifiée en premier, puis les options, puis
-  // le reste de la ligne : liste de référence des couleurs développées chez
-  // Laurentides.
+  // 1) Couleur écrite littéralement avec son code : on la reprend telle quelle.
   for (const src of all) {
-    const hit = matchCouleurRef(src);
+    const hit = findLiteralCouleur(src);
     if (hit) {
       result = hit;
       break;
     }
   }
+
+  // 2) Sinon, liste de référence des couleurs développées chez Laurentides.
+  if (!result) {
+    for (const src of all) {
+      const hit = matchCouleurRef(src);
+      if (hit) {
+        result = hit;
+        break;
+      }
+    }
+  }
+
 
   // Cas particulier : « développement de couleur » — la vraie couleur se
   // trouve plus loin sous la forme « couleur spécial Gentek <nom> <code> ».
