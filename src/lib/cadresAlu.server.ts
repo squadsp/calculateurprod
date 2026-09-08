@@ -363,34 +363,30 @@ function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
   );
 }
 
-/** Mesure de la moulure à brique (souvent dans la section commentaires). */
+/**
+ * Mesure de la moulure à brique non standard : on repère la colonne qui
+ * mentionne « commentaire » et on prend la mesure dans la colonne suivante.
+ */
 function findCommentaireMesure(allRowValues: string[]): string {
-  // 1. Mesure sur une ligne qui parle de moulure/brique.
-  for (const v of allRowValues) {
-    if (/brique|moulure/i.test(v)) {
-      const m = v.match(MEASURE_RE);
+  for (let i = 0; i < allRowValues.length; i++) {
+    const txt = (allRowValues[i] ?? "").trim();
+    if (!txt || !/commentaire/i.test(txt)) continue;
+    // mesure éventuellement collée après le mot « commentaire »
+    const after = txt.replace(/^.*commentaires?[\s:.\-–]*/i, "");
+    const inline = after.match(MEASURE_RE);
+    if (inline) return inline[0].trim();
+    // sinon, colonnes suivantes
+    for (let j = i + 1; j < allRowValues.length; j++) {
+      const next = (allRowValues[j] ?? "").trim();
+      if (!next) continue;
+      const m = next.match(MEASURE_RE);
       if (m) return m[0].trim();
-    }
-  }
-  // 2. Mesure dans la section commentaires.
-  let inComments = false;
-  for (const v of allRowValues) {
-    const txt = (v ?? "").trim();
-    if (!txt) continue;
-    if (/commentaire/i.test(txt)) {
-      inComments = true;
-      const after = txt.replace(/[-\s]*commentaires?[-\s:]*/i, "");
-      const m = after.match(MEASURE_RE);
-      if (m) return m[0].trim();
-      continue;
-    }
-    if (inComments) {
-      const m = txt.match(MEASURE_RE);
-      if (m) return m[0].trim();
+      break;
     }
   }
   return "";
 }
+
 
 /** Astragale / Moulure / Jardin / Modulaire / Alu int / head thickness note, combined in one column. */
 
@@ -419,11 +415,10 @@ function buildAstragaleDimMab(
     if (nonStd) {
       const mesure = findCommentaireMesure(allRowValues);
       moulureTypes.delete("Moulure à brique");
-      moulureTypes.add(
-        ["Moulure à brique", "non standard", mesure].filter(Boolean).join(" "),
-      );
+      moulureTypes.add(["MAB non std", mesure].filter(Boolean).join(" "));
     }
   }
+
 
 
   parts.push(...moulureTypes);
