@@ -382,43 +382,30 @@ function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
 }
 
 /**
- * Mesure d'une MAB non standard. On ignore toutes les mesures situées avant
- * « moulure à brique … non standard », puis on cherche plus loin une mention
- * « mesure MAB », « mesure moulure » ou « mesure moulure à brique ».
+ * Mesure d'une MAB non standard : on repère la colonne qui mentionne
+ * « commentaire », puis on prend la mesure dans la ou les colonnes suivantes.
  */
 function findNonStandardMabMesure(allRowValues: string[]): string {
-  const whole = allRowValues.join(" | ");
-  MOULURE_BRIQUE_RE.lastIndex = 0;
+  for (let i = 0; i < allRowValues.length; i++) {
+    const v = allRowValues[i] ?? "";
+    if (!/commentaire/i.test(v)) continue;
 
-  let moulureMatch: RegExpExecArray | null;
-  while ((moulureMatch = MOULURE_BRIQUE_RE.exec(whole)) !== null) {
-    const afterMoulureIndex = moulureMatch.index + moulureMatch[0].length;
-    const afterMoulure = whole.slice(afterMoulureIndex);
-    const nonStandard = /non[\s-]*std(?:andard|\.)?/i.exec(afterMoulure);
-    if (!nonStandard) continue;
+    // Mesure éventuellement écrite dans la même colonne après le mot.
+    const after = v.slice(v.search(/commentaire/i) + "commentaire".length);
+    const inline = matchMesure(after);
+    if (inline) return inline;
 
-    const afterNonStandard = afterMoulure.slice(
-      nonStandard.index + nonStandard[0].length,
-    );
-
-    // 1) Mesure explicitement étiquetée (mesure MAB / mesure moulure …).
-    const measureLabel =
-      /mesure\s*(?:de\s*(?:la\s*)?)?(?:m\.?\s*a\.?\s*b\.?|moulure(?:\s*[àa]\s*brique)?)?\s*:?/gi;
-    let labelMatch: RegExpExecArray | null;
-    while ((labelMatch = measureLabel.exec(afterNonStandard)) !== null) {
-      const afterLabel = afterNonStandard.slice(
-        labelMatch.index + labelMatch[0].length,
-      );
-      const mesure = matchMesure(afterLabel);
+    // Sinon, on regarde les colonnes suivantes.
+    for (let j = i + 1; j < allRowValues.length; j++) {
+      const next = allRowValues[j] ?? "";
+      if (!next.trim()) continue;
+      const mesure = matchMesure(next);
       if (mesure) return mesure;
     }
-
-    // 2) Sinon, première mesure double puis simple rencontrée après « non standard ».
-    const mesure = matchMesure(afterNonStandard);
-    if (mesure) return mesure;
   }
   return "";
 }
+
 
 
 
