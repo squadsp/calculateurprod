@@ -538,10 +538,13 @@ function extractAstragale(allRowValues: string[], sensRow: string): string {
   let sens = "";
   if (/\bfixe\b/i.test(scope)) sens = "Fixe";
   else {
-    const m = scope.match(/\b(gauche|droite)\b/i);
-    if (m) sens = m[1].toLowerCase() === "gauche" ? "Gauche" : "Droite";
-    else if (sensRow) sens = sensRow;
+    const m = scope.match(/\b(gauche|droite)\b/i) ?? sensRow.match(/\b(gauche|droite|fixe)\b/i);
+    if (m) {
+      const w = m[1].toLowerCase();
+      sens = w === "gauche" ? "Gauche" : w === "droite" ? "Droite" : "Fixe";
+    }
   }
+
 
   return sens ? `${size} ${sens}` : size;
 }
