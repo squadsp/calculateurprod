@@ -465,9 +465,9 @@ export async function buildCadreAluPdf(
       r.astragale,
       r.moustiquaire,
       r.seuil,
-      r.seuil,
       r.souffle,
       r.couleur,
+
 
     ].forEach((v, i) => {
       page.drawText(truncate(v, widths[i] - 8, 8.5), {
