@@ -786,24 +786,6 @@ function buildAstragaleDimMab(
 }
 
 
-function cleanColorText(text: string): string {
-  return text
-    .replace(/^[\s\-–:]*special[\s\-–:]*/i, "")
-    .replace(/\s+/g, " ")
-    .replace(/[.\s]+$/, "")
-    .trim()
-    .slice(0, 60);
-}
-
-const COLOR_STOPWORDS = new Set([
-  "de","du","des","la","le","les","couleur","aluminium","alu","alum","peinture",
-  "interieur","interieure","exterieur","exterieure","recouvert","recouverte",
-  "recouvrement","poteau","centrale","moulure","retenue","retenu","cadre","pvc",
-  "gentek","kaycan","special","integre","avec","bois","plat","lame","clouage",
-  "retiree","ouverte","fermee","non","standard","et","en","sur","porte","portes",
-  "seuil","jambage","tete","brique","mab","dim","int","ext","fixe","gauche","droite",
-]);
-
 const norm = (s: string) =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -813,272 +795,126 @@ const titleCase = (s: string) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
 
-/** Texte normalisé pour comparer avec les clés de la liste de référence. */
+/** Texte normalisé (entouré d'espaces) pour comparer avec les noms du catalogue. */
 const normText = (s: string) =>
   ` ${s
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z ]/g, " ")
+    .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")} `;
 
-// Index premier-mot → couleurs de référence (les plus longues d'abord).
-const REF_BY_FIRST_WORD = (() => {
-  const map = new Map<string, typeof COULEURS_REF>();
-  for (const ref of COULEURS_REF) {
-    const w = ref.key.split(" ")[0];
-    if (!w) continue;
-    const arr = map.get(w) ?? [];
-    arr.push(ref);
-    map.set(w, arr);
-  }
-  return map;
-})();
+export type CouleurEntry = { name: string; code: string | null };
 
-// Index code numérique → couleur de référence (ex. « 525 » → Noir).
-const REF_BY_CODE = (() => {
-  const map = new Map<string, (typeof COULEURS_REF)[number]>();
-  for (const ref of COULEURS_REF) {
-    if (!ref.code) continue;
-    const digits = ref.code.replace(/^[A-Z]+-?/i, "");
-    if (/^\d{3,4}$/.test(digits) && !map.has(digits)) map.set(digits, ref);
-  }
-  return map;
-})();
+type CatalogueEntry = { name: string; key: string; codes: string[] };
 
-/** Un code de couleur valide est soit préfixé de lettres (P-525, HC-126),
- *  soit un nombre de 3 ou 4 chiffres ne commençant pas par 0. Les nombres
- *  courts (« 80 », « 30 ») ne sont pas des codes de couleur. */
-function isValidCouleurCode(code: string | null | undefined): boolean {
-  if (!code) return false;
-  const c = code.trim();
-  if (/^[A-Za-z]{1,3}-?\d{2,6}(-\d+)*$/.test(c)) return true;
-  return /^[1-9]\d{2,3}$/.test(c);
+export type CouleurCatalogue = {
+  byFirstWord: Map<string, CatalogueEntry[]>;
+  byDigits: Map<string, CatalogueEntry>;
+};
+
+const codeDigits = (code: string) => code.replace(/[^0-9]/g, "");
+
+/** Construit l'index de recherche à partir de la liste de couleurs (base de données). */
+export function buildCouleurCatalogue(list: CouleurEntry[]): CouleurCatalogue {
+  const byKey = new Map<string, CatalogueEntry>();
+  for (const item of list) {
+    const name = (item.name || "").trim();
+    if (!name) continue;
+    const key = normText(name).trim();
+    if (!key) continue;
+    let entry = byKey.get(key);
+    if (!entry) {
+      entry = { name, key, codes: [] };
+      byKey.set(key, entry);
+    }
+    const code = (item.code || "").trim();
+    if (code && !entry.codes.includes(code)) entry.codes.push(code);
+  }
+
+  const byFirstWord = new Map<string, CatalogueEntry[]>();
+  const byDigits = new Map<string, CatalogueEntry>();
+  for (const entry of byKey.values()) {
+    const first = entry.key.split(" ")[0];
+    if (first) {
+      const arr = byFirstWord.get(first) ?? [];
+      arr.push(entry);
+      byFirstWord.set(first, arr);
+    }
+    for (const code of entry.codes) {
+      const d = codeDigits(code);
+      if (d.length >= 3 && !byDigits.has(d)) byDigits.set(d, entry);
+    }
+  }
+  for (const arr of byFirstWord.values()) {
+    arr.sort((a, b) => b.key.length - a.key.length);
+  }
+  return { byFirstWord, byDigits };
 }
 
-/** Cherche une couleur connue de la liste de référence dans le texte. */
-function matchCouleurRef(text: string): string {
+/** Choisit le code à afficher pour une couleur du catalogue.
+ *  - un code écrit littéralement dans le texte gagne toujours;
+ *  - sinon les codes « W- » sont ignorés (ex. Brun Commercial → P-562);
+ *  - on préfère la forme préfixée (P-525) à la forme nue (525). */
+function pickCode(entry: CatalogueEntry, text: string): string {
+  if (entry.codes.length === 0) return "";
   const t = normText(text);
-  if (t.length < 6) return "";
-  for (const word of t.split(" ").filter(Boolean)) {
-    const candidates = REF_BY_FIRST_WORD.get(word);
+  const literal = entry.codes.filter((c) => {
+    const d = codeDigits(c);
+    if (d.length < 3) return false;
+    return t.includes(` ${norm(c).replace(/[^a-z0-9]/g, "")} `) || t.includes(` ${d} `);
+  });
+  const pool = literal.length > 0 ? literal : entry.codes.filter((c) => !/^w/i.test(c));
+  if (pool.length === 0) return "";
+  const prefixed = pool.find((c) => /^[a-z]/i.test(c));
+  return (prefixed ?? pool[0]).toUpperCase();
+}
+
+function formatEntry(entry: CatalogueEntry, text: string): string {
+  const code = pickCode(entry, text);
+  return code ? `${entry.name} ${code}` : entry.name;
+}
+
+/** Cherche dans un texte une couleur du catalogue (nom, puis code seul). */
+function matchCouleurInText(text: string, catalogue: CouleurCatalogue): string {
+  if (!text || !text.trim()) return "";
+  const t = normText(text);
+
+  // 1) Nom de couleur du catalogue (le plus long qui apparaît dans le texte).
+  let best: CatalogueEntry | null = null;
+  for (const word of t.split(" ")) {
+    if (!word) continue;
+    const candidates = catalogue.byFirstWord.get(word);
     if (!candidates) continue;
-    for (const ref of candidates) {
-      if (ref.key.length < 4) continue;
-      if (!t.includes(ref.key)) continue;
-      // Ignore les entrées-notes du type « Couleur Noir » qui ne sont pas
-      // des noms de couleur réels.
-      if (/^couleur\s+/i.test(ref.name)) continue;
-      return isValidCouleurCode(ref.code) ? `${ref.name} ${ref.code}` : ref.name;
+    for (const entry of candidates) {
+      if (entry.key.length < 4) continue;
+      if (!t.includes(` ${entry.key} `)) continue;
+      if (!best || entry.key.length > best.key.length) best = entry;
+      break;
     }
   }
-  return "";
-}
+  if (best) return formatEntry(best, text);
 
-
-/** Normalise le résultat couleur : supprime les préfixes « Couleur » et
- *  applique les codes fixes connus (ex. Noir → Noir P-525). */
-function normalizeCouleurResult(result: string): string {
-  if (!result) return result;
-  let cleaned = result.replace(/^couleur[\s\-–:]+/i, "").replace(/[\s.]+$/, "").trim();
-
-  // Couleur standard : on impose le code officiel, quel que soit le code trouvé.
-  const withoutCode = cleaned
-    .replace(/\s*(?:[A-Za-z]{1,3}\s*-\s*[\dA-Za-z-]+|#\s*\d{2,6}|\b\d{2,6}\b)\s*$/i, "")
-    .trim();
-  const std = STANDARD_CODES[norm(withoutCode)];
-  if (std) return `${titleCase(withoutCode)} ${std}`;
-
-  const words = cleaned.split(/\s+/);
-  const first = words[0];
-  if (!first) return cleaned;
-  const lower = norm(first);
-  const fixed = FIXED_CODES[lower];
-  if (!fixed) return cleaned;
-  // Si le résultat est exactement la couleur, ou couleur + code numérique seul,
-  // on normalise avec le code fixe. On ne touche pas aux noms composés
-  // (ex. « Noir Grand Manan » reste inchangé).
-  if (words.length === 1 || (words.length === 2 && /^\d{2,4}$/.test(words[1]))) {
-    return `${titleCase(first)} ${fixed}`;
-  }
-  return cleaned;
-}
-
-/** Cherche « <nom> P-562 » ou « <nom> #562 » écrit littéralement dans le texte
- *  et ne garde que le nom de couleur proprement dit (ex. « Brun Commercial P-562 »,
- *  « Noir P-525 », « BLEU ARDOISE #525 »). Les mots parasites comme
- *  « barrotin extérieur » avant « noir » sont ignorés. */
-function findLiteralCouleur(text: string): string {
-  const re = /([A-Za-zÀ-ÿ'’]+(?:[\s-]+[A-Za-zÀ-ÿ'’]+){0,5})\s*[\s-]\s*((?:[A-Za-z]{1,3}\s*-\s*\d{2,4})|(?:#\s*\d{2,4})|(?:\b[1-9]\d{2,3}\b))/g;
+  // 2) Code seul (P-525, #525) rattaché à une couleur du catalogue.
+  const re = /\b(?:p|#)\s*-?\s*(\d{3,4})\b/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
-    const rawName = m[1].trim();
-    const code = m[2].replace(/\s*-\s*/, "-").replace(/\s+/g, "").toUpperCase();
-    const words = rawName.split(/[\s-]+/).filter(Boolean);
-
-    // On remonte depuis le code pour ne garder que le suffixe qui correspond
-    // à un nom de couleur connu. Ex. "barrotin extérieur noir P-525" -> "noir".
-    let startIdx = -1;
-    for (let i = words.length - 1; i >= 0; i--) {
-      const suffix = words.slice(i).join(" ").toLowerCase();
-      const isKnownSuffix = COULEURS_REF.some((ref) => {
-        const refName = norm(ref.name);
-        return refName === suffix || refName.endsWith(" " + suffix);
-      });
-      const isColorWord = COLOR_WORDS.some((c) => norm(c) === norm(words[i]));
-      if (isKnownSuffix) {
-        startIdx = i;
-      } else if (i === words.length - 1 && isColorWord) {
-        // Le mot juste avant le code est un mot-couleur isolé.
-        startIdx = i;
-      }
-    }
-
-    // Repli : aucun suffixe connu (ex. « bleu wedge wood P-535 »). On part du
-    // dernier mot-couleur trouvé et on garde tout jusqu'au code.
-    if (startIdx < 0) {
-      for (let i = words.length - 1; i >= 0; i--) {
-        if (COLOR_WORDS.some((c) => norm(c) === norm(words[i]))) {
-          if (words.length - i <= 4) startIdx = i;
-          break;
-        }
-      }
-    }
-
-    if (startIdx < 0) continue;
-    const name = words.slice(startIdx);
-    if (!name.some((w) => COLOR_WORDS.some((c) => norm(c) === norm(w)))) continue;
-    return `${titleCase(name.join(" "))} ${code}`;
-
+    const entry = catalogue.byDigits.get(m[1]);
+    if (entry) return formatEntry(entry, text);
   }
   return "";
 }
 
-/** Cherche un code couleur seul (P-525, #525, 525) et tente de retrouver
- *  le nom dans la liste de référence. */
-function findStandaloneCouleurCode(text: string): string {
-  const re = /\b(P\s*-\s*\d{3,4}|#\s*\d{3,4})\b/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const raw = m[1].replace(/\s+/g, "").toUpperCase();
-    const digits = raw.replace(/^#/, "").replace(/^[A-Z]+-?/i, "");
-    const ref = REF_BY_CODE.get(digits);
-    if (ref) return `${ref.name} ${raw}`;
-    if (isValidCouleurCode(raw)) return raw;
-  }
-  // Code numérique seul de 3 ou 4 chiffres (ex. « 525 »).
-  const numRe = /\b([1-9]\d{2,3})\b/g;
-  while ((m = numRe.exec(text)) !== null) {
-    const ref = REF_BY_CODE.get(m[1]);
-    if (ref) return `${ref.name} ${m[1]}`;
-  }
-  return "";
-}
-
-/** Couleur : on ne cherche qu'à partir de Opt4 (jamais Opt1-3, ni la
- *  description). Le nom de couleur suit généralement le mot « peinture »
- *  ou « couleur » (parfois quelques mots plus loin). */
-const COULEUR_FILLER = new Set([
-  "de", "du", "des", "la", "le", "les", "et", "en", "a", "au", "aux",
-  "special", "speciale", "specialle", "dev", "developpement", "developpee",
-  "developpe", "exterieur", "exterieure", "interieur", "interieure",
-  "gentek", "novatech", "couleur", "couleurs", "peinture", "peint", "peinte",
-  "peinturee", "peinturer",
-  "pour", "avec", "sur", "cadre", "jambage", "porte",
-]);
-
-function pickCouleurAfterKeyword(text: string): string {
-  if (!text) return "";
-  // « peinture », « peinturé(e)(s) », « peinturer », « peint(s) », « couleur(s) »
-  const re = /\b(peintur\w*|peint(?:e|s|es)?|couleurs?)\b/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    let tail = text.slice(m.index + m[0].length);
-    tail = tail.split(/[,;/|)]/)[0];
-
-    // 1) « Nom P-525 » écrit littéralement.
-    const literal = findLiteralCouleur(tail);
-    if (literal) return literal;
-
-    // 2) Couleur connue de la liste de référence.
-    const ref = matchCouleurRef(tail);
-    if (ref) return normalizeCouleurResult(ref);
-
-    // 3) Repli : mots plausibles suivis éventuellement d'un code.
-    const tokens = tail.match(/[A-Za-zÀ-ÿ'’]+|[A-Za-z]{1,3}\s*-\s*\d{2,4}|\b\d{3,4}\b/g) ?? [];
-    const name: string[] = [];
-    let code = "";
-    for (const t of tokens) {
-      const codeM = t.match(/^([A-Za-z]{1,3})\s*-\s*(\d{2,4})$/);
-      if (codeM) {
-        code = `${codeM[1].toUpperCase()}-${codeM[2]}`;
-        break;
-      }
-      if (/^\d{3,4}$/.test(t)) {
-        if (name.length) code = t;
-        break;
-      }
-      const n = norm(t);
-      if (COULEUR_FILLER.has(n) || n.length < 3) {
-        if (name.length) break;
-        continue;
-      }
-      name.push(t);
-      if (name.length >= 3) break;
-    }
-    // Sans code, on n'accepte qu'un vrai mot-couleur connu.
-    if (!name.length) continue;
-    const isKnown = name.some((w) =>
-      COLOR_WORDS.some((c) => norm(c) === norm(w)),
-    );
-    if (!code && !isKnown) continue;
-    return normalizeCouleurResult(
-      code ? `${titleCase(name.join(" "))} ${code}` : titleCase(name.join(" ")),
-    );
-  }
-  return "";
-}
-
-
-/** Un résultat couleur doit porter un code. Sans code, on tente de le
- *  retrouver dans la liste de référence; sinon on rejette les noms trop
- *  génériques (ex. « Bleu » seul). */
-function finalizeCouleur(result: string): string {
-  const value = normalizeCouleurResult((result || "").trim());
-  if (!value) return "";
-  const hasCode = /(?:[A-Za-z]{1,3}\s*-\s*\d{2,6}|#\s*\d{2,4}|\b[1-9]\d{2,3}\b)\s*$/.test(value);
-  if (hasCode) return value;
-
-  const key = norm(value);
-  const exact = COULEURS_REF.find((ref) => norm(ref.name) === key);
-  if (exact?.code) return `${exact.name} ${exact.code}`;
-
-  const fixed = FIXED_CODES[key];
-  if (fixed) return `${titleCase(value)} ${fixed}`;
-
-  // Nom composé sans code connu : on le garde. Un seul mot générique
-  // (« Bleu », « Vert »…) n'est pas une couleur exploitable.
-  const words = value.split(/\s+/).filter(Boolean);
-  if (words.length < 2) return "";
-  return value;
-}
-
-function extractCouleur(row: Record<string, unknown>, _values: string[], _aluCell: string): string {
+/** Couleur : uniquement à partir de Opt4 et suivants (jamais Opt1-3 ni la
+ *  description), et uniquement des valeurs présentes dans la liste de couleurs. */
+function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogue): string {
   const optKeys = Object.keys(row)
     .map((k) => ({ k, n: /^opt(\d+)$/i.test(k) ? parseInt(k.replace(/^opt/i, ""), 10) : -1 }))
     .filter((o) => o.n >= 4)
     .sort((a, b) => a.n - b.n);
   for (const { k } of optKeys) {
-    const text = toStr(row[k]);
-    // 1) Motif littéral « Nom P-xxx / #xxx » : prioritaire, il porte un code.
-    const literal = finalizeCouleur(findLiteralCouleur(text));
-    if (literal) return literal;
-    // 2) Après les mots-clés « peinture » ou « couleur ».
-    const hit = finalizeCouleur(pickCouleurAfterKeyword(text));
+    const hit = matchCouleurInText(toStr(row[k]), catalogue);
     if (hit) return hit;
-    // 3) Code seul P-xxx / #xxx / xxx.
-    const standalone = finalizeCouleur(findStandaloneCouleurCode(text));
-    if (standalone) return standalone;
   }
   return "";
 }
