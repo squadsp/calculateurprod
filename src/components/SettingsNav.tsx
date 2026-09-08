@@ -2,9 +2,11 @@ import { Link, useRouterState } from "@tanstack/react-router";
 
 const tabs = [
   { to: "/admin", label: "Fenêtres" },
-  { to: "/portes-admin", label: "Portes" },
+  { to: "/portes-admin", label: "Jambage" },
+  { to: "/machinage-admin", label: "Machinage" },
+  { to: "/cadres-alu-admin", label: "Cadres Aluminium" },
   { to: "/delays-admin", label: "Délais" },
-];
+] as const;
 
 export function SettingsNav() {
   const path = useRouterState({
