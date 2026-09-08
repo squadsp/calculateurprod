@@ -303,6 +303,7 @@ function CadresAluPage() {
                         "Épaisseur jambage",
                         "Hauteur jambage",
                         "Astragale dim m.a.b int",
+                        "Moustiquaire",
                         "Couleur",
                       ].map((h) => (
                         <th key={h} className="px-3 py-2 text-left font-semibold whitespace-nowrap">
@@ -322,6 +323,7 @@ function CadresAluPage() {
                         <td className="px-3 py-1.5">{row.jambageEpaisseur}</td>
                         <td className="px-3 py-1.5">{row.jambageHauteur}</td>
                         <td className="px-3 py-1.5">{row.astragale}</td>
+                        <td className="px-3 py-1.5">{row.moustiquaire}</td>
                         <td className="px-3 py-1.5">{row.couleur}</td>
                       </tr>
                     ))}

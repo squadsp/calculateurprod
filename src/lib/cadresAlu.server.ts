@@ -10,8 +10,38 @@ export type CadreAluRow = {
   jambageEpaisseur: string;
   jambageHauteur: string;
   astragale: string;
+  moustiquaire: string;
   couleur: string;
 };
+
+/**
+ * Détecte une mention de moustiquaires multiples :
+ * "attention 2ième moustiquaire", "moustiquaire double", "avec 2 moustiquaire",
+ * "deux moustiquaires", "moustiquaire x2", etc.
+ */
+function extractMoustiquaire(allRowValues: string[]): string {
+  const whole = allRowValues.join(" ");
+  if (!/moustiquaire/i.test(whole)) return "";
+
+  const patterns: RegExp[] = [
+    /(\d+)\s*(?:i[eè]me|e|ème)?\s*moustiquaire/i, // "2ième moustiquaire", "2 moustiquaire"
+    /moustiquaire\s*(?:x\s*|\*\s*)(\d+)/i, // "moustiquaire x2"
+    /deux\s+moustiquaire/i,
+    /moustiquaire\s+double/i,
+    /double\s+moustiquaire/i,
+    /moustiquaires?\s+en\s+double/i,
+  ];
+  for (const p of patterns) {
+    const m = whole.match(p);
+    if (!m) continue;
+    if (m[1]) {
+      const n = parseInt(m[1], 10);
+      if (n > 1) return `${n} moustiquaires`;
+    }
+    return "2 moustiquaires";
+  }
+  return "";
+}
 
 const COLOR_WORDS = [
   "Blanc",
@@ -281,6 +311,7 @@ export function extractCadreAluRows(
       jambageEpaisseur: epaisseurJambage,
       jambageHauteur: dims.hauteur,
       astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens),
+      moustiquaire: extractMoustiquaire(allRowValues),
       couleur: extractCouleur(r, values, aluCell),
     });
   }
@@ -298,6 +329,7 @@ export const CADRE_ALU_HEADERS = [
   "ÉPAISSEUR JAMBAGE",
   "HAUTEUR JAMBAGE",
   "ASTRAGALE DIM M.A.B INT",
+  "MOUSTIQUAIRE",
   "COULEUR",
 ];
 
@@ -317,7 +349,7 @@ export async function buildCadreAluPdf(
   const usableWidth = pageWidth - margin * 2;
 
   const headers = CADRE_ALU_HEADERS;
-  const ratios = [0.09, 0.12, 0.07, 0.1, 0.11, 0.11, 0.11, 0.17, 0.12];
+  const ratios = [0.08, 0.11, 0.06, 0.09, 0.1, 0.1, 0.1, 0.16, 0.1, 0.1];
   const widths = ratios.map((r) => usableWidth * r);
   const rowHeight = 18;
   const headerHeight = 24;
@@ -391,6 +423,7 @@ export async function buildCadreAluPdf(
       r.jambageEpaisseur,
       r.jambageHauteur,
       r.astragale,
+      r.moustiquaire,
       r.couleur,
     ].forEach((v, i) => {
       page.drawText(truncate(v, widths[i] - 8, 8.5), {
