@@ -397,12 +397,15 @@ export const CADRE_ALU_HEADERS = [
   "ÉPAISSEUR JAMBAGE",
   "HAUTEUR JAMBAGE",
   "ASTRAGALE DIM M.A.B INT",
-  "MOUSTIQUAIRE",
+  "MOUST.",
   "SEUIL",
   "SOUFFLÉ",
-
+  "DUMMY",
+  "ENFIG.",
+  "TYPE",
   "COULEUR",
 ];
+
 
 
 export async function buildCadreAluPdf(
