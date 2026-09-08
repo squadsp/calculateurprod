@@ -276,6 +276,11 @@ const COLOR_WORDS = [
   "Commercial",
 ];
 
+// Codes fixes pour les couleurs standards (ex. « Noir » est toujours P-525).
+const FIXED_CODES: Record<string, string> = {
+  noir: "P-525",
+};
+
 function toStr(v: unknown): string {
   if (v === null || v === undefined) return "";
   if (v instanceof Date) return formatDate(v);
