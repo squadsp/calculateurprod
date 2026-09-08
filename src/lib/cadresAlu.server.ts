@@ -162,17 +162,13 @@ function parseSouffleSegment(after: string): { prof: string; mesure: string } {
   }
   if (prof) {
     const end = prof.index + prof[0].length;
-    // La mesure réelle se trouve juste avant « de profondeur / profondeur »,
-    // la mesure après est la profondeur.
-    const afterProf = mesures.filter((x) => x.index > end);
+    // Format type : « ... de 0" à 1.9" - 15/16" de profondeur 1 1/8 '' »
+    // → profondeur = mesure juste avant « profondeur », mesure réelle = celle qui suit.
     const beforeProf = mesures.filter((x) => x.index < prof.index);
-    let profVal = afterProf[0]?.value ?? "";
-    let real = beforeProf[beforeProf.length - 1]?.value ?? "";
-    if (!real) {
-      // Dernier recours : première mesure disponible différente de la profondeur.
-      real = mesures.find((x) => x.value !== profVal)?.value ?? "";
-    }
-    return { prof: profVal ? `prof. ${profVal}` : "", mesure: real };
+    const afterProf = mesures.filter((x) => x.index > end);
+    const profVal = beforeProf[beforeProf.length - 1]?.value ?? "";
+    const real = afterProf[0]?.value ?? "";
+    return { prof: profVal ? `${profVal} profond` : "", mesure: real };
   }
   // Pas de mot profondeur : on ignore la première petite mesure et on prend la suivante.
   const candidates = skipLeadingSmallMesures(mesures);
