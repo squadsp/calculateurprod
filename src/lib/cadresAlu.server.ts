@@ -538,10 +538,13 @@ function extractAstragale(allRowValues: string[], sensRow: string): string {
   let sens = "";
   if (/\bfixe\b/i.test(scope)) sens = "Fixe";
   else {
-    const m = scope.match(/\b(gauche|droite)\b/i);
-    if (m) sens = m[1].toLowerCase() === "gauche" ? "Gauche" : "Droite";
-    else if (sensRow) sens = sensRow;
+    const m = scope.match(/\b(gauche|droite)\b/i) ?? sensRow.match(/\b(gauche|droite|fixe)\b/i);
+    if (m) {
+      const w = m[1].toLowerCase();
+      sens = w === "gauche" ? "Gauche" : w === "droite" ? "Droite" : "Fixe";
+    }
   }
+
 
   return sens ? `${size} ${sens}` : size;
 }
@@ -775,13 +778,42 @@ function buildAstragaleDimMab(
 }
 
 
+function cleanColorText(text: string): string {
+  return text
+    .replace(/^[\s\-–:]*special[\s\-–:]*/i, "")
+    .replace(/\s+/g, " ")
+    .replace(/[.\s]+$/, "")
+    .trim()
+    .slice(0, 60);
+}
+
 function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
   const pickWord = (text: string) =>
     COLOR_WORDS.find((c) => new RegExp(`\\b${c}\\b`, "i").test(text)) ?? "";
 
-  // Only P- codes are real colour codes (N600 & co. are door models).
+  const all = [aluCell, ...values, ...Object.values(row).map(toStr)].filter(Boolean);
+
+  // 1) « ... aluminium de couleur X » : X est la vraie couleur (texte libre).
+  for (const v of all) {
+    const m = v.match(/alumin\w*\s+de\s+couleur\s*(.+)$/i);
+    if (m) {
+      const c = cleanColorText(m[1]);
+      if (c) return c;
+    }
+  }
+
+  // 2) Ligne « <couleur> extérieur » (ex. « Charcoil #49 Kaycan extérieur »).
+  for (const v of all) {
+    const m = v.match(/^(.{2,60}?)\s+ext[ée]rieur\s*$/i);
+    if (m && !/porte\(s\)|moulure\(s\)|recouvrement|cadre|seuil|ouverture/i.test(m[1])) {
+      const c = cleanColorText(m[1]);
+      if (c) return c;
+    }
+  }
+
+  // 3) Repli : code P- et/ou mot-couleur connu.
   let code = "";
-  for (const v of [aluCell, ...values]) {
+  for (const v of all) {
     const m = v.match(/\(\s*(P-\s*\d{2,4})\s*\)/i);
     if (m) {
       code = m[1].replace(/\s+/g, "").toUpperCase();
@@ -798,6 +830,7 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
   if (word && code) return `${word} (${code})`;
   return word || code;
 }
+
 
 function findTable(reader: MDBReader) {
   for (const name of reader.getTableNames()) {
