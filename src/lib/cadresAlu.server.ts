@@ -911,8 +911,61 @@ function findLiteralCouleur(text: string): string {
   return "";
 }
 
-/** Couleur : logique retirée — la colonne reste présente mais vide. */
-function extractCouleur(_row: Record<string, unknown>, _values: string[], _aluCell: string): string {
+/** Couleur : on ne cherche qu'à partir de Opt4 (jamais Opt1-3, ni la
+ *  description). Le nom de couleur suit généralement le mot « peinture »
+ *  ou « couleur » (parfois quelques mots plus loin). */
+const COULEUR_FILLER = new Set([
+  "de", "du", "des", "la", "le", "les", "et", "en", "a", "au", "aux",
+  "special", "speciale", "specialle", "dev", "developpement", "developpee",
+  "developpe", "exterieur", "exterieure", "interieur", "interieure",
+  "gentek", "novatech", "couleur", "couleurs", "peinture", "peint", "peinte",
+  "pour", "avec", "sur", "cadre", "jambage", "porte",
+]);
+
+function pickCouleurAfterKeyword(text: string): string {
+  if (!text) return "";
+  const re = /\b(peinture|peint(?:e|ur)?|couleurs?)\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    let tail = text.slice(m.index + m[0].length);
+    // On coupe au premier séparateur fort.
+    tail = tail.split(/[,;/|)]/)[0];
+    const tokens = tail.match(/[A-Za-zÀ-ÿ'’]+|[A-Za-z]{1,3}\s*-\s*\d{2,4}|\b\d{3,4}\b/g) ?? [];
+    const name: string[] = [];
+    let code = "";
+    for (const t of tokens) {
+      const codeM = t.match(/^([A-Za-z]{1,3})\s*-\s*(\d{2,4})$/);
+      if (codeM) {
+        code = `${codeM[1].toUpperCase()}-${codeM[2]}`;
+        break;
+      }
+      if (/^\d{3,4}$/.test(t)) {
+        if (name.length) code = t;
+        break;
+      }
+      const n = norm(t);
+      if (COULEUR_FILLER.has(n)) {
+        if (name.length) break;
+        continue;
+      }
+      name.push(t);
+      if (name.length >= 4) break;
+    }
+    if (!name.length) continue;
+    return code ? `${titleCase(name.join(" "))} ${code}` : titleCase(name.join(" "));
+  }
+  return "";
+}
+
+function extractCouleur(row: Record<string, unknown>, _values: string[], _aluCell: string): string {
+  const optKeys = Object.keys(row)
+    .map((k) => ({ k, n: /^opt(\d+)$/i.test(k) ? parseInt(k.replace(/^opt/i, ""), 10) : -1 }))
+    .filter((o) => o.n >= 4)
+    .sort((a, b) => a.n - b.n);
+  for (const { k } of optKeys) {
+    const hit = pickCouleurAfterKeyword(toStr(row[k]));
+    if (hit) return hit;
+  }
   return "";
 }
 
