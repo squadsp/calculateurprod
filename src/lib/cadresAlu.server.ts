@@ -1044,7 +1044,7 @@ function pickCouleurAfterKeyword(text: string): string {
  *  retrouver dans la liste de référence; sinon on rejette les noms trop
  *  génériques (ex. « Bleu » seul). */
 function finalizeCouleur(result: string): string {
-  const value = (result || "").trim();
+  const value = normalizeCouleurResult((result || "").trim());
   if (!value) return "";
   const hasCode = /(?:[A-Za-z]{1,3}\s*-\s*\d{2,6}|#\s*\d{2,4}|\b[1-9]\d{2,3}\b)\s*$/.test(value);
   if (hasCode) return value;
