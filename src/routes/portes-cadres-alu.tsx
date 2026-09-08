@@ -303,14 +303,16 @@ function CadresAluPage() {
                         "Épaisseur jambage",
                         "Hauteur jambage",
                         "Astragale dim m.a.b int",
-                        "Moustiquaire",
+                        "Moust.",
                         "Seuil",
+                        "Soufflé",
                         "Couleur",
                       ].map((h) => (
-                        <th key={h} className="px-3 py-2 text-left font-semibold whitespace-nowrap">
+                        <th key={h} className="px-2 py-2 text-left font-semibold whitespace-nowrap">
                           {h}
                         </th>
                       ))}
+
                     </tr>
                   </thead>
                   <tbody>
