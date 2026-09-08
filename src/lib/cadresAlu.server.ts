@@ -43,6 +43,18 @@ function extractMoustiquaire(allRowValues: string[]): string {
   return "";
 }
 
+/** Type de seuil : Sans seuil / Seuil adapté AC5 / Seuil adapté / Seuil AC5. */
+function extractSeuil(allRowValues: string[]): string {
+  const whole = allRowValues.join(" ");
+  if (/sans\s+seuil/i.test(whole)) return "Sans seuil";
+  const adapte = /seuil\s+adapt/i.test(whole);
+  const ac5 = /\bAC5\b/i.test(whole);
+  if (adapte && ac5) return "Seuil adapté AC5";
+  if (adapte) return "Seuil adapté";
+  if (ac5) return "Seuil AC5";
+  return "";
+}
+
 const COLOR_WORDS = [
   "Blanc",
   "Noir",
