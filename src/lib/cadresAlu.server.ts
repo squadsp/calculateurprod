@@ -302,7 +302,12 @@ function buildAstragaleDimMab(
   const parts: string[] = [];
   const astragale = extractAstragale(allRowValues, sensRow);
   if (astragale) parts.push(astragale);
-  if (values.some((v) => /moulure/i.test(v))) parts.push("Moulure");
+  const moulureValue = values.find((v) => /moulure/i.test(v));
+  if (moulureValue) {
+    if (/moulure\s+de\s+retenu/i.test(moulureValue)) parts.push("Moulure de retenu");
+    else if (/moulure\s+à\s+brique|moulure\s+a\s+brique/i.test(moulureValue)) parts.push("Moulure à brique");
+    else parts.push("Moulure");
+  }
   if (values.some((v) => /jardin/i.test(v))) parts.push("Jardin");
   if (values.some((v) => /modulaire/i.test(v))) parts.push("Modulaire");
 
