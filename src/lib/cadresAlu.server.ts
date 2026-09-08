@@ -1,23 +1,17 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import MDBReader from "mdb-reader";
 
-export type CadreAluRow = {
-  sequence: string;
-  id: string;
-  sens: string;
-  tete: string;
-  jambageLargeur: string;
-  jambageEpaisseur: string;
-  jambageHauteur: string;
-  astragale: string;
-  moustiquaire: string;
-  seuil: string;
-  souffle: string;
-  dummy: string;
-  enfigure: string;
-  
-  couleur: string;
-};
+export type { CadreAluRow } from "@/lib/cadresAlu.types";
+import type { CadreAluRow } from "@/lib/cadresAlu.types";
+import {
+  DEFAULT_CADRE_ALU_SETTINGS,
+  normalizeCadreAluSettings,
+  type CadreAluSettings,
+} from "@/lib/cadresAluSettings";
+
+function escapeRe(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /** « Dummy » avec sa mesure si elle est mentionnée sur la ligne. */
 function extractDummy(allRowValues: string[]): string {
@@ -326,17 +320,20 @@ function normalizeFraction(raw: string): string {
     .trim();
 }
 
-function findAluCell(values: string[]): string | null {
+function findAluCell(values: string[], keywords: string[]): string | null {
+  const re = new RegExp(`\\b(?:${keywords.map(escapeRe).join("|")})\\b`, "i");
   for (const v of values) {
-    if (/\balum?(inium|inum)?\b/i.test(v) || /\balu\b/i.test(v)) return v;
+    if (re.test(v)) return v;
   }
   return null;
 }
 
 /** MAB en J, MAB J, or MAB alone next to a lone "J" -> excluded. */
-function isExcluded(values: string[]): boolean {
+function isExcluded(values: string[], keywords: string[]): boolean {
+  if (keywords.length === 0) return false;
+  const re = new RegExp(`\\b(?:${keywords.map(escapeRe).join("|")})\\b`, "i");
   for (const v of values) {
-    if (/\bMAB\b/i.test(v)) {
+    if (re.test(v)) {
       if (/\bMAB\b\s*(en\s*)?J\b/i.test(v)) return true;
       if (/\bJ\b/.test(v.replace(/J-\d+/g, ""))) return true;
       return true; // any MAB mention on an alu line is excluded
@@ -844,17 +841,26 @@ function findTable(reader: MDBReader) {
 export function extractCadreAluRows(
   fileBuffer: ArrayBuffer,
   targetDate: Date | null,
+  rawSettings?: unknown,
 ): CadreAluRow[] {
+  const settings: CadreAluSettings = rawSettings
+    ? normalizeCadreAluSettings(rawSettings)
+    : DEFAULT_CADRE_ALU_SETTINGS;
+  const prefixRe = new RegExp(
+    `^(?:${settings.sequencePrefixes.map(escapeRe).join("|")})`,
+    "i",
+  );
   const reader = new MDBReader(Buffer.from(fileBuffer));
   const table = findTable(reader);
   if (!table) throw new Error("Aucune table compatible trouvée dans le fichier Access.");
 
   const rows = table.getData() as Array<Record<string, unknown>>;
   const kept: CadreAluRow[] = [];
+  const dates = new Map<CadreAluRow, string>();
 
   for (const r of rows) {
     const sequence = toStr(r.Sequence);
-    if (!/^(LA|LB|SA|PA)/i.test(sequence)) continue;
+    if (settings.sequencePrefixes.length > 0 && !prefixRe.test(sequence)) continue;
     if (targetDate && !matchesDate(r.Ligne1, targetDate)) continue;
 
     // Only option/description fields count — never Client or other free-text columns.
@@ -862,9 +868,9 @@ export function extractCadreAluRows(
       .filter(([key]) => /^(opt\d+|description|code)$/i.test(key))
       .map(([, v]) => toStr(v))
       .filter(Boolean);
-    const aluCell = findAluCell(values);
+    const aluCell = findAluCell(values, settings.aluKeywords);
     if (!aluCell) continue;
-    if (isExcluded(values)) continue;
+    if (isExcluded(values, settings.excludeKeywords)) continue;
 
     const allRowValues = Object.values(r).map(toStr).filter(Boolean);
     const dims = parseDimension(toStr(r.Dimension));
@@ -874,7 +880,7 @@ export function extractCadreAluRows(
     const sens = extractSens(values);
 
     const couleur = extractCouleur(r, values, aluCell);
-    kept.push({
+    const row: CadreAluRow = {
       sequence,
       id: extractId(toStr(r.Code)),
       sens,
@@ -889,10 +895,18 @@ export function extractCadreAluRows(
       dummy: extractDummy(allRowValues),
       enfigure: extractEnfigure(allRowValues),
       couleur,
-    });
+    };
+    kept.push(row);
+    dates.set(row, toStr(r.Ligne1));
   }
 
-  kept.sort((a, b) => a.sequence.localeCompare(b.sequence, "fr", { numeric: true }));
+  kept.sort((a, b) => {
+    if (settings.sortByDate) {
+      const d = (dates.get(a) ?? "").localeCompare(dates.get(b) ?? "");
+      if (d !== 0) return d;
+    }
+    return a.sequence.localeCompare(b.sequence, "fr", { numeric: true });
+  });
   return kept;
 }
 
@@ -918,7 +932,13 @@ export const CADRE_ALU_HEADERS = [
 export async function buildCadreAluPdf(
   rows: CadreAluRow[],
   targetDate: Date | null,
+  rawSettings?: unknown,
 ): Promise<Uint8Array> {
+  const settings: CadreAluSettings = rawSettings
+    ? normalizeCadreAluSettings(rawSettings)
+    : DEFAULT_CADRE_ALU_SETTINGS;
+  const cols = settings.columns.filter((c) => c.visible);
+  const totalWeight = cols.reduce((t, c) => t + c.width, 0) || 1;
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -929,11 +949,8 @@ export async function buildCadreAluPdf(
   const margin = 28;
   const usableWidth = pageWidth - margin * 2;
 
-  const headers = CADRE_ALU_HEADERS;
-  // Largeurs ajustées pour 14 colonnes : Moust./Seuil ne se touchent plus.
-  const ratios = [
-    0.05, 0.07, 0.04, 0.07, 0.07, 0.07, 0.065, 0.155, 0.03, 0.085, 0.06, 0.06, 0.105, 0.07,
-  ];
+  const headers = cols.map((c) => c.label);
+  const ratios = cols.map((c) => c.width / totalWeight);
 
   const widths = ratios.map((r) => usableWidth * r);
   const headerHeight = 30;
@@ -1005,7 +1022,7 @@ export async function buildCadreAluPdf(
     return lines.length > 0 ? lines : [""];
   };
 
-  page.drawText("Cadres Aluminium", { x: margin, y: y - 14, size: 14, font: bold, color: rgb(0, 0, 0) });
+  page.drawText(settings.pdfTitle, { x: margin, y: y - 14, size: 14, font: bold, color: rgb(0, 0, 0) });
   page.drawText(
     `${targetDate ? `Date: ${formatDate(targetDate)}   —   ` : ""}${rows.length} ligne(s)`,
     { x: margin, y: y - 30, size: 10, font, color: rgb(0.3, 0.3, 0.3) },
@@ -1024,23 +1041,7 @@ export async function buildCadreAluPdf(
   }
 
   rows.forEach((r, idx) => {
-    const cells = [
-      r.sequence,
-      r.id,
-      r.sens,
-      r.tete,
-      r.jambageLargeur,
-      r.jambageEpaisseur,
-      r.jambageHauteur,
-      r.astragale,
-      r.moustiquaire,
-      r.seuil,
-      r.souffle,
-      r.dummy,
-      r.enfigure,
-      
-      r.couleur,
-    ];
+    const cells = cols.map((c) => r[c.key] ?? "");
     // Chaque cellule peut occuper plusieurs lignes (ex. « Moulure » sous l'astragale).
     const wrapped = cells.map((v, i) => wrap(v, widths[i] - 8));
     const height = Math.max(...wrapped.map((l) => l.length)) * lineHeight + 6;

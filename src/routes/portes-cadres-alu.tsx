@@ -13,6 +13,11 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { processCadreAluSources, type CadreAluRow } from "@/lib/cadresAlu.functions";
+import {
+  DEFAULT_CADRE_ALU_SETTINGS,
+  loadCadreAluSettings,
+  type CadreAluSettings,
+} from "@/lib/cadresAluSettings";
 
 export const Route = createFileRoute("/portes-cadres-alu")({
   component: CadresAluPage,
@@ -72,6 +77,10 @@ function base64ToUint8Array(base64: string): Uint8Array {
 function CadresAluPage() {
   const processSources = useServerFn(processCadreAluSources);
 
+  const [settings, setSettings] = useState<CadreAluSettings>(DEFAULT_CADRE_ALU_SETTINGS);
+  useEffect(() => { setSettings(loadCadreAluSettings()); }, []);
+  const visibleColumns = settings.columns.filter((c) => c.visible);
+
   const [date, setDate] = useState<string>(todayIso());
   const [useDate, setUseDate] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -112,7 +121,7 @@ function CadresAluPage() {
     (async () => {
       try {
         const response = await processSources({
-          data: { sources, date: useDate ? date : null },
+          data: { sources, date: useDate ? date : null, settings },
         });
         const out = response.results.map((result): Result => {
           const bytes = base64ToUint8Array(result.pdfBase64);
@@ -144,12 +153,12 @@ function CadresAluPage() {
     return () => {
       cancelled = true;
     };
-  }, [sources, date, useDate, processSources]);
+  }, [sources, date, useDate, processSources, settings]);
 
   const downloadOne = (r: Result) => {
     const a = document.createElement("a");
     a.href = r.url;
-    a.download = `Cadres Aluminium${useDate ? ` ${date}` : ""}.pdf`;
+    a.download = `${settings.pdfTitle}${useDate ? ` ${date}` : ""}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -177,7 +186,7 @@ function CadresAluPage() {
           <Link to="/portes" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Portes
           </Link>
-          <h1 className="text-lg font-semibold tracking-tight">Cadres Aluminium</h1>
+          <h1 className="text-lg font-semibold tracking-tight">{settings.name}</h1>
           <Link to="/portes-admin" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <SettingsIcon className="h-4 w-4" /> Paramètres
           </Link>
@@ -186,7 +195,7 @@ function CadresAluPage() {
 
       <main className="max-w-6xl mx-auto px-6 py-10">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold tracking-tight">Cadres Aluminium</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{settings.name}</h2>
           <p className="mt-2 text-muted-foreground">
             Déposez un fichier Access (.mdb) pour extraire les commandes en aluminium.
           </p>
@@ -294,49 +303,21 @@ function CadresAluPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-muted">
                     <tr>
-                      {[
-                        "SA-PA",
-                        "ID",
-                        "Sens",
-                        "Mesure tête",
-                        "Largeur jambage",
-                        "Épaisseur jambage",
-                        "Hauteur jambage",
-                        "Astragale dim m.a.b int",
-                        "Moust.",
-                        "Seuil",
-                        "Soufflé",
-                        "Dummy",
-                        "Enfiguré",
-                        "Couleur",
-                      ].map((h) => (
-                        <th key={h} className="px-2 py-2 text-left font-semibold whitespace-nowrap">
-                          {h}
+                      {visibleColumns.map((c) => (
+                        <th key={c.key} className="px-2 py-2 text-left font-semibold whitespace-nowrap">
+                          {c.label}
                         </th>
                       ))}
-
                     </tr>
                   </thead>
                   <tbody>
                     {r.rows.map((row, i) => (
                       <tr key={`${row.id}-${row.sequence}-${i}`} className="border-t border-border">
-                        <td className="px-2 py-1.5 whitespace-nowrap">{row.sequence}</td>
-                        <td className="px-2 py-1.5 font-mono text-xs whitespace-nowrap">{row.id}</td>
-                        <td className="px-2 py-1.5">{row.sens}</td>
-                        <td className="px-2 py-1.5">{row.tete}</td>
-                        <td className="px-2 py-1.5">{row.jambageLargeur}</td>
-                        <td className="px-2 py-1.5">{row.jambageEpaisseur}</td>
-                        <td className="px-2 py-1.5">{row.jambageHauteur}</td>
-                        <td className="px-2 py-1.5">{row.astragale}</td>
-                        <td className="px-2 py-1.5 text-center">{row.moustiquaire}</td>
-                        <td className="px-2 py-1.5">{row.seuil}</td>
-                        <td className="px-2 py-1.5">{row.souffle}</td>
-                        <td className="px-2 py-1.5">{row.dummy}</td>
-                        <td className="px-2 py-1.5">{row.enfigure}</td>
-
-                        <td className="px-2 py-1.5">{row.couleur}</td>
-
-
+                        {visibleColumns.map((c) => (
+                          <td key={c.key} className="px-2 py-1.5">
+                            {row[c.key]}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>

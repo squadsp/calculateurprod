@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PortesMachinageRouteImport } from './routes/portes-machinage'
 import { Route as PortesJambagesRouteImport } from './routes/portes-jambages'
 import { Route as PortesCadresAluRouteImport } from './routes/portes-cadres-alu'
-import { Route as PortesAluminiumRouteImport } from './routes/portes-aluminium'
 import { Route as PortesAdminRouteImport } from './routes/portes-admin'
 import { Route as PortesRouteImport } from './routes/portes'
 import { Route as FenetresRouteImport } from './routes/fenetres'
@@ -34,11 +33,6 @@ const PortesJambagesRoute = PortesJambagesRouteImport.update({
 const PortesCadresAluRoute = PortesCadresAluRouteImport.update({
   id: '/portes-cadres-alu',
   path: '/portes-cadres-alu',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PortesAluminiumRoute = PortesAluminiumRouteImport.update({
-  id: '/portes-aluminium',
-  path: '/portes-aluminium',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortesAdminRoute = PortesAdminRouteImport.update({
@@ -85,7 +79,6 @@ export interface FileRoutesByFullPath {
   '/fenetres': typeof FenetresRoute
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
-  '/portes-aluminium': typeof PortesAluminiumRoute
   '/portes-cadres-alu': typeof PortesCadresAluRoute
   '/portes-jambages': typeof PortesJambagesRoute
   '/portes-machinage': typeof PortesMachinageRoute
@@ -98,7 +91,6 @@ export interface FileRoutesByTo {
   '/fenetres': typeof FenetresRoute
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
-  '/portes-aluminium': typeof PortesAluminiumRoute
   '/portes-cadres-alu': typeof PortesCadresAluRoute
   '/portes-jambages': typeof PortesJambagesRoute
   '/portes-machinage': typeof PortesMachinageRoute
@@ -112,7 +104,6 @@ export interface FileRoutesById {
   '/fenetres': typeof FenetresRoute
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
-  '/portes-aluminium': typeof PortesAluminiumRoute
   '/portes-cadres-alu': typeof PortesCadresAluRoute
   '/portes-jambages': typeof PortesJambagesRoute
   '/portes-machinage': typeof PortesMachinageRoute
@@ -127,7 +118,6 @@ export interface FileRouteTypes {
     | '/fenetres'
     | '/portes'
     | '/portes-admin'
-    | '/portes-aluminium'
     | '/portes-cadres-alu'
     | '/portes-jambages'
     | '/portes-machinage'
@@ -140,7 +130,6 @@ export interface FileRouteTypes {
     | '/fenetres'
     | '/portes'
     | '/portes-admin'
-    | '/portes-aluminium'
     | '/portes-cadres-alu'
     | '/portes-jambages'
     | '/portes-machinage'
@@ -153,7 +142,6 @@ export interface FileRouteTypes {
     | '/fenetres'
     | '/portes'
     | '/portes-admin'
-    | '/portes-aluminium'
     | '/portes-cadres-alu'
     | '/portes-jambages'
     | '/portes-machinage'
@@ -167,7 +155,6 @@ export interface RootRouteChildren {
   FenetresRoute: typeof FenetresRoute
   PortesRoute: typeof PortesRoute
   PortesAdminRoute: typeof PortesAdminRoute
-  PortesAluminiumRoute: typeof PortesAluminiumRoute
   PortesCadresAluRoute: typeof PortesCadresAluRoute
   PortesJambagesRoute: typeof PortesJambagesRoute
   PortesMachinageRoute: typeof PortesMachinageRoute
@@ -194,13 +181,6 @@ declare module '@tanstack/react-router' {
       path: '/portes-cadres-alu'
       fullPath: '/portes-cadres-alu'
       preLoaderRoute: typeof PortesCadresAluRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/portes-aluminium': {
-      id: '/portes-aluminium'
-      path: '/portes-aluminium'
-      fullPath: '/portes-aluminium'
-      preLoaderRoute: typeof PortesAluminiumRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portes-admin': {
@@ -263,7 +243,6 @@ const rootRouteChildren: RootRouteChildren = {
   FenetresRoute: FenetresRoute,
   PortesRoute: PortesRoute,
   PortesAdminRoute: PortesAdminRoute,
-  PortesAluminiumRoute: PortesAluminiumRoute,
   PortesCadresAluRoute: PortesCadresAluRoute,
   PortesJambagesRoute: PortesJambagesRoute,
   PortesMachinageRoute: PortesMachinageRoute,
