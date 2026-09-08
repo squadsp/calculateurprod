@@ -292,12 +292,32 @@ function extractAstragale(allRowValues: string[], sensRow: string): string {
   return sens ? `${size} ${sens}` : size;
 }
 
+/** Détecte une couleur différente de la couleur principale (utile pour Alu int). */
+function findDifferentColor(values: string[], mainColor: string): string {
+  const mainWord = mainColor.split(" ")[0].toLowerCase();
+  for (const v of values) {
+    const m = v.match(/\(\s*(P-\s*\d{2,4})\s*\)/i);
+    if (m) {
+      const code = m[1].replace(/\s+/g, "").toUpperCase();
+      if (!mainColor.toUpperCase().includes(code)) return code;
+    }
+  }
+  for (const c of COLOR_WORDS) {
+    if (mainWord === c.toLowerCase()) continue;
+    for (const v of values) {
+      if (new RegExp(`\\b${c}\\b`, "i").test(v)) return c;
+    }
+  }
+  return "";
+}
+
 /** Astragale / Moulure / Jardin / Modulaire / Alu int / head thickness note, combined in one column. */
 function buildAstragaleDimMab(
   values: string[],
   allRowValues: string[],
   epaisseurJambage: string,
   sensRow: string,
+  couleur: string,
 ): string {
   const parts: string[] = [];
   const astragale = extractAstragale(allRowValues, sensRow);
@@ -310,7 +330,12 @@ function buildAstragaleDimMab(
   parts.push(...moulureTypes);
   if (values.some((v) => /jardin/i.test(v))) parts.push("Jardin");
   if (values.some((v) => /modulaire/i.test(v))) parts.push("Modulaire");
-  if (allRowValues.some((v) => /recouvrement\s+int[ée]rieur\s+aluminium/i.test(v))) parts.push("Alu int");
+
+  const aluInt = allRowValues.some((v) => /recouvrement\s+int[ée]rieur\s+aluminium/i.test(v));
+  if (aluInt) {
+    const aluIntColor = findDifferentColor(allRowValues, couleur);
+    parts.push(aluIntColor ? `Alu int ${aluIntColor}` : "Alu int");
+  }
 
   if (epaisseurJambage === "1 1/2") {
     const teteEp = values.find((v) => /t[êe]te/i.test(v) && /1[-\s]1\/4/.test(v));
