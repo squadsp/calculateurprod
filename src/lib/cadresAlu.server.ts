@@ -195,8 +195,7 @@ function findAluCell(values: string[]): string | null {
   return null;
 }
 
-/** MAB en J, MAB J, or MAB alone next to a lone "J" -> excluded.
- *  A line mentioning "moulure à brique en J" is also ignored entirely. */
+/** MAB en J, MAB J, or MAB alone next to a lone "J" -> excluded. */
 function isExcluded(values: string[]): boolean {
   for (const v of values) {
     if (/\bMAB\b/i.test(v)) {
@@ -204,7 +203,6 @@ function isExcluded(values: string[]): boolean {
       if (/\bJ\b/.test(v.replace(/J-\d+/g, ""))) return true;
       return true; // any MAB mention on an alu line is excluded
     }
-    if (/moulure\s+[àa]\s+brique\s*(?:en\s*)?[-]?\s*j\b/i.test(v)) return true;
   }
   return false;
 }
@@ -326,7 +324,7 @@ const J_MARKER_RE = /^[\s.:,'"«»\-–]*(?:en\s*)?[«"']?\s*j\b/i;
 
 /** Variantes descriptives telles que « Tout P.V.C. avec "J" intégré ». */
 const J_DESCRIPTION_RE =
-  /\b(?:avec|en)\s*[«"']?\s*j\s*[»"']?\b(?:\s+int[ée]gr[ée]?)?/i;
+  /\b(?:avec|en)\s*[«"']?\s*j\s*[»"']?(?:\s+int[ée]gr[ée]?)?/i;
 
 /** Vrai si la ligne contient au moins une moulure à brique qui n'est PAS « en J ». */
 function hasMoulureBrique(value: string): boolean {
@@ -342,13 +340,26 @@ function hasMoulureBrique(value: string): boolean {
   return found;
 }
 
+/** Vrai si au moins une moulure à brique de la ligne est décrite comme étant en J. */
+function hasMoulureBriqueEnJ(value: string): boolean {
+  const text = value ?? "";
+  MOULURE_BRIQUE_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
+    const after = text.slice(m.index + m[0].length);
+    if (J_MARKER_RE.test(after) || J_DESCRIPTION_RE.test(after)) return true;
+  }
+  return false;
+}
 
-/** Vrai si la ligne mentionne une moulure à brique non standard. */
+
+/**
+ * Vrai seulement si les mots « moulure à brique non standard » font partie
+ * de la même mention. Un « non standard » ailleurs dans la commande ne compte pas.
+ */
 function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
-  const whole = allRowValues.join(" | ");
-  return (
-    /moulure\s+[àa]\s+brique/i.test(whole) &&
-    /non[\s-]*standard|non[\s-]*std|hors[\s-]*standard|special|spécial/i.test(whole)
+  return allRowValues.some((v) =>
+    /moulure\s*[àa]\s*brique\s*(?:[:;,\-–]\s*)?non[\s-]*standard/i.test(v),
   );
 }
 
@@ -394,10 +405,12 @@ function buildAstragaleDimMab(
   const astragale = extractAstragale(allRowValues, sensRow);
   if (astragale) parts.push(astragale);
   const moulureTypes = new Set<string>();
+  const wholeRow = allRowValues.join(" | ");
+  const hasJBrickDescription = hasMoulureBriqueEnJ(wholeRow);
   for (const v of values) {
     if (/moulure\s+de\s+retenu/i.test(v)) moulureTypes.add("Moulure de retenu");
-    // On ignore toutes les moulures à brique « en J ».
-    if (hasMoulureBrique(v)) moulureTypes.add("Moulure à brique");
+    // Toute description « avec J / J intégré » de la même ligne annule la moulure à brique.
+    if (!hasJBrickDescription && hasMoulureBrique(v)) moulureTypes.add("Moulure à brique");
   }
 
 
