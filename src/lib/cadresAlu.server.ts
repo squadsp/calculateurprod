@@ -265,18 +265,21 @@ export function extractCadreAluRows(
     if (!aluCell) continue;
     if (isExcluded(values)) continue;
 
+    const allRowValues = Object.values(r).map(toStr).filter(Boolean);
     const dims = parseDimension(toStr(r.Dimension));
     const epaisseurs = extractEpaisseurs(values);
     const epaisseurJambage = epaisseurs[0] ?? "";
+    const sens = extractSens(values);
 
     kept.push({
       sequence,
       id: extractId(toStr(r.Code)),
+      sens,
       tete: extractTete(toStr(r.Dimension)),
       jambageLargeur: extractJambageLargeur(aluCell, values),
       jambageEpaisseur: epaisseurJambage,
       jambageHauteur: dims.hauteur,
-      astragale: buildAstragaleDimMab(values, epaisseurJambage),
+      astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens),
       couleur: extractCouleur(r, values, aluCell),
     });
   }
@@ -288,6 +291,7 @@ export function extractCadreAluRows(
 export const CADRE_ALU_HEADERS = [
   "SA-PA",
   "ID",
+  "SENS",
   "MESURE TÊTE",
   "LARGEUR JAMBAGE",
   "ÉPAISSEUR JAMBAGE",
@@ -295,6 +299,7 @@ export const CADRE_ALU_HEADERS = [
   "ASTRAGALE DIM M.A.B INT",
   "COULEUR",
 ];
+
 
 export async function buildCadreAluPdf(
   rows: CadreAluRow[],
