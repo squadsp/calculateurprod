@@ -35,9 +35,20 @@ function extractDummy(allRowValues: string[]): string {
   return "Dummy";
 }
 
-/** Seuil / pièce enfiguré : Oui ou Non. */
+/**
+ * Enfiguré : mention directe « enfiguré », ou une porte d'acier avec un
+ * 2e slab (« 2e slab », « 2 slab », « 2ième slab », « double slab », « slab x2 »).
+ */
 function extractEnfigure(allRowValues: string[]): string {
-  return /enfigur[ée]/i.test(allRowValues.join(" ")) ? "Oui" : "Non";
+  const whole = allRowValues.join(" ");
+  if (/enfigur[ée]/i.test(whole)) return "Oui";
+  const slab = [
+    /\b(?:2|deux)\s*(?:e|i[eè]me|ème|nd)?\s*[-.]?\s*slabs?\b/i,
+    /\bdouble\s+slabs?\b/i,
+    /\bslabs?\s*(?:x|\*)\s*2\b/i,
+    /\bslabs?\s+double\b/i,
+  ].some((p) => p.test(whole));
+  return slab ? "Oui" : "Non";
 }
 
 /** Précise s'il s'agit d'une porte d'acier. */
