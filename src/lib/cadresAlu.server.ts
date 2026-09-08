@@ -292,7 +292,7 @@ function extractAstragale(allRowValues: string[], sensRow: string): string {
   return sens ? `${size} ${sens}` : size;
 }
 
-/** Astragale / Moulure / Jardin / head thickness note, combined in one column. */
+/** Astragale / Moulure / Jardin / Modulaire / head thickness note, combined in one column. */
 function buildAstragaleDimMab(
   values: string[],
   allRowValues: string[],
@@ -304,6 +304,7 @@ function buildAstragaleDimMab(
   if (astragale) parts.push(astragale);
   if (values.some((v) => /moulure/i.test(v))) parts.push("Moulure");
   if (values.some((v) => /jardin/i.test(v))) parts.push("Jardin");
+  if (values.some((v) => /modulaire/i.test(v))) parts.push("Modulaire");
 
   if (epaisseurJambage === "1 1/2") {
     const teteEp = values.find((v) => /t[êe]te/i.test(v) && /1[-\s]1\/4/.test(v));
