@@ -313,7 +313,10 @@ function findDifferentColor(values: string[], mainColor: string): string {
   return "";
 }
 
-const MEASURE_RE = /\d+\s+\d+\/\d+\s*"?|\d+\/\d+\s*"?|\d+\s*"/;
+// Mesure dans n'importe quel format : entiers, décimales, fractions
+// (10 1/2, 10-1/2, 1/2), avec ou sans symbole " / po / mm.
+const MEASURE_RE =
+  /\d+(?:[.,]\d+)?(?:[\s-]+\d+\/\d+)?\s*(?:"|''|po\b|mm\b)?|\d+\/\d+\s*(?:"|''|po\b|mm\b)?/i;
 /** Deux mesures reliées par « x » (ex. 10 1/2 x 30 1/4). */
 const DOUBLE_MEASURE_RE = new RegExp(
   `(?:${MEASURE_RE.source})(?:\\s*[x×]\\s*(?:${MEASURE_RE.source}))+`,
