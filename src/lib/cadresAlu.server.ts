@@ -327,7 +327,15 @@ function buildAstragaleDimMab(
     if (/moulure\s+de\s+retenu/i.test(v)) moulureTypes.add("Moulure de retenu");
     if (/moulure\s+à\s+brique|moulure\s+a\s+brique/i.test(v)) moulureTypes.add("Moulure à brique");
   }
+  if (moulureTypes.has("Moulure à brique") && isMoulureBriqueNonStandard(allRowValues)) {
+    const mesure = findCommentaireMesure(allRowValues);
+    moulureTypes.delete("Moulure à brique");
+    moulureTypes.add(
+      mesure ? `Moulure à brique non standard ${mesure}` : "Moulure à brique non standard",
+    );
+  }
   parts.push(...moulureTypes);
+
   if (values.some((v) => /jardin/i.test(v))) parts.push("Jardin");
   if (values.some((v) => /modulaire/i.test(v))) parts.push("Modulaire");
 
