@@ -178,28 +178,55 @@ function parseSouffleSegment(after: string): { prof: string; mesure: string } {
 function extractSouffle(allRowValues: string[]): string {
   const whole = allRowValues.join(" ");
   SOUFFLE_WORD_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
+
+  // Repère toutes les occurrences de « soufflé/souffler ».
+  const occurrences: number[] = [];
+  let om: RegExpExecArray | null;
+  while ((om = SOUFFLE_WORD_RE.exec(whole)) !== null) {
+    occurrences.push(om.index + om[0].length);
+  }
+
   let hauteur = "";
   let largeur = "";
   let hauteurFound = false;
   let largeurFound = false;
 
-  while ((m = SOUFFLE_WORD_RE.exec(whole)) !== null) {
-    const before = whole.slice(Math.max(0, m.index - 60), m.index);
-    const after = whole.slice(m.index + m[0].length, m.index + m[0].length + 120);
-    const ctx = `${before} ${after}`;
+  const H_RE = /\b(hauteur|haut|htr)\b/gi;
+  const L_RE = /\b(largeur|large|lrg)\b/gi;
 
-    const isH = /\b(hauteur|haut|htr)\b/i.test(ctx);
-    const isL = /\b(largeur|large|lrg)\b/i.test(ctx);
+  const nearestDistance = (re: RegExp, start: number, segment: string, before: string): number => {
+    re.lastIndex = 0;
+    let best = Infinity;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(segment)) !== null) best = Math.min(best, m.index);
+    re.lastIndex = 0;
+    while ((m = re.exec(before)) !== null) {
+      best = Math.min(best, before.length - m.index);
+    }
+    void start;
+    return best;
+  };
 
-    const { prof, mesure } = parseSouffleSegment(after);
+  for (let i = 0; i < occurrences.length; i++) {
+    const start = occurrences[i];
+    // Chaque occurrence est traitée séparément : le segment s'arrête au
+    // prochain « soufflé », pour ne jamais mélanger hauteur et largeur.
+    const nextStart = i + 1 < occurrences.length ? occurrences[i + 1] : whole.length;
+    const segment = whole.slice(start, Math.min(nextStart, start + 160));
+    const before = whole.slice(Math.max(0, start - 60), start);
+
+    const dH = nearestDistance(H_RE, start, segment, before);
+    const dL = nearestDistance(L_RE, start, segment, before);
+    if (dH === Infinity && dL === Infinity) continue;
+
+    const { prof, mesure } = parseSouffleSegment(segment);
     const txt = [mesure, prof ? `(${prof})` : ""].filter(Boolean).join(" ");
 
-    if (isH) {
+    // Une occurrence = une seule direction (la plus proche).
+    if (dH <= dL) {
       hauteurFound = true;
       if (txt && !hauteur) hauteur = txt;
-    }
-    if (isL) {
+    } else {
       largeurFound = true;
       if (txt && !largeur) largeur = txt;
     }
@@ -214,6 +241,7 @@ function extractSouffle(allRowValues: string[]): string {
   // Direction inconnue : on ne devine pas — la cellule reste vide.
   return "";
 }
+
 
 
 
