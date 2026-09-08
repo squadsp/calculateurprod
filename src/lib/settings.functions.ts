@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 
-type Role = "super_admin" | "admin";
+type Role = "super_admin" | "admin" | "couleur_admin";
 
 const ComponentSchema = z.object({
   field: z.enum([
@@ -131,7 +131,7 @@ export const listUsers = createServerFn({ method: "POST" })
 const CreateUserSchema = AdminAuthSchema.extend({
   newUsername: z.string().trim().min(1).max(100).regex(/^[a-zA-Z0-9_.-]+$/, "Nom d'utilisateur invalide"),
   newPassword: z.string().min(4).max(200),
-  newRole: z.enum(["super_admin", "admin"]),
+  newRole: z.enum(["super_admin", "admin", "couleur_admin"]),
 });
 
 export const createUser = createServerFn({ method: "POST" })

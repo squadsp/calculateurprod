@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-export type Role = "super_admin" | "admin";
+export type Role = "super_admin" | "admin" | "couleur_admin";
 
 const COOKIE_NAME = "admin_session";
 const SESSION_DAYS = 30;
