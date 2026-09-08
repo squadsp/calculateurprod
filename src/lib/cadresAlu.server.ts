@@ -392,7 +392,6 @@ export async function buildCadreAluPdf(
   const ratios = [0.055, 0.08, 0.045, 0.085, 0.095, 0.095, 0.09, 0.155, 0.05, 0.095, 0.075, 0.08];
 
   const widths = ratios.map((r) => usableWidth * r);
-  const rowHeight = 18;
   const headerHeight = 24;
 
   let page = doc.addPage([pageWidth, pageHeight]);
