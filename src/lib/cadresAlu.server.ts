@@ -12,13 +12,14 @@ export type CadreAluRow = {
   astragale: string;
   moustiquaire: string;
   seuil: string;
+  souffle: string;
   couleur: string;
 };
 
 /**
  * Détecte une mention de moustiquaires multiples :
  * "attention 2ième moustiquaire", "moustiquaire double", "avec 2 moustiquaire",
- * "deux moustiquaires", "moustiquaire x2", etc.
+ * "deux moustiquaires", "moustiquaire x2", etc. Retourne uniquement le nombre.
  */
 function extractMoustiquaire(allRowValues: string[]): string {
   const whole = allRowValues.join(" ");
@@ -37,12 +38,30 @@ function extractMoustiquaire(allRowValues: string[]): string {
     if (!m) continue;
     if (m[1]) {
       const n = parseInt(m[1], 10);
-      if (n > 1) return `${n} moustiquaires`;
+      if (n > 1) return String(n);
     }
-    return "2 moustiquaires";
+    return "2";
   }
   return "";
 }
+
+/** Détecte si le cadre est soufflé en hauteur, en largeur ou les deux. */
+function extractSouffle(allRowValues: string[]): string {
+  const whole = allRowValues.join(" ");
+  if (!/souffl/i.test(whole)) return "";
+
+  const hauteur = /souffl\w*[^.;|]{0,40}\b(hauteur|haut\b|htr)/i.test(whole)
+    || /\b(hauteur|haut)\b[^.;|]{0,40}souffl/i.test(whole);
+  const largeur = /souffl\w*[^.;|]{0,40}\b(largeur|large\b|lrg)/i.test(whole)
+    || /\b(largeur|large)\b[^.;|]{0,40}souffl/i.test(whole);
+  const deux = /souffl\w*[^.;|]{0,40}\b(2|deux|les\s*2|both)\s*(c[oô]t[ée]s?|sens|directions?)?/i.test(whole);
+
+  if ((hauteur && largeur) || deux) return "Hauteur + Largeur";
+  if (hauteur) return "Hauteur";
+  if (largeur) return "Largeur";
+  return "Oui";
+}
+
 
 /** Type de seuil : Sans seuil / Seuil adapté AC5 / Seuil adapté / Seuil AC5. */
 function extractSeuil(allRowValues: string[]): string {
