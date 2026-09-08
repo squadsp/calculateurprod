@@ -83,6 +83,8 @@ function CadresAluPage() {
 
   const [date, setDate] = useState<string>(todayIso());
   const [useDate, setUseDate] = useState(false);
+  const [sortColumn, setSortColumn] = useState<CadreAluSettings["sortColumn"]>("sequence");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [dragOver, setDragOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
