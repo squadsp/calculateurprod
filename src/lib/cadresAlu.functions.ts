@@ -1,23 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-export type CadreAluRow = {
-  sequence: string;
-  id: string;
-  sens: string;
-  tete: string;
-  jambageLargeur: string;
-  jambageEpaisseur: string;
-  jambageHauteur: string;
-  astragale: string;
-  moustiquaire: string;
-  seuil: string;
-  souffle: string;
-  dummy: string;
-  enfigure: string;
-  
-  couleur: string;
-};
+export type { CadreAluRow } from "@/lib/cadresAlu.types";
 
 const SourceSchema = z.object({
   id: z.string().min(1),
@@ -28,6 +12,7 @@ const SourceSchema = z.object({
 const RequestSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   sources: z.array(SourceSchema).min(1),
+  settings: z.unknown().optional(),
 });
 
 export const processCadreAluSources = createServerFn({ method: "POST" })
@@ -41,8 +26,8 @@ export const processCadreAluSources = createServerFn({ method: "POST" })
       data.sources.map(async (source) => {
         const bin = Buffer.from(source.base64, "base64");
         const ab = bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength) as ArrayBuffer;
-        const rows = extractCadreAluRows(ab, target);
-        const pdf = await buildCadreAluPdf(rows, target);
+        const rows = extractCadreAluRows(ab, target, data.settings);
+        const pdf = await buildCadreAluPdf(rows, target, data.settings);
 
         return {
           id: source.id,
