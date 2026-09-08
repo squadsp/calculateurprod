@@ -919,7 +919,7 @@ const COULEUR_FILLER = new Set([
   "special", "speciale", "specialle", "dev", "developpement", "developpee",
   "developpe", "exterieur", "exterieure", "interieur", "interieure",
   "gentek", "novatech", "couleur", "couleurs", "peinture", "peint", "peinte",
-  "peinturee", "peinturee", "peinturer", "peinturee", "peintureer",
+  "peinturee", "peinturer",
   "pour", "avec", "sur", "cadre", "jambage", "porte",
 ]);
 
