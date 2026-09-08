@@ -12,13 +12,14 @@ export type CadreAluRow = {
   astragale: string;
   moustiquaire: string;
   seuil: string;
+  souffle: string;
   couleur: string;
 };
 
 /**
  * Détecte une mention de moustiquaires multiples :
  * "attention 2ième moustiquaire", "moustiquaire double", "avec 2 moustiquaire",
- * "deux moustiquaires", "moustiquaire x2", etc.
+ * "deux moustiquaires", "moustiquaire x2", etc. Retourne uniquement le nombre.
  */
 function extractMoustiquaire(allRowValues: string[]): string {
   const whole = allRowValues.join(" ");
@@ -37,12 +38,30 @@ function extractMoustiquaire(allRowValues: string[]): string {
     if (!m) continue;
     if (m[1]) {
       const n = parseInt(m[1], 10);
-      if (n > 1) return `${n} moustiquaires`;
+      if (n > 1) return String(n);
     }
-    return "2 moustiquaires";
+    return "2";
   }
   return "";
 }
+
+/** Détecte si le cadre est soufflé en hauteur, en largeur ou les deux. */
+function extractSouffle(allRowValues: string[]): string {
+  const whole = allRowValues.join(" ");
+  if (!/souffl/i.test(whole)) return "";
+
+  const hauteur = /souffl\w*[^.;|]{0,40}\b(hauteur|haut\b|htr)/i.test(whole)
+    || /\b(hauteur|haut)\b[^.;|]{0,40}souffl/i.test(whole);
+  const largeur = /souffl\w*[^.;|]{0,40}\b(largeur|large\b|lrg)/i.test(whole)
+    || /\b(largeur|large)\b[^.;|]{0,40}souffl/i.test(whole);
+  const deux = /souffl\w*[^.;|]{0,40}\b(2|deux|les\s*2|both)\s*(c[oô]t[ée]s?|sens|directions?)?/i.test(whole);
+
+  if ((hauteur && largeur) || deux) return "Hauteur + Largeur";
+  if (hauteur) return "Hauteur";
+  if (largeur) return "Largeur";
+  return "Oui";
+}
+
 
 /** Type de seuil : Sans seuil / Seuil adapté AC5 / Seuil adapté / Seuil AC5. */
 function extractSeuil(allRowValues: string[]): string {
@@ -326,6 +345,8 @@ export function extractCadreAluRows(
       astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens),
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
+      souffle: extractSouffle(allRowValues),
+
       couleur: extractCouleur(r, values, aluCell),
     });
   }
@@ -345,6 +366,8 @@ export const CADRE_ALU_HEADERS = [
   "ASTRAGALE DIM M.A.B INT",
   "MOUSTIQUAIRE",
   "SEUIL",
+  "SOUFFLÉ",
+
   "COULEUR",
 ];
 
@@ -364,7 +387,9 @@ export async function buildCadreAluPdf(
   const usableWidth = pageWidth - margin * 2;
 
   const headers = CADRE_ALU_HEADERS;
-  const ratios = [0.07, 0.1, 0.06, 0.08, 0.09, 0.09, 0.09, 0.14, 0.09, 0.09, 0.1];
+  // SA-PA / ID / Sens réduits pour laisser respirer les autres colonnes.
+  const ratios = [0.055, 0.08, 0.045, 0.085, 0.095, 0.095, 0.09, 0.155, 0.05, 0.095, 0.075, 0.08];
+
   const widths = ratios.map((r) => usableWidth * r);
   const rowHeight = 18;
   const headerHeight = 24;
@@ -440,7 +465,10 @@ export async function buildCadreAluPdf(
       r.astragale,
       r.moustiquaire,
       r.seuil,
+      r.souffle,
       r.couleur,
+
+
     ].forEach((v, i) => {
       page.drawText(truncate(v, widths[i] - 8, 8.5), {
         x: x + 4,

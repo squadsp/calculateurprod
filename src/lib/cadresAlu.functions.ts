@@ -12,7 +12,9 @@ export type CadreAluRow = {
   astragale: string;
   moustiquaire: string;
   seuil: string;
+  souffle: string;
   couleur: string;
+
 };
 
 const SourceSchema = z.object({
