@@ -434,10 +434,10 @@ export async function buildCadreAluPdf(
   let page = doc.addPage([pageWidth, pageHeight]);
   let y = pageHeight - margin;
 
-  const fontSize = 8.5;
-  const lineHeight = 11;
-  const headerFontSize = 6.5;
-  const headerLineHeight = 8;
+  const fontSize = 7.5;
+  const lineHeight = 10;
+  const headerFontSize = 6;
+  const headerLineHeight = 7.5;
 
   // Découpe un texte d'en-tête en lignes qui tiennent dans la colonne.
   const wrapHeader = (text: string, maxWidth: number): string[] => {
