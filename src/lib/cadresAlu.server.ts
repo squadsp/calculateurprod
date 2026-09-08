@@ -366,8 +366,15 @@ function buildAstragaleDimMab(
   const moulureTypes = new Set<string>();
   for (const v of values) {
     if (/moulure\s+de\s+retenu/i.test(v)) moulureTypes.add("Moulure de retenu");
-    if (/moulure\s+à\s+brique|moulure\s+a\s+brique/i.test(v)) moulureTypes.add("Moulure à brique");
+    // On ignore les moulures à brique « en J ».
+    if (
+      /moulure\s+[àa]\s+brique/i.test(v) &&
+      !/moulure\s+[àa]\s+brique\s*(?:en\s*)?[-]?\s*j\b/i.test(v)
+    ) {
+      moulureTypes.add("Moulure à brique");
+    }
   }
+
   if (moulureTypes.has("Moulure à brique")) {
     const mesure = findCommentaireMesure(allRowValues);
     const nonStd = isMoulureBriqueNonStandard(allRowValues);
