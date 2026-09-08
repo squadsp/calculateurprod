@@ -836,35 +836,28 @@ export function buildCouleurCatalogue(list: CouleurEntry[]): CouleurCatalogue {
   return { byFirstWord, byDigits };
 }
 
-/** Choisit le code à afficher pour une couleur du catalogue.
- *  - un code écrit littéralement dans le texte gagne toujours;
- *  - sinon les codes « W- » sont ignorés (ex. Brun Commercial → P-562);
- *  - on préfère la forme préfixée (P-525) à la forme nue (525). */
-function pickCode(entry: CatalogueEntry, text: string): string {
-  if (entry.codes.length === 0) return "";
+/** Cherche un code de la liste écrit littéralement dans le texte du MDB. */
+function literalCode(entry: CatalogueEntry, text: string): string {
   const t = normText(text);
-  const literal = entry.codes.filter((c) => {
-    const d = codeDigits(c);
-    if (d.length < 3) return false;
-    return t.includes(` ${norm(c).replace(/[^a-z0-9]/g, "")} `) || t.includes(` ${d} `);
-  });
-  const pool = literal.length > 0 ? literal : entry.codes.filter((c) => !/^w/i.test(c));
-  if (pool.length === 0) return "";
-  const prefixed = pool.find((c) => /^[a-z]/i.test(c));
-  return (prefixed ?? pool[0]).toUpperCase();
+  const compact = ` ${t.replace(/[^a-z0-9 ]/g, "")} `;
+  for (const code of entry.codes) {
+    const d = codeDigits(code);
+    if (d.length < 3) continue;
+    const flat = norm(code).replace(/[^a-z0-9]/g, "");
+    if (compact.includes(` ${flat} `) || t.includes(` ${d} `) || t.includes(`#${d}`)) {
+      return code.toUpperCase();
+    }
+  }
+  return "";
 }
 
-function formatEntry(entry: CatalogueEntry, text: string): string {
-  const code = pickCode(entry, text);
-  return code ? `${entry.name} ${code}` : entry.name;
-}
-
-/** Cherche dans un texte une couleur du catalogue (nom, puis code seul). */
+/** Cherche dans un texte une couleur validée par la liste : le nom ET le code
+ *  doivent être présents tels quels dans la ligne du MDB. Seule exception :
+ *  « blanc » sans code reste « Blanc ». */
 function matchCouleurInText(text: string, catalogue: CouleurCatalogue): string {
   if (!text || !text.trim()) return "";
   const t = normText(text);
 
-  // 1) Nom de couleur du catalogue (le plus long qui apparaît dans le texte).
   let best: CatalogueEntry | null = null;
   for (const word of t.split(" ")) {
     if (!word) continue;
@@ -873,19 +866,15 @@ function matchCouleurInText(text: string, catalogue: CouleurCatalogue): string {
     for (const entry of candidates) {
       if (entry.key.length < 4) continue;
       if (!t.includes(` ${entry.key} `)) continue;
+      const code = literalCode(entry, text);
+      if (code) return `${entry.name} ${code}`;
       if (!best || entry.key.length > best.key.length) best = entry;
       break;
     }
   }
-  if (best) return formatEntry(best, text);
 
-  // 2) Code seul (P-525, #525) rattaché à une couleur du catalogue.
-  const re = /\b(?:p|#)\s*-?\s*(\d{3,4})\b/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const entry = catalogue.byDigits.get(m[1]);
-    if (entry) return formatEntry(entry, text);
-  }
+  // Sans code dans la ligne : seul « blanc » est accepté.
+  if (best && best.key === "blanc") return "Blanc";
   return "";
 }
 
