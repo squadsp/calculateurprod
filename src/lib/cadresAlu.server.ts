@@ -384,14 +384,14 @@ function findCommentaireMesure(allRowValues: string[]): string {
     if (!txt || !/commentaire/i.test(txt)) continue;
     // mesure éventuellement collée après le mot « commentaire »
     const after = txt.replace(/^.*commentaires?[\s:.\-–]*/i, "");
-    const inline = after.match(MEASURE_RE);
-    if (inline) return inline[0].trim();
+    const inline = matchMesure(after);
+    if (inline) return inline;
     // sinon, colonnes suivantes
     for (let j = i + 1; j < allRowValues.length; j++) {
       const next = (allRowValues[j] ?? "").trim();
       if (!next) continue;
-      const m = next.match(MEASURE_RE);
-      if (m) return m[0].trim();
+      const m = matchMesure(next);
+      if (m) return m;
       break;
     }
   }
