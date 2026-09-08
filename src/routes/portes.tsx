@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Settings as SettingsIcon, DoorOpen, PaintBucket, Cog } from "lucide-react";
+import { ArrowLeft, Settings as SettingsIcon, DoorOpen, PaintBucket, Cog, Layers } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCalculatorName } from "@/lib/calculatorNames";
 
