@@ -366,6 +366,8 @@ export const CADRE_ALU_HEADERS = [
   "ASTRAGALE DIM M.A.B INT",
   "MOUSTIQUAIRE",
   "SEUIL",
+  "SOUFFLÉ",
+
   "COULEUR",
 ];
 
