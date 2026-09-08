@@ -915,7 +915,6 @@ function findLiteralCouleur(text: string): string {
 function extractCouleur(_row: Record<string, unknown>, _values: string[], _aluCell: string): string {
   return "";
 }
-}
 
 
 function findTable(reader: MDBReader) {
