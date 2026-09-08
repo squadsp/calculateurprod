@@ -454,22 +454,7 @@ export async function buildCadreAluPdf(
   }
 
   rows.forEach((r, idx) => {
-    if (y - rowHeight < margin) {
-      page = doc.addPage([pageWidth, pageHeight]);
-      y = pageHeight - margin;
-      drawHeader();
-    }
-    if (idx % 2 === 1) {
-      page.drawRectangle({
-        x: margin,
-        y: y - rowHeight,
-        width: usableWidth,
-        height: rowHeight,
-        color: rgb(0.97, 0.97, 0.97),
-      });
-    }
-    let x = margin;
-    [
+    const cells = [
       r.sequence,
       r.id,
       r.sens,
@@ -482,19 +467,39 @@ export async function buildCadreAluPdf(
       r.seuil,
       r.souffle,
       r.couleur,
+    ];
+    // Chaque cellule peut occuper plusieurs lignes (ex. « Moulure » sous l'astragale).
+    const wrapped = cells.map((v, i) => wrap(v, widths[i] - 8));
+    const height = Math.max(...wrapped.map((l) => l.length)) * lineHeight + 6;
 
-
-    ].forEach((v, i) => {
-      page.drawText(truncate(v, widths[i] - 8, 8.5), {
-        x: x + 4,
-        y: y - rowHeight + 5,
-        size: 8.5,
-        font,
-        color: rgb(0, 0, 0),
+    if (y - height < margin) {
+      page = doc.addPage([pageWidth, pageHeight]);
+      y = pageHeight - margin;
+      drawHeader();
+    }
+    if (idx % 2 === 1) {
+      page.drawRectangle({
+        x: margin,
+        y: y - height,
+        width: usableWidth,
+        height,
+        color: rgb(0.97, 0.97, 0.97),
+      });
+    }
+    let x = margin;
+    wrapped.forEach((lines, i) => {
+      lines.forEach((line, li) => {
+        page.drawText(line, {
+          x: x + 4,
+          y: y - 4 - (li + 1) * lineHeight + 3,
+          size: fontSize,
+          font,
+          color: rgb(0, 0, 0),
+        });
       });
       x += widths[i];
     });
-    y -= rowHeight;
+    y -= height;
   });
 
   return await doc.save();
