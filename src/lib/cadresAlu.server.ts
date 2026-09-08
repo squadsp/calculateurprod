@@ -900,11 +900,19 @@ export function extractCadreAluRows(
     dates.set(row, toStr(r.Ligne1));
   }
 
+  const sortKey = settings.sortColumn ?? "sequence";
+  const dir = settings.sortDir === "desc" ? -1 : 1;
   kept.sort((a, b) => {
     if (settings.sortByDate) {
       const d = (dates.get(a) ?? "").localeCompare(dates.get(b) ?? "");
       if (d !== 0) return d;
     }
+    const av = String(a[sortKey] ?? "");
+    const bv = String(b[sortKey] ?? "");
+    const empty = (v: string) => (v.trim() ? 0 : 1);
+    if (empty(av) !== empty(bv)) return empty(av) - empty(bv);
+    const c = av.localeCompare(bv, "fr", { numeric: true, sensitivity: "base" });
+    if (c !== 0) return c * dir;
     return a.sequence.localeCompare(b.sequence, "fr", { numeric: true });
   });
   return kept;

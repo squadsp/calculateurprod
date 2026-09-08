@@ -16,6 +16,8 @@ export type CadreAluSettings = {
   aluKeywords: string[];
   excludeKeywords: string[];
   sortByDate: boolean;
+  sortColumn?: CadreAluColumnKey;
+  sortDir?: "asc" | "desc";
   columns: CadreAluColumn[];
 };
 
