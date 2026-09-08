@@ -782,30 +782,57 @@ function cleanColorText(text: string): string {
     .slice(0, 60);
 }
 
-function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
-  const pickWord = (text: string) =>
-    COLOR_WORDS.find((c) => new RegExp(`\\b${c}\\b`, "i").test(text)) ?? "";
+const COLOR_STOPWORDS = new Set([
+  "de","du","des","la","le","les","couleur","aluminium","alu","alum","peinture",
+  "interieur","interieure","exterieur","exterieure","recouvert","recouverte",
+  "recouvrement","poteau","centrale","moulure","retenue","retenu","cadre","pvc",
+  "gentek","kaycan","special","integre","avec","bois","plat","lame","clouage",
+  "retiree","ouverte","fermee","non","standard","et","en","sur","porte","portes",
+  "seuil","jambage","tete","brique","mab","dim","int","ext","fixe","gauche","droite",
+]);
 
+const norm = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+const titleCase = (s: string) =>
+  s
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+
+/** Couleur = nom + code, ex. « Noir P-525 » ou « Brun Commercial P-562 ». */
+function extractCouleur(row: Record<string, unknown>, values: string[], aluCell: string): string {
   const all = [aluCell, ...values, ...Object.values(row).map(toStr)].filter(Boolean);
 
-  // Code P- et/ou mot-couleur connu uniquement (pas de texte libre).
-  let code = "";
+  const codeRe = /(?:^|[^A-Za-z0-9])P\s*-\s*(\d{2,4})\b/gi;
+
   for (const v of all) {
-    const m = v.match(/\(\s*(P-\s*\d{2,4})\s*\)/i);
-    if (m) {
-      code = m[1].replace(/\s+/g, "").toUpperCase();
-      break;
+    codeRe.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = codeRe.exec(v)) !== null) {
+      const code = `P-${m[1]}`;
+      const before = v.slice(0, m.index).replace(/[\s(\-–:"']+$/, "");
+      const words = before.match(/[A-Za-zÀ-ÿ']+/g) ?? [];
+      const name: string[] = [];
+      for (let i = words.length - 1; i >= 0 && name.length < 3; i--) {
+        const w = words[i];
+        if (COLOR_STOPWORDS.has(norm(w))) break;
+        name.unshift(w);
+      }
+      if (name.length) return `${titleCase(name.join(" "))} ${code}`;
+      return code;
     }
   }
 
+  // Repli : mot-couleur connu sans code.
+  const pickWord = (text: string) =>
+    COLOR_WORDS.find((c) => new RegExp(`\\b${c}\\b`, "i").test(text)) ?? "";
   const afterCouleur = aluCell.match(/couleur\s+(.+)$/i);
-  const word =
+  return (
     pickWord(afterCouleur ? afterCouleur[1] : "") ||
     pickWord(aluCell) ||
-    pickWord(toStr(row.Opt1));
-
-  if (word && code) return `${word} (${code})`;
-  return word || code;
+    pickWord(toStr(row.Opt1))
+  );
 }
 
 
