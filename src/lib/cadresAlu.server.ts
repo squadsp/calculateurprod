@@ -889,17 +889,18 @@ function normalizeCouleurResult(result: string): string {
   return cleaned;
 }
 
-/** Cherche « <nom> P-562 » écrit littéralement dans le texte et le renvoie
- *  exactement tel quel (ex. « Brun Commercial P-562 », « Noir P-525 »). */
+/** Cherche « <nom> P-562 » ou « <nom> #562 » écrit littéralement dans le texte
+ *  et le renvoie exactement tel quel (ex. « Brun Commercial P-562 »,
+ *  « Noir P-525 », « BLEU ARDOISE #525 »). Accepte aussi les codes seuls. */
 function findLiteralCouleur(text: string): string {
-  const re = /([A-Za-zÀ-ÿ'’]+(?:[\s-]+[A-Za-zÀ-ÿ'’]+){0,3})\s*[\s-]\s*((?:[A-Za-z]{1,3}\s*-\s*\d{2,4})|(?:\b[1-9]\d{2,3}\b))/g;
+  const re = /([A-Za-zÀ-ÿ'’]+(?:[\s-]+[A-Za-zÀ-ÿ'’]+){0,5})\s*[\s-]\s*((?:[A-Za-z]{1,3}\s*-\s*\d{2,4})|(?:#\s*\d{2,4})|(?:\b[1-9]\d{2,3}\b))/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     const rawName = m[1].trim();
     const code = m[2].replace(/\s*-\s*/, "-").replace(/\s+/g, "").toUpperCase();
     const words = rawName.split(/[\s-]+/).filter(Boolean);
     const name: string[] = [];
-    for (let i = words.length - 1; i >= 0 && name.length < 4; i--) {
+    for (let i = words.length - 1; i >= 0 && name.length < 6; i--) {
       if (COLOR_STOPWORDS.has(norm(words[i]))) break;
       name.unshift(words[i]);
     }
@@ -907,6 +908,28 @@ function findLiteralCouleur(text: string): string {
     // Il faut au moins un vrai mot-couleur pour éviter les faux positifs.
     if (!name.some((w) => COLOR_WORDS.some((c) => norm(c) === norm(w)))) continue;
     return `${titleCase(name.join(" "))} ${code}`;
+  }
+  return "";
+}
+
+/** Cherche un code couleur seul (P-525, #525, 525) et tente de retrouver
+ *  le nom dans la liste de référence. */
+function findStandaloneCouleurCode(text: string): string {
+  const re = /\b(P\s*-\s*\d{2,4}|#\s*\d{2,4})\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const raw = m[1].replace(/\s+/g, "").toUpperCase();
+    const digits = raw.replace(/^#/, "").replace(/^[A-Z]+-?/i, "");
+    const ref = REF_BY_CODE.get(digits);
+    if (ref) return `${ref.name} ${raw}`;
+    // Pas de référence connue : on retourne le code brut.
+    return raw;
+  }
+  // Code numérique seul de 3 ou 4 chiffres (ex. « 525 »).
+  const numRe = /\b([1-9]\d{2,3})\b/g;
+  while ((m = numRe.exec(text)) !== null) {
+    const ref = REF_BY_CODE.get(m[1]);
+    if (ref) return `${ref.name} ${m[1]}`;
   }
   return "";
 }
