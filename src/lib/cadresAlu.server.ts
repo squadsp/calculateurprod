@@ -849,6 +849,9 @@ function matchCouleurRef(text: string): string {
     for (const ref of candidates) {
       if (ref.key.length < 4) continue;
       if (!t.includes(ref.key)) continue;
+      // Ignore les entrées-notes du type « Couleur Noir » qui ne sont pas
+      // des noms de couleur réels.
+      if (/^couleur\s+/i.test(ref.name)) continue;
       return ref.code ? `${ref.name} ${ref.code}` : ref.name;
     }
   }
