@@ -375,7 +375,7 @@ function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
     let m: RegExpExecArray | null;
     while ((m = MOULURE_BRIQUE_RE.exec(text)) !== null) {
       const after = text.slice(m.index + m[0].length);
-      if (/non[\s-]*standard/i.test(after)) return true;
+      if (/non[\s-]*std(?:andard|\.)?/i.test(after)) return true;
     }
     return false;
   });
@@ -394,22 +394,32 @@ function findNonStandardMabMesure(allRowValues: string[]): string {
   while ((moulureMatch = MOULURE_BRIQUE_RE.exec(whole)) !== null) {
     const afterMoulureIndex = moulureMatch.index + moulureMatch[0].length;
     const afterMoulure = whole.slice(afterMoulureIndex);
-    const nonStandard = /non[\s-]*standard/i.exec(afterMoulure);
+    const nonStandard = /non[\s-]*std(?:andard|\.)?/i.exec(afterMoulure);
     if (!nonStandard) continue;
 
     const afterNonStandard = afterMoulure.slice(
       nonStandard.index + nonStandard[0].length,
     );
-    const measureLabel = /mesure\s+(?:de\s+(?:la\s+)?)?(?:m\.?\s*a\.?\s*b\.?|moulure(?:\s+[àa]\s+brique)?)/gi;
+
+    // 1) Mesure explicitement étiquetée (mesure MAB / mesure moulure …).
+    const measureLabel =
+      /mesure\s*(?:de\s*(?:la\s*)?)?(?:m\.?\s*a\.?\s*b\.?|moulure(?:\s*[àa]\s*brique)?)?\s*:?/gi;
     let labelMatch: RegExpExecArray | null;
     while ((labelMatch = measureLabel.exec(afterNonStandard)) !== null) {
-      const afterLabel = afterNonStandard.slice(labelMatch.index + labelMatch[0].length);
+      const afterLabel = afterNonStandard.slice(
+        labelMatch.index + labelMatch[0].length,
+      );
       const mesure = matchMesure(afterLabel);
       if (mesure) return mesure;
     }
+
+    // 2) Sinon, première mesure double puis simple rencontrée après « non standard ».
+    const mesure = matchMesure(afterNonStandard);
+    if (mesure) return mesure;
   }
   return "";
 }
+
 
 
 /** Astragale / Moulure / Jardin / Modulaire / Alu int / head thickness note, combined in one column. */
