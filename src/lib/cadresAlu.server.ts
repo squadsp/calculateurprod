@@ -397,6 +397,29 @@ export async function buildCadreAluPdf(
   let page = doc.addPage([pageWidth, pageHeight]);
   let y = pageHeight - margin;
 
+  const fontSize = 8.5;
+  const lineHeight = 11;
+  const headerFontSize = 6.5;
+  const headerLineHeight = 8;
+
+  // Découpe un texte d'en-tête en lignes qui tiennent dans la colonne.
+  const wrapHeader = (text: string, maxWidth: number): string[] => {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let current = "";
+    for (const w of words) {
+      const candidate = current ? `${current} ${w}` : w;
+      if (bold.widthOfTextAtSize(candidate, headerFontSize) <= maxWidth) {
+        current = candidate;
+      } else {
+        if (current) lines.push(current);
+        current = w;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  };
+
   const drawHeader = () => {
     let x = margin;
     page.drawRectangle({
@@ -407,14 +430,18 @@ export async function buildCadreAluPdf(
       color: rgb(0.92, 0.92, 0.95),
     });
     headers.forEach((h, i) => {
-      page.drawText(h, { x: x + 4, y: y - headerHeight + 8, size: 7.5, font: bold, color: rgb(0, 0, 0) });
+      const lines = wrapHeader(h, widths[i] - 6);
+      const totalH = lines.length * headerLineHeight;
+      let ty = y - (headerHeight - totalH) / 2 - headerFontSize;
+      for (const line of lines) {
+        page.drawText(line, { x: x + 3, y: ty, size: headerFontSize, font: bold, color: rgb(0, 0, 0) });
+        ty -= headerLineHeight;
+      }
       x += widths[i];
     });
     y -= headerHeight;
   };
 
-  const fontSize = 8.5;
-  const lineHeight = 11;
 
   // Découpe un texte en plusieurs lignes qui tiennent dans la largeur donnée.
   const wrap = (text: string, maxWidth: number): string[] => {
