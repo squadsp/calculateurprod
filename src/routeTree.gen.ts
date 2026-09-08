@@ -14,6 +14,7 @@ import { Route as PortesJambagesRouteImport } from './routes/portes-jambages'
 import { Route as PortesCadresAluRouteImport } from './routes/portes-cadres-alu'
 import { Route as PortesAdminRouteImport } from './routes/portes-admin'
 import { Route as PortesRouteImport } from './routes/portes'
+import { Route as MachinageAdminRouteImport } from './routes/machinage-admin'
 import { Route as FenetresRouteImport } from './routes/fenetres'
 import { Route as DelaysAdminRouteImport } from './routes/delays-admin'
 import { Route as DelaysRouteImport } from './routes/delays'
@@ -43,6 +44,11 @@ const PortesAdminRoute = PortesAdminRouteImport.update({
 const PortesRoute = PortesRouteImport.update({
   id: '/portes',
   path: '/portes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MachinageAdminRoute = MachinageAdminRouteImport.update({
+  id: '/machinage-admin',
+  path: '/machinage-admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FenetresRoute = FenetresRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/delays': typeof DelaysRoute
   '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
+  '/machinage-admin': typeof MachinageAdminRoute
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-cadres-alu': typeof PortesCadresAluRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/delays': typeof DelaysRoute
   '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
+  '/machinage-admin': typeof MachinageAdminRoute
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-cadres-alu': typeof PortesCadresAluRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/delays': typeof DelaysRoute
   '/delays-admin': typeof DelaysAdminRoute
   '/fenetres': typeof FenetresRoute
+  '/machinage-admin': typeof MachinageAdminRoute
   '/portes': typeof PortesRoute
   '/portes-admin': typeof PortesAdminRoute
   '/portes-cadres-alu': typeof PortesCadresAluRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/delays'
     | '/delays-admin'
     | '/fenetres'
+    | '/machinage-admin'
     | '/portes'
     | '/portes-admin'
     | '/portes-cadres-alu'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/delays'
     | '/delays-admin'
     | '/fenetres'
+    | '/machinage-admin'
     | '/portes'
     | '/portes-admin'
     | '/portes-cadres-alu'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/delays'
     | '/delays-admin'
     | '/fenetres'
+    | '/machinage-admin'
     | '/portes'
     | '/portes-admin'
     | '/portes-cadres-alu'
@@ -153,6 +165,7 @@ export interface RootRouteChildren {
   DelaysRoute: typeof DelaysRoute
   DelaysAdminRoute: typeof DelaysAdminRoute
   FenetresRoute: typeof FenetresRoute
+  MachinageAdminRoute: typeof MachinageAdminRoute
   PortesRoute: typeof PortesRoute
   PortesAdminRoute: typeof PortesAdminRoute
   PortesCadresAluRoute: typeof PortesCadresAluRoute
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/portes'
       fullPath: '/portes'
       preLoaderRoute: typeof PortesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/machinage-admin': {
+      id: '/machinage-admin'
+      path: '/machinage-admin'
+      fullPath: '/machinage-admin'
+      preLoaderRoute: typeof MachinageAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fenetres': {
@@ -241,6 +261,7 @@ const rootRouteChildren: RootRouteChildren = {
   DelaysRoute: DelaysRoute,
   DelaysAdminRoute: DelaysAdminRoute,
   FenetresRoute: FenetresRoute,
+  MachinageAdminRoute: MachinageAdminRoute,
   PortesRoute: PortesRoute,
   PortesAdminRoute: PortesAdminRoute,
   PortesCadresAluRoute: PortesCadresAluRoute,
