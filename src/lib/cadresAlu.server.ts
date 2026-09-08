@@ -155,7 +155,9 @@ function parseSouffleSegment(after: string): { prof: string; mesure: string } {
   const mesures = listMesures(after);
 
   if (pleine) {
-    const next = skipLeadingSmallMesures(mesures.filter((x) => x.index > pleine.index + pleine[0].length))[0];
+    // « pleine profondeur » : la mesure réelle est celle qui suit directement.
+    const after2 = mesures.filter((x) => x.index > pleine.index + pleine[0].length);
+    const next = after2[0];
     return { prof: "pleine prof.", mesure: next?.value ?? "" };
   }
   if (prof) {
