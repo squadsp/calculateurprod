@@ -370,6 +370,54 @@ function extractTete(dimension: string): string {
   return parseDimension(dimension).largeur;
 }
 
+/** Convertit une valeur décimale en mesure fractionnaire (au 1/16 près). */
+function decimalToMeasure(n: number): string {
+  if (!isFinite(n) || n <= 0) return "";
+  const whole = Math.floor(n);
+  let num = Math.round((n - whole) * 16);
+  let den = 16;
+  if (num === 16) return `${whole + 1}`;
+  if (num === 0) return `${whole}`;
+  while (num % 2 === 0 && den % 2 === 0) {
+    num /= 2;
+    den /= 2;
+  }
+  return whole > 0 ? `${whole} ${num}/${den}` : `${num}/${den}`;
+}
+
+/** Profondeur du soufflage mentionnée sur la ligne (ex. « profondeur 1 1/4 »). */
+function extractSouffleProfondeur(allValues: string[]): number | null {
+  for (const v of allValues) {
+    if (!/souffl(?:é|ée|és|er)/i.test(v)) continue;
+    const m = v.match(/(\d+(?:\s+\d+\/\d+)?|\d+-\d+\/\d+|\d+\/\d+)\s*''?\s*(?:de\s+)?profond(?:eur)?/i);
+    if (m) {
+      const d = measureToDecimal(normalizeFraction(m[1]));
+      if (d !== null) return d;
+    }
+    const m2 = v.match(/profond(?:eur)?\s*(?:de\s*)?(\d+(?:\s+\d+\/\d+)?|\d+-\d+\/\d+|\d+\/\d+)/i);
+    if (m2) {
+      const d = measureToDecimal(normalizeFraction(m2[1]));
+      if (d !== null) return d;
+    }
+  }
+  return null;
+}
+
+/** Profondeur (ou dimension) du cadre mentionnée sur la ligne. */
+function extractCadreProfondeur(allValues: string[]): number | null {
+  for (const v of allValues) {
+    const m =
+      v.match(/profondeur\s*(?:du|de)\s*cadre[^0-9]{0,20}(\d+(?:\s+\d+\/\d+)?|\d+-\d+\/\d+|\d+\/\d+)/i) ||
+      v.match(/cadre[^0-9]{0,20}profondeur[^0-9]{0,10}(\d+(?:\s+\d+\/\d+)?|\d+-\d+\/\d+|\d+\/\d+)/i) ||
+      v.match(/(?:dimension|dim\.?)\s*(?:du|de)?\s*cadre[^0-9]{0,20}(\d+(?:\s+\d+\/\d+)?|\d+-\d+\/\d+|\d+\/\d+)/i);
+    if (m) {
+      const d = measureToDecimal(normalizeFraction(m[1]));
+      if (d !== null) return d;
+    }
+  }
+  return null;
+}
+
 function extractJambageLargeur(aluCell: string, allValues: string[]): string {
   const fromAlu = aluCell.match(/Cadre\s*(\d+(?:[-\s]\d+\/\d+)?)\s*''/i);
   if (fromAlu) return normalizeFraction(fromAlu[1]);
@@ -377,8 +425,16 @@ function extractJambageLargeur(aluCell: string, allValues: string[]): string {
     const m = v.match(/Cadre\s*(\d+(?:[-\s]\d+\/\d+)?)\s*''/i);
     if (m) return normalizeFraction(m[1]);
   }
+  // Repli : profondeur/dimension du cadre moins la profondeur du soufflage.
+  const cadre = extractCadreProfondeur(allValues);
+  if (cadre !== null) {
+    const souffle = extractSouffleProfondeur(allValues) ?? 0;
+    const result = cadre - souffle;
+    if (result > 0) return decimalToMeasure(result);
+  }
   return "";
 }
+
 
 /** "Épaisseur de 1-1/2''" -> "1 1/2" */
 function extractEpaisseurs(values: string[]): string[] {
