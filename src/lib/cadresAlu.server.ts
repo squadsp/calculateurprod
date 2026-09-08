@@ -345,6 +345,8 @@ export function extractCadreAluRows(
       astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens),
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
+      souffle: extractSouffle(allRowValues),
+
       couleur: extractCouleur(r, values, aluCell),
     });
   }
