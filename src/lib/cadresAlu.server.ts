@@ -919,12 +919,13 @@ const COULEUR_FILLER = new Set([
   "special", "speciale", "specialle", "dev", "developpement", "developpee",
   "developpe", "exterieur", "exterieure", "interieur", "interieure",
   "gentek", "novatech", "couleur", "couleurs", "peinture", "peint", "peinte",
+  "peinturee", "peinturee", "peinturer", "peinturee", "peintureer",
   "pour", "avec", "sur", "cadre", "jambage", "porte",
 ]);
 
 function pickCouleurAfterKeyword(text: string): string {
   if (!text) return "";
-  const re = /\b(peinture|peint(?:e|ur)?|couleurs?)\b/gi;
+  const re = /\b(peinture|peintur[eé](?:e|r)?|peint(?:e|ur)?|couleurs?)\b/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     let tail = text.slice(m.index + m[0].length);
