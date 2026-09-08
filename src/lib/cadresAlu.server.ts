@@ -860,6 +860,9 @@ function extractCouleur(row: Record<string, unknown>, values: string[], aluCell:
     "soufflage", "mesure", "dimension", "epaisseur", "sequence", "code",
     "ligne", "option", "opt", "pleine", "plein", "moustiquaire", "astragale",
     "slab", "acier", "cadre", "jambage",
+    "promotion", "promo", "novatech", "serie", "series", "modele", "edition",
+    "limitee", "speciale", "offre", "rabais", "annee", "saison", "collection",
+    "prix", "special",
   ]);
   const bareCodeRe = /([A-Za-zÀ-ÿ']+(?:\s+[A-Za-zÀ-ÿ']+){0,2})\s+(\d{3,4})\b/g;
   for (const v of all) {
