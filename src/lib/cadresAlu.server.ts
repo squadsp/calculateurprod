@@ -448,10 +448,12 @@ function buildAstragaleDimMab(
   const moulureTypes = new Set<string>();
   const wholeRow = allRowValues.join(" | ");
   const hasJBrickDescription = hasMoulureBriqueEnJ(wholeRow);
+  const nonInstalle = hasNonInstalleMab(wholeRow);
   for (const v of values) {
     if (/moulure\s+de\s+retenu/i.test(v)) moulureTypes.add("Moulure de retenu");
-    // Toute description « avec J / J intégré » de la même ligne annule la moulure à brique.
-    if (!hasJBrickDescription && hasMoulureBrique(v)) moulureTypes.add("Moulure à brique");
+    // Toute description « avec J / J intégré » ou « non installé » de la même ligne annule la moulure à brique.
+    if (!hasJBrickDescription && !nonInstalle && hasMoulureBrique(v))
+      moulureTypes.add("Moulure à brique");
   }
 
 
