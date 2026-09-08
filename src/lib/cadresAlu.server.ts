@@ -975,7 +975,7 @@ export function extractCadreAluRows(
     const hauteurJambage = extractPleineHauteur(values, dims.hauteur);
     const sens = extractSens(values);
 
-    const couleur = extractCouleur(r, values, aluCell);
+    const couleur = extractCouleur(r, catalogue);
     const row: CadreAluRow = {
       sequence,
       id: extractId(toStr(r.Code)),
