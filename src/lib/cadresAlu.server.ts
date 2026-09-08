@@ -314,6 +314,17 @@ function findDifferentColor(values: string[], mainColor: string): string {
 }
 
 const MEASURE_RE = /\d+\s+\d+\/\d+\s*"?|\d+\/\d+\s*"?|\d+\s*"/;
+/** Deux mesures reliées par « x » (ex. 10 1/2 x 30 1/4). */
+const DOUBLE_MEASURE_RE = new RegExp(
+  `(?:${MEASURE_RE.source})(?:\\s*[x×]\\s*(?:${MEASURE_RE.source}))+`,
+  "i",
+);
+function matchMesure(text: string): string {
+  const dbl = text.match(DOUBLE_MEASURE_RE);
+  if (dbl) return dbl[0].trim();
+  const single = text.match(MEASURE_RE);
+  return single ? single[0].trim() : "";
+}
 
 /** Toutes les mentions de moulure à brique (M.A.B), variantes incluses. */
 const MOULURE_BRIQUE_RE =
@@ -373,14 +384,14 @@ function findCommentaireMesure(allRowValues: string[]): string {
     if (!txt || !/commentaire/i.test(txt)) continue;
     // mesure éventuellement collée après le mot « commentaire »
     const after = txt.replace(/^.*commentaires?[\s:.\-–]*/i, "");
-    const inline = after.match(MEASURE_RE);
-    if (inline) return inline[0].trim();
+    const inline = matchMesure(after);
+    if (inline) return inline;
     // sinon, colonnes suivantes
     for (let j = i + 1; j < allRowValues.length; j++) {
       const next = (allRowValues[j] ?? "").trim();
       if (!next) continue;
-      const m = next.match(MEASURE_RE);
-      if (m) return m[0].trim();
+      const m = matchMesure(next);
+      if (m) return m;
       break;
     }
   }
