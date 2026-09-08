@@ -306,6 +306,8 @@ function CadresAluPage() {
                         "Moust.",
                         "Seuil",
                         "Soufflé",
+                        "Dummy",
+                        "Enfiguré",
                         "Couleur",
                       ].map((h) => (
                         <th key={h} className="px-2 py-2 text-left font-semibold whitespace-nowrap">
@@ -329,7 +331,11 @@ function CadresAluPage() {
                         <td className="px-2 py-1.5 text-center">{row.moustiquaire}</td>
                         <td className="px-2 py-1.5">{row.seuil}</td>
                         <td className="px-2 py-1.5">{row.souffle}</td>
+                        <td className="px-2 py-1.5">{row.dummy}</td>
+                        <td className="px-2 py-1.5">{row.enfigure}</td>
+
                         <td className="px-2 py-1.5">{row.couleur}</td>
+
 
                       </tr>
                     ))}

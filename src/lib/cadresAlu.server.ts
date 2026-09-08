@@ -13,8 +13,46 @@ export type CadreAluRow = {
   moustiquaire: string;
   seuil: string;
   souffle: string;
+  dummy: string;
+  enfigure: string;
+  
   couleur: string;
 };
+
+/** « Dummy » avec sa mesure si elle est mentionnée sur la ligne. */
+function extractDummy(allRowValues: string[]): string {
+  const whole = allRowValues.join(" | ");
+  if (!/\bdummy\b/i.test(whole)) return "";
+  const patterns: RegExp[] = [
+    /\bdummy\b[^|]{0,30}?(\d+(?:\s*[-\s]\s*\d+\/\d+)?)\s*(?:''|"|”|po\b|pouces?\b)/i,
+    /(\d+(?:\s*[-\s]\s*\d+\/\d+)?)\s*(?:''|"|”)[^|]{0,20}?\bdummy\b/i,
+    /\bdummy\b[^|]{0,20}?(\d+(?:\s*[-\s]\s*\d+\/\d+)?)\b/i,
+  ];
+  for (const p of patterns) {
+    const m = whole.match(p);
+    if (m && m[1]) return `Dummy ${normalizeFraction(m[1])}`;
+  }
+  return "Dummy";
+}
+
+/**
+ * Enfiguré : « Enfiguré » par défaut, et « Enfiguré porte d'acier » dès qu'une
+ * 2e slab est mentionnée (« 2e slab », « 2 slab », « double slab », « slab x2 »).
+ */
+function extractEnfigure(allRowValues: string[]): string {
+  const whole = allRowValues.join(" ");
+  const deuxiemeSlab = [
+    /\b(?:2|deux)\s*(?:e|i[eè]me|ème|nd)?\s*[-.]?\s*slabs?\b/i,
+    /\bdouble\s+slabs?\b/i,
+    /\bslabs?\s*(?:x|\*)\s*2\b/i,
+    /\bslabs?\s+double\b/i,
+  ].some((p) => p.test(whole));
+  return deuxiemeSlab ? "Enfiguré porte d'acier" : "Enfiguré";
+}
+
+
+
+
 
 /**
  * Détecte une mention de moustiquaires multiples :
@@ -347,7 +385,9 @@ export function extractCadreAluRows(
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
       souffle: extractSouffle(allRowValues),
-
+      dummy: extractDummy(allRowValues),
+      enfigure: extractEnfigure(allRowValues),
+      
       couleur: extractCouleur(r, values, aluCell),
     });
   }
@@ -365,12 +405,14 @@ export const CADRE_ALU_HEADERS = [
   "ÉPAISSEUR JAMBAGE",
   "HAUTEUR JAMBAGE",
   "ASTRAGALE DIM M.A.B INT",
-  "MOUSTIQUAIRE",
+  "MST",
   "SEUIL",
   "SOUFFLÉ",
-
+  "DUMMY",
+  "ENFIGURÉ",
   "COULEUR",
 ];
+
 
 
 export async function buildCadreAluPdf(
@@ -388,19 +430,21 @@ export async function buildCadreAluPdf(
   const usableWidth = pageWidth - margin * 2;
 
   const headers = CADRE_ALU_HEADERS;
-  // SA-PA / ID / Sens réduits pour laisser respirer les autres colonnes.
-  const ratios = [0.055, 0.08, 0.045, 0.085, 0.095, 0.095, 0.09, 0.155, 0.05, 0.095, 0.075, 0.08];
+  // Largeurs ajustées pour 14 colonnes : Moust./Seuil ne se touchent plus.
+  const ratios = [
+    0.05, 0.07, 0.04, 0.07, 0.07, 0.07, 0.065, 0.155, 0.03, 0.085, 0.06, 0.06, 0.105, 0.07,
+  ];
 
   const widths = ratios.map((r) => usableWidth * r);
-  const headerHeight = 24;
+  const headerHeight = 30;
 
   let page = doc.addPage([pageWidth, pageHeight]);
   let y = pageHeight - margin;
 
-  const fontSize = 8.5;
-  const lineHeight = 11;
-  const headerFontSize = 6.5;
-  const headerLineHeight = 8;
+  const fontSize = 7.5;
+  const lineHeight = 10;
+  const headerFontSize = 6;
+  const headerLineHeight = 7.5;
 
   // Découpe un texte d'en-tête en lignes qui tiennent dans la colonne.
   const wrapHeader = (text: string, maxWidth: number): string[] => {
@@ -492,6 +536,9 @@ export async function buildCadreAluPdf(
       r.moustiquaire,
       r.seuil,
       r.souffle,
+      r.dummy,
+      r.enfigure,
+      
       r.couleur,
     ];
     // Chaque cellule peut occuper plusieurs lignes (ex. « Moulure » sous l'astragale).
