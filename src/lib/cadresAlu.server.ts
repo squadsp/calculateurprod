@@ -8,7 +8,6 @@ import {
   normalizeCadreAluSettings,
   type CadreAluSettings,
 } from "@/lib/cadresAluSettings";
-import { COULEURS_REF } from "@/lib/couleursRef";
 
 function escapeRe(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -275,18 +274,6 @@ const COLOR_WORDS = [
   "Ivoire",
   "Commercial",
 ];
-
-// Codes fixes pour les couleurs standards (ex. « Noir » est toujours P-525).
-const FIXED_CODES: Record<string, string> = {
-  noir: "P-525",
-};
-
-/** Couleurs standards : le code est imposé, peu importe ce que dit la liste
- *  de référence ou le texte du MDB (clé = nom complet normalisé). */
-const STANDARD_CODES: Record<string, string> = {
-  "noir": "P-525",
-  "brun commercial": "P-562",
-};
 
 function toStr(v: unknown): string {
   if (v === null || v === undefined) return "";
