@@ -11,6 +11,7 @@ export type CadreAluRow = {
   jambageHauteur: string;
   astragale: string;
   moustiquaire: string;
+  seuil: string;
   couleur: string;
 };
 
@@ -40,6 +41,18 @@ function extractMoustiquaire(allRowValues: string[]): string {
     }
     return "2 moustiquaires";
   }
+  return "";
+}
+
+/** Type de seuil : Sans seuil / Seuil adapté AC5 / Seuil adapté / Seuil AC5. */
+function extractSeuil(allRowValues: string[]): string {
+  const whole = allRowValues.join(" ");
+  if (/sans\s+seuil/i.test(whole)) return "Sans seuil";
+  const adapte = /seuil\s+adapt/i.test(whole);
+  const ac5 = /\bAC5\b/i.test(whole);
+  if (adapte && ac5) return "Seuil adapté AC5";
+  if (adapte) return "Seuil adapté";
+  if (ac5) return "Seuil AC5";
   return "";
 }
 
@@ -312,6 +325,7 @@ export function extractCadreAluRows(
       jambageHauteur: dims.hauteur,
       astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens),
       moustiquaire: extractMoustiquaire(allRowValues),
+      seuil: extractSeuil(allRowValues),
       couleur: extractCouleur(r, values, aluCell),
     });
   }
@@ -330,6 +344,7 @@ export const CADRE_ALU_HEADERS = [
   "HAUTEUR JAMBAGE",
   "ASTRAGALE DIM M.A.B INT",
   "MOUSTIQUAIRE",
+  "SEUIL",
   "COULEUR",
 ];
 
@@ -349,7 +364,7 @@ export async function buildCadreAluPdf(
   const usableWidth = pageWidth - margin * 2;
 
   const headers = CADRE_ALU_HEADERS;
-  const ratios = [0.08, 0.11, 0.06, 0.09, 0.1, 0.1, 0.1, 0.16, 0.1, 0.1];
+  const ratios = [0.07, 0.1, 0.06, 0.08, 0.09, 0.09, 0.09, 0.14, 0.09, 0.09, 0.1];
   const widths = ratios.map((r) => usableWidth * r);
   const rowHeight = 18;
   const headerHeight = 24;
@@ -424,6 +439,7 @@ export async function buildCadreAluPdf(
       r.jambageHauteur,
       r.astragale,
       r.moustiquaire,
+      r.seuil,
       r.couleur,
     ].forEach((v, i) => {
       page.drawText(truncate(v, widths[i] - 8, 8.5), {
