@@ -317,7 +317,7 @@ export async function buildCadreAluPdf(
   const usableWidth = pageWidth - margin * 2;
 
   const headers = CADRE_ALU_HEADERS;
-  const ratios = [0.1, 0.13, 0.11, 0.12, 0.12, 0.12, 0.17, 0.13];
+  const ratios = [0.09, 0.12, 0.07, 0.1, 0.11, 0.11, 0.11, 0.17, 0.12];
   const widths = ratios.map((r) => usableWidth * r);
   const rowHeight = 18;
   const headerHeight = 24;
