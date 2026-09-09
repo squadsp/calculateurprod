@@ -878,8 +878,81 @@ function matchCouleurInText(text: string, catalogue: CouleurCatalogue): string {
   return "";
 }
 
+/* --- Détection directe : « Nom (P-536) », « NOM - #534 », « BENJAMIN MOORE HC-126 » --- */
+
+const CODE_RE =
+  /\(\s*([A-Za-z]{1,3}-?\d[A-Za-z0-9-]*)\s*\)|#\s*(\d{3,4})\b|\b([A-Za-z]{1,3}-\d{2,6}[A-Za-z0-9]*)\b/g;
+
+/** Mots qui ne font jamais partie d'un nom de couleur (arrêtent la lecture). */
+const NAME_STOP = new Set([
+  "couleur", "couleurs", "special", "speciale", "specialle", "aluminium", "alu",
+  "recouvert", "recouverte", "recouvrement", "pin", "cadre", "poteau", "centrale",
+  "interieur", "exterieur", "interieure", "exterieure", "peinture", "peinturee",
+  "peinturees", "peinture s", "peinturer", "peinture:", "moulure", "brique",
+  "seuil", "coupe", "froid", "porte", "portes", "bois", "avec", "sur", "et",
+  "cotes", "cote", "identiques", "differents", "developpement", "fournir",
+  "echantillon", "intercalaire", "thermo", "volet", "fixe", "vitrail", "std",
+  "extra", "dimension", "dimensions", "epaisseur", "barre", "renforcement",
+  "pentures", "billes", "machiner", "gache", "percer", "trous", "trou",
+]);
+
+const CONNECTORS = new Set(["de", "du", "des", "la", "le", "les", "d", "a", "au", "aux", "l"]);
+
+const cleanWord = (w: string) =>
+  w.replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ]+$/g, "");
+
+/** Reconstruit le nom de couleur écrit juste avant un code. */
+function nameBeforeCode(before: string): string {
+  const raw = before.split(/\s+/).filter(Boolean);
+  const picked: string[] = [];
+  for (let i = raw.length - 1; i >= 0 && picked.length < 4; i--) {
+    const w = cleanWord(raw[i] ?? "");
+    if (!w) {
+      if (picked.length > 0) break;
+      continue;
+    }
+    const n = norm(w);
+    if (NAME_STOP.has(n)) break;
+    if (!/^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’-]*$/.test(w)) break;
+    picked.unshift(w);
+  }
+  while (picked.length && CONNECTORS.has(norm(picked[0] ?? ""))) picked.shift();
+  while (picked.length && CONNECTORS.has(norm(picked[picked.length - 1] ?? ""))) picked.pop();
+  if (picked.length === 0) return "";
+  return picked
+    .map((w, i) => {
+      const n = norm(w);
+      if (i > 0 && CONNECTORS.has(n)) return n;
+      return titleCase(w);
+    })
+    .join(" ");
+}
+
+/** Couleur écrite littéralement avec son code dans une cellule. */
+function literalColorInText(text: string, catalogue: CouleurCatalogue): string {
+  if (!text) return "";
+  CODE_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = CODE_RE.exec(text))) {
+    const rawCode = (m[1] ?? m[3] ?? "").trim();
+    const hashCode = (m[2] ?? "").trim();
+    const code = rawCode ? rawCode.toUpperCase() : hashCode ? `#${hashCode}` : "";
+    if (!code) continue;
+    const name = nameBeforeCode(text.slice(0, m.index));
+    if (!name || name.length < 3) continue;
+    // Si la liste connaît ce nom, on garde son orthographe officielle.
+    const key = normText(name).trim();
+    const known = (catalogue.byFirstWord.get(key.split(" ")[0] ?? "") ?? []).find(
+      (e) => e.key === key,
+    );
+    return `${known ? known.name : name} ${code}`;
+  }
+  return "";
+}
+
 /** Couleur : uniquement à partir de Opt4 et suivants (jamais Opt1-3 ni la
- *  description), et uniquement des valeurs présentes dans la liste de couleurs. */
+ *  description). On valide d'abord avec la liste, sinon on prend la couleur
+ *  écrite telle quelle avec son code. */
 function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogue): string {
   const optKeys = Object.keys(row)
     .map((k) => ({ k, n: /^opt(\d+)$/i.test(k) ? parseInt(k.replace(/^opt/i, ""), 10) : -1 }))
@@ -889,8 +962,13 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
     const hit = matchCouleurInText(toStr(row[k]), catalogue);
     if (hit) return hit;
   }
+  for (const { k } of optKeys) {
+    const hit = literalColorInText(toStr(row[k]), catalogue);
+    if (hit) return hit;
+  }
   return "";
 }
+
 
 
 
