@@ -1113,6 +1113,10 @@ const REFERENCE_RE =
   /\b(?:r[ée]f\.?|ref)\s*(?:pour\s+couleur)?\s*:?\s*(?:achat)?\s*:?\s*[A-Za-z]{0,3}-?\d[\dA-Za-z-]*/gi;
 const ACHAT_RE = /\bachat\s*:?\s*[A-Za-z]{0,3}-?\d[\dA-Za-z-]*/gi;
 
+/** Marque de peinture écrite avant le nom, ex. « Farrow & Ball - Stuffield Green ».
+ *  On garde uniquement le nom de la couleur. */
+const MARQUE_RE = /\b[A-Za-zÀ-ÿ.]{2,}\s*&\s*[A-Za-zÀ-ÿ.]{2,}\s*-\s*/gi;
+
 /** Retire les mentions qui ne décrivent pas la couleur de la porte. */
 function stripNonCouleur(text: string): string {
   if (!text) return "";
@@ -1120,11 +1124,13 @@ function stripNonCouleur(text: string): string {
   COUPE_FROID_RE.lastIndex = 0;
   REFERENCE_RE.lastIndex = 0;
   ACHAT_RE.lastIndex = 0;
+  MARQUE_RE.lastIndex = 0;
   return text
     .replace(INTERIEUR_PVC_RE, " ")
     .replace(COUPE_FROID_RE, " ")
     .replace(REFERENCE_RE, " ")
-    .replace(ACHAT_RE, " ");
+    .replace(ACHAT_RE, " ")
+    .replace(MARQUE_RE, " ");
 }
 
 const RECOUVERT_COULEUR_RE =
