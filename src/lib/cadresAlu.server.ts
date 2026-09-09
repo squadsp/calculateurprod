@@ -1090,6 +1090,21 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
     const hit = contextColorInText(toStr(row[k]));
     if (hit) return hit;
   }
+  // « ... recouvert aluminium de couleur XXX 000 » : la couleur extérieure
+  // suit directement cette mention.
+  const recouvertRe = /recouvert[e]?\s+alu(?:m(?:inium)?)?\s+de\s+couleur\s*:?\s*/i;
+  for (const { k } of optKeys) {
+    const text = toStr(row[k]);
+    const m = text.match(recouvertRe);
+    if (!m) continue;
+    const tail = text.slice((m.index ?? 0) + m[0].length);
+    const hit =
+      matchCouleurInText(tail, catalogue) ||
+      literalColorInText(tail, catalogue) ||
+      parseColorTail(tail);
+    if (hit) return hit;
+  }
+
   // Dernier recours : après « Développement de couleur », la couleur (et son
   // code s'il existe) est écrite dans une des cellules suivantes.
   const devIndex = optKeys.findIndex((o) =>
