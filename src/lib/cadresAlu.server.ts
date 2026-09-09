@@ -907,7 +907,7 @@ export function matchCouleurInText(text: string, catalogue: CouleurCatalogue): s
 /* --- Détection directe : « Nom (P-536) », « NOM - #534 », « BENJAMIN MOORE HC-126 » --- */
 
 const CODE_RE =
-  /\(\s*([A-Za-z0-9][A-Za-z0-9-]{1,9})\s*\)|#\s*(\d{3,4})\b|\b([A-Za-z]{1,3}-\d{1,6}[A-Za-z0-9]*)\b/g;
+  /\(\s*([A-Za-z0-9][A-Za-z0-9-]{1,9})\s*\)|#\s*(\d{2,4})\b|\b([A-Za-z]{1,3}-\d{1,6}[A-Za-z0-9]*)\b/g;
 
 /** Code plausible de couleur (exclut les modèles de porte N600, les mesures, etc.). */
 function isCodeLike(code: string): boolean {
