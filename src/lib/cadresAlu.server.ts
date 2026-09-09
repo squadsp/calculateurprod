@@ -1150,16 +1150,24 @@ function stripNonCouleur(text: string): string {
 const RECOUVERT_COULEUR_RE =
   /recouvert[e]?\s+alu(?:m(?:inium)?)?\s+de\s+couleur\s*:?\s*/i;
 
+/** Une cellule qui parle de l'intérieur (sans mention extérieure) donne la
+ *  couleur intérieure : elle ne doit jamais servir de couleur principale. */
+function isInterieurCell(text: string): boolean {
+  return /int[ée]rieur/i.test(text) && !/ext[ée]rieur/i.test(text);
+}
+
 function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogue): string {
   const optKeys = Object.keys(row)
     .map((k) => ({ k, n: /^opt(\d+)$/i.test(k) ? parseInt(k.replace(/^opt/i, ""), 10) : -1 }))
     .filter((o) => o.n >= 4)
     .sort((a, b) => a.n - b.n);
   const cell = (k: string) => stripNonCouleur(toStr(row[k]));
+  // Cellules utilisables pour la couleur extérieure (on retire l'intérieur).
+  const extKeys = optKeys.filter(({ k }) => !isInterieurCell(toStr(row[k])));
 
   // Texte qui suit « recouvert aluminium de couleur ... » (couleur extérieure).
   const recouvertTails: string[] = [];
-  for (const { k } of optKeys) {
+  for (const { k } of extKeys) {
     const text = cell(k);
     const m = text.match(RECOUVERT_COULEUR_RE);
     if (m) recouvertTails.push(text.slice((m.index ?? 0) + m[0].length));
@@ -1170,8 +1178,15 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
     const hit = matchCouleurInText(tail, catalogue);
     if (hit && hit !== "Blanc") return hit;
   }
+
+  // 2) Couleur écrite telle quelle après « de couleur ».
+  for (const tail of recouvertTails) {
+    const hit = literalColorInText(tail, catalogue) || parseColorTail(tail);
+    if (hit) return hit;
+  }
+
   let blancFallback = "";
-  for (const { k } of optKeys) {
+  for (const { k } of extKeys) {
     const hit = matchCouleurInText(cell(k), catalogue);
     if (!hit) continue;
     // « Blanc » sans code est trop faible : on le garde en dernier recours.
@@ -1182,29 +1197,23 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
     return hit;
   }
 
-  // 2) Couleur écrite telle quelle après « de couleur ».
-  for (const tail of recouvertTails) {
-    const hit = literalColorInText(tail, catalogue) || parseColorTail(tail);
-    if (hit) return hit;
-  }
-
   // 3) Logique générale : couleur + code écrits dans la cellule.
-  for (const { k } of optKeys) {
+  for (const { k } of extKeys) {
     const hit = literalColorInText(cell(k), catalogue);
     if (hit) return hit;
   }
-  for (const { k } of optKeys) {
+  for (const { k } of extKeys) {
     const hit = contextColorInText(cell(k));
     if (hit) return hit;
   }
 
   // 4) Après « Développement de couleur », la couleur (et son code s'il existe)
   // est écrite dans une des cellules suivantes.
-  const devIndex = optKeys.findIndex((o) =>
+  const devIndex = extKeys.findIndex((o) =>
     /d[ée]veloppement\s+de\s+couleur/i.test(toStr(row[o.k])),
   );
   if (devIndex >= 0) {
-    for (const { k } of optKeys.slice(devIndex + 1)) {
+    for (const { k } of extKeys.slice(devIndex + 1)) {
       const hit = colorAfterDevelopment(cell(k), catalogue);
       if (hit) return hit;
     }
