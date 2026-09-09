@@ -1026,6 +1026,17 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
     const hit = contextColorInText(toStr(row[k]));
     if (hit) return hit;
   }
+  // Dernier recours : après « Développement de couleur », la couleur (et son
+  // code s'il existe) est écrite dans une des cellules suivantes.
+  const devIndex = optKeys.findIndex((o) =>
+    /d[ée]veloppement\s+de\s+couleur/i.test(toStr(row[o.k])),
+  );
+  if (devIndex >= 0) {
+    for (const { k } of optKeys.slice(devIndex + 1)) {
+      const hit = colorAfterDevelopment(toStr(row[k]), catalogue);
+      if (hit) return hit;
+    }
+  }
   return "";
 }
 
