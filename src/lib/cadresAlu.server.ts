@@ -544,9 +544,27 @@ function extractAstragale(allRowValues: string[], sensRow: string): string {
   return sens ? `${size} ${sens}` : size;
 }
 
+/** Compare deux couleurs (nom + code) en ignorant accents, casse,
+ *  ponctuation et préfixes de code (P-514 ≡ 514). */
+function sameColor(a: string, b: string): string extends never ? never : boolean {
+  const key = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/\b[a-z]{1,3}-(?=\d)/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  const ka = key(a);
+  const kb = key(b);
+  if (!ka || !kb) return false;
+  return ka === kb || ka.includes(kb) || kb.includes(ka);
+}
+
 /** Détecte une couleur du catalogue différente de la couleur principale
  *  (utile pour « Alu int »). Aucune couleur inventée : elle doit exister
  *  dans la liste de couleurs. */
+
 function findDifferentColor(
   values: string[],
   mainColor: string,
