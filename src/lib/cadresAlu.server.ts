@@ -1104,23 +1104,59 @@ function colorAfterDevelopment(text: string, catalogue: CouleurCatalogue): strin
 const INTERIEUR_PVC_RE =
   /(?:recouvrement\s+)?int[ée]rieur[e]?\s+(?:vinyle|vinyl|pvc|p\.\s*v\.\s*c\.?)(?:\s+[A-Za-zÀ-ÿ'’-]+){0,2}/gi;
 
-/** Retire les mentions de finition intérieure vinyle/PVC avant de chercher la couleur. */
-function stripInterieurPvc(text: string): string {
+/** « Coupe-froid blanc/noir » : quincaillerie, jamais la couleur de la porte. */
+const COUPE_FROID_RE = /coupe[\s-]?froid(?:\s+[A-Za-zÀ-ÿ'’-]+){0,2}/gi;
+
+/** Retire les mentions qui ne décrivent pas la couleur de la porte. */
+function stripNonCouleur(text: string): string {
   if (!text) return "";
   INTERIEUR_PVC_RE.lastIndex = 0;
-  return text.replace(INTERIEUR_PVC_RE, " ");
+  COUPE_FROID_RE.lastIndex = 0;
+  return text.replace(INTERIEUR_PVC_RE, " ").replace(COUPE_FROID_RE, " ");
 }
+
+const RECOUVERT_COULEUR_RE =
+  /recouvert[e]?\s+alu(?:m(?:inium)?)?\s+de\s+couleur\s*:?\s*/i;
 
 function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogue): string {
   const optKeys = Object.keys(row)
     .map((k) => ({ k, n: /^opt(\d+)$/i.test(k) ? parseInt(k.replace(/^opt/i, ""), 10) : -1 }))
     .filter((o) => o.n >= 4)
     .sort((a, b) => a.n - b.n);
-  const cell = (k: string) => stripInterieurPvc(toStr(row[k]));
+  const cell = (k: string) => stripNonCouleur(toStr(row[k]));
+
+  // Texte qui suit « recouvert aluminium de couleur ... » (couleur extérieure).
+  const recouvertTails: string[] = [];
+  for (const { k } of optKeys) {
+    const text = cell(k);
+    const m = text.match(RECOUVERT_COULEUR_RE);
+    if (m) recouvertTails.push(text.slice((m.index ?? 0) + m[0].length));
+  }
+
+  // 1) La liste officielle en priorité, d'abord sur la mention « de couleur ».
+  for (const tail of recouvertTails) {
+    const hit = matchCouleurInText(tail, catalogue);
+    if (hit && hit !== "Blanc") return hit;
+  }
+  let blancFallback = "";
   for (const { k } of optKeys) {
     const hit = matchCouleurInText(cell(k), catalogue);
+    if (!hit) continue;
+    // « Blanc » sans code est trop faible : on le garde en dernier recours.
+    if (hit === "Blanc") {
+      blancFallback = blancFallback || hit;
+      continue;
+    }
+    return hit;
+  }
+
+  // 2) Couleur écrite telle quelle après « de couleur ».
+  for (const tail of recouvertTails) {
+    const hit = literalColorInText(tail, catalogue) || parseColorTail(tail);
     if (hit) return hit;
   }
+
+  // 3) Logique générale : couleur + code écrits dans la cellule.
   for (const { k } of optKeys) {
     const hit = literalColorInText(cell(k), catalogue);
     if (hit) return hit;
@@ -1129,23 +1165,9 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
     const hit = contextColorInText(cell(k));
     if (hit) return hit;
   }
-  // « ... recouvert aluminium de couleur XXX 000 » : la couleur extérieure
-  // suit directement cette mention.
-  const recouvertRe = /recouvert[e]?\s+alu(?:m(?:inium)?)?\s+de\s+couleur\s*:?\s*/i;
-  for (const { k } of optKeys) {
-    const text = cell(k);
-    const m = text.match(recouvertRe);
-    if (!m) continue;
-    const tail = text.slice((m.index ?? 0) + m[0].length);
-    const hit =
-      matchCouleurInText(tail, catalogue) ||
-      literalColorInText(tail, catalogue) ||
-      parseColorTail(tail);
-    if (hit) return hit;
-  }
 
-  // Dernier recours : après « Développement de couleur », la couleur (et son
-  // code s'il existe) est écrite dans une des cellules suivantes.
+  // 4) Après « Développement de couleur », la couleur (et son code s'il existe)
+  // est écrite dans une des cellules suivantes.
   const devIndex = optKeys.findIndex((o) =>
     /d[ée]veloppement\s+de\s+couleur/i.test(toStr(row[o.k])),
   );
@@ -1155,7 +1177,7 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
       if (hit) return hit;
     }
   }
-  return "";
+  return blancFallback;
 }
 
 
