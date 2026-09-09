@@ -1032,6 +1032,32 @@ function contextColorInText(text: string): string {
   return "";
 }
 
+/** Lit « Nom [code] » au début d'un texte (après une mention de couleur). */
+function parseColorTail(tail: string): string {
+  const clean = (tail ?? "").replace(/\s*(int[ée]rieur|ext[ée]rieur)\s*$/i, "").trim();
+  const tokens = clean.split(/\s+/).filter(Boolean);
+  const words: string[] = [];
+  let code = "";
+  for (const token of tokens) {
+    const raw = token.replace(/[(),.:;]/g, "");
+    if (isCodeLike(raw) && /^[A-Za-z0-9-]+$/.test(raw)) {
+      code = raw.toUpperCase();
+      break;
+    }
+    const w = cleanWord(token);
+    if (!w || NAME_STOP.has(norm(w)) || !/^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’-]*$/.test(w)) break;
+    words.push(w);
+    if (words.length >= 4) break;
+  }
+  while (words.length && CONNECTORS.has(norm(words[words.length - 1] ?? ""))) words.pop();
+  if (words.length === 0) return "";
+  const name = words
+    .map((w, i) => (i > 0 && CONNECTORS.has(norm(w)) ? norm(w) : titleCase(w)))
+    .join(" ");
+  if (name.length < 3) return "";
+  return code ? `${name} ${code}` : name;
+}
+
 /** Repli après « Développement de couleur » : la couleur (et son code s'il
  *  existe) est écrite un peu plus loin, souvent après « -Special- » ou
  *  « Couleur spéciale ». La liste officielle reste vérifiée en premier. */
@@ -1090,6 +1116,21 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
     const hit = contextColorInText(toStr(row[k]));
     if (hit) return hit;
   }
+  // « ... recouvert aluminium de couleur XXX 000 » : la couleur extérieure
+  // suit directement cette mention.
+  const recouvertRe = /recouvert[e]?\s+alu(?:m(?:inium)?)?\s+de\s+couleur\s*:?\s*/i;
+  for (const { k } of optKeys) {
+    const text = toStr(row[k]);
+    const m = text.match(recouvertRe);
+    if (!m) continue;
+    const tail = text.slice((m.index ?? 0) + m[0].length);
+    const hit =
+      matchCouleurInText(tail, catalogue) ||
+      literalColorInText(tail, catalogue) ||
+      parseColorTail(tail);
+    if (hit) return hit;
+  }
+
   // Dernier recours : après « Développement de couleur », la couleur (et son
   // code s'il existe) est écrite dans une des cellules suivantes.
   const devIndex = optKeys.findIndex((o) =>
