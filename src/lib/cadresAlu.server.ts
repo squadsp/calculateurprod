@@ -756,11 +756,19 @@ function buildAstragaleDimMab(
   if (values.some((v) => /jardin/i.test(v))) parts.push("Jardin");
   if (values.some((v) => /modulaire/i.test(v))) parts.push("Modulaire");
 
-  const aluInt = allRowValues.some((v) => /recouvrement\s+int[ée]rieur\s+aluminium/i.test(v));
-  if (aluInt) {
-    const aluIntColor = findDifferentColor(allRowValues, couleur, catalogue);
-    parts.push(aluIntColor ? `Alu int ${aluIntColor}` : "Alu int");
+  const aluIntRe = /(?:recouvrement\s+)?int[ée]rieur\s+alu(?:m(?:inium)?)?\b/i;
+  const aluIntCell = allRowValues.find((v) => aluIntRe.test(v));
+  if (aluIntCell) {
+    const tail = aluIntCell.slice(aluIntCell.search(aluIntRe));
+    const aluIntColor =
+      matchCouleurInText(tail, catalogue) ||
+      literalColorInText(tail, catalogue) ||
+      findDifferentColor(allRowValues, couleur, catalogue);
+    parts.push(
+      aluIntColor && !sameColor(aluIntColor, couleur) ? `Alu int ${aluIntColor}` : "Alu int",
+    );
   }
+
 
   if (epaisseurJambage === "1 1/2") {
     const teteEp = values.find((v) => /t[êe]te/i.test(v) && /1[-\s]1\/4/.test(v));
