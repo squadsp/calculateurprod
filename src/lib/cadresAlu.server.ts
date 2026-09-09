@@ -1151,7 +1151,7 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
   );
   if (devIndex >= 0) {
     for (const { k } of optKeys.slice(devIndex + 1)) {
-      const hit = colorAfterDevelopment(toStr(row[k]), catalogue);
+      const hit = colorAfterDevelopment(cell(k), catalogue);
       if (hit) return hit;
     }
   }
