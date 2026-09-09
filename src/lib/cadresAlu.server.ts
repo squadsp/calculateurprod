@@ -881,7 +881,7 @@ function matchCouleurInText(text: string, catalogue: CouleurCatalogue): string {
 /* --- Détection directe : « Nom (P-536) », « NOM - #534 », « BENJAMIN MOORE HC-126 » --- */
 
 const CODE_RE =
-  /\(\s*([A-Za-z]{1,3}-?\d[A-Za-z0-9-]*)\s*\)|#\s*(\d{3,4})\b|\b([A-Za-z]{1,3}-\d{2,6}[A-Za-z0-9]*)\b/g;
+  /\(\s*([A-Za-z]{1,3}-\d[A-Za-z0-9-]*)\s*\)|#\s*(\d{3,4})\b|\b([A-Za-z]{1,3}-\d{2,6}[A-Za-z0-9]*)\b/g;
 
 /** Mots qui ne font jamais partie d'un nom de couleur (arrêtent la lecture). */
 const NAME_STOP = new Set([
@@ -894,6 +894,7 @@ const NAME_STOP = new Set([
   "echantillon", "intercalaire", "thermo", "volet", "fixe", "vitrail", "std",
   "extra", "dimension", "dimensions", "epaisseur", "barre", "renforcement",
   "pentures", "billes", "machiner", "gache", "percer", "trous", "trou",
+  "deluxe", "barrotin", "exte", "ext", "int", "capuchon", "moustiquaire",
 ]);
 
 const CONNECTORS = new Set(["de", "du", "des", "la", "le", "les", "d", "a", "au", "aux", "l"]);
