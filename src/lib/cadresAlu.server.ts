@@ -816,7 +816,7 @@ const normText = (s: string) =>
 
 export type CouleurEntry = { name: string; code: string | null };
 
-type CatalogueEntry = { name: string; key: string; codes: string[] };
+type CatalogueEntry = { name: string; key: string; tokens: string[]; codes: string[] };
 
 export type CouleurCatalogue = {
   byFirstWord: Map<string, CatalogueEntry[]>;
@@ -824,6 +824,11 @@ export type CouleurCatalogue = {
 };
 
 const codeDigits = (code: string) => code.replace(/[^0-9]/g, "");
+
+/** Radical d'un mot : ignore le pluriel et le féminin (pur/pure/pures). */
+const stem = (w: string) => (w.length > 3 ? w.replace(/(?:es|s|e)$/, "") : w);
+
+const stems = (key: string) => key.split(" ").filter(Boolean).map(stem);
 
 /** Construit l'index de recherche à partir de la liste de couleurs (base de données). */
 export function buildCouleurCatalogue(list: CouleurEntry[]): CouleurCatalogue {
@@ -835,7 +840,7 @@ export function buildCouleurCatalogue(list: CouleurEntry[]): CouleurCatalogue {
     if (!key) continue;
     let entry = byKey.get(key);
     if (!entry) {
-      entry = { name, key, codes: [] };
+      entry = { name, key, tokens: stems(key), codes: [] };
       byKey.set(key, entry);
     }
     const code = (item.code || "").trim();
@@ -845,7 +850,7 @@ export function buildCouleurCatalogue(list: CouleurEntry[]): CouleurCatalogue {
   const byFirstWord = new Map<string, CatalogueEntry[]>();
   const byDigits = new Map<string, CatalogueEntry>();
   for (const entry of byKey.values()) {
-    const first = entry.key.split(" ")[0];
+    const first = entry.tokens[0];
     if (first) {
       const arr = byFirstWord.get(first) ?? [];
       arr.push(entry);
@@ -857,7 +862,7 @@ export function buildCouleurCatalogue(list: CouleurEntry[]): CouleurCatalogue {
     }
   }
   for (const arr of byFirstWord.values()) {
-    arr.sort((a, b) => b.key.length - a.key.length);
+    arr.sort((a, b) => b.tokens.length - a.tokens.length || b.key.length - a.key.length);
   }
   return { byFirstWord, byDigits };
 }
@@ -877,21 +882,30 @@ function literalCode(entry: CatalogueEntry, text: string): string {
   return "";
 }
 
-/** Cherche dans un texte une couleur validée par la liste : le nom ET le code
- *  doivent être présents tels quels dans la ligne du MDB. Seule exception :
- *  « blanc » sans code reste « Blanc ». */
+/** Cherche dans un texte une couleur validée par la liste : le nom (au singulier
+ *  ou au pluriel/féminin) ET le code doivent être présents dans la ligne du MDB.
+ *  Seule exception : « blanc » sans code reste « Blanc ». */
 export function matchCouleurInText(text: string, catalogue: CouleurCatalogue): string {
   if (!text || !text.trim()) return "";
-  const t = normText(text);
+  const words = normText(text).split(" ").filter(Boolean);
+  const wordStems = words.map(stem);
 
   let best: CatalogueEntry | null = null;
-  for (const word of t.split(" ")) {
-    if (!word) continue;
-    const candidates = catalogue.byFirstWord.get(word);
+  for (let i = 0; i < wordStems.length; i++) {
+    const candidates = catalogue.byFirstWord.get(wordStems[i] ?? "");
     if (!candidates) continue;
     for (const entry of candidates) {
       if (entry.key.length < 4) continue;
-      if (!t.includes(` ${entry.key} `)) continue;
+      const toks = entry.tokens;
+      if (i + toks.length > wordStems.length) continue;
+      let ok = true;
+      for (let j = 0; j < toks.length; j++) {
+        if (wordStems[i + j] !== toks[j]) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) continue;
       const code = literalCode(entry, text);
       if (code) return `${entry.name} ${code}`;
       if (!best || entry.key.length > best.key.length) best = entry;
