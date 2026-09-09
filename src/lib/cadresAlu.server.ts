@@ -1118,7 +1118,13 @@ function stripNonCouleur(text: string): string {
   if (!text) return "";
   INTERIEUR_PVC_RE.lastIndex = 0;
   COUPE_FROID_RE.lastIndex = 0;
-  return text.replace(INTERIEUR_PVC_RE, " ").replace(COUPE_FROID_RE, " ");
+  REFERENCE_RE.lastIndex = 0;
+  ACHAT_RE.lastIndex = 0;
+  return text
+    .replace(INTERIEUR_PVC_RE, " ")
+    .replace(COUPE_FROID_RE, " ")
+    .replace(REFERENCE_RE, " ")
+    .replace(ACHAT_RE, " ");
 }
 
 const RECOUVERT_COULEUR_RE =
