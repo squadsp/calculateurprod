@@ -1099,21 +1099,34 @@ function colorAfterDevelopment(text: string, catalogue: CouleurCatalogue): strin
 /** Couleur : uniquement à partir de Opt4 et suivants (jamais Opt1-3 ni la
  *  description). On valide d'abord avec la liste, sinon on prend la couleur
  *  écrite telle quelle avec son code. */
+/** « Recouvrement intérieur Vinyle blanc », « intérieur PVC blanc » : finition
+ *  intérieure en vinyle/PVC — ce n'est pas la couleur de peinture de la ligne. */
+const INTERIEUR_PVC_RE =
+  /(?:recouvrement\s+)?int[ée]rieur[e]?\s+(?:vinyle|vinyl|pvc|p\.\s*v\.\s*c\.?)(?:\s+[A-Za-zÀ-ÿ'’-]+){0,2}/gi;
+
+/** Retire les mentions de finition intérieure vinyle/PVC avant de chercher la couleur. */
+function stripInterieurPvc(text: string): string {
+  if (!text) return "";
+  INTERIEUR_PVC_RE.lastIndex = 0;
+  return text.replace(INTERIEUR_PVC_RE, " ");
+}
+
 function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogue): string {
   const optKeys = Object.keys(row)
     .map((k) => ({ k, n: /^opt(\d+)$/i.test(k) ? parseInt(k.replace(/^opt/i, ""), 10) : -1 }))
     .filter((o) => o.n >= 4)
     .sort((a, b) => a.n - b.n);
+  const cell = (k: string) => stripInterieurPvc(toStr(row[k]));
   for (const { k } of optKeys) {
-    const hit = matchCouleurInText(toStr(row[k]), catalogue);
+    const hit = matchCouleurInText(cell(k), catalogue);
     if (hit) return hit;
   }
   for (const { k } of optKeys) {
-    const hit = literalColorInText(toStr(row[k]), catalogue);
+    const hit = literalColorInText(cell(k), catalogue);
     if (hit) return hit;
   }
   for (const { k } of optKeys) {
-    const hit = contextColorInText(toStr(row[k]));
+    const hit = contextColorInText(cell(k));
     if (hit) return hit;
   }
   // « ... recouvert aluminium de couleur XXX 000 » : la couleur extérieure
