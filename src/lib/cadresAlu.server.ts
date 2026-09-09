@@ -1006,6 +1006,44 @@ function contextColorInText(text: string): string {
   return "";
 }
 
+/** Repli après « Développement de couleur » : la couleur (et son code s'il
+ *  existe) est écrite un peu plus loin, souvent après « -Special- » ou
+ *  « Couleur spéciale ». La liste officielle reste vérifiée en premier. */
+function colorAfterDevelopment(text: string, catalogue: CouleurCatalogue): string {
+  const t = text.trim();
+  if (!t) return "";
+  const known = matchCouleurInText(t, catalogue);
+  if (known) return known;
+  const literal = literalColorInText(t, catalogue);
+  if (literal) return literal;
+  const ctx = contextColorInText(t);
+  if (ctx) return ctx;
+  const m = t.match(/(?:-\s*sp[ée]cial\s*-|couleur\s+sp[ée]ciale?)\s*(.+)$/i);
+  if (!m) return "";
+  const tail = (m[1] ?? "").replace(/\s*(int[ée]rieur|ext[ée]rieur)\s*$/i, "").trim();
+  const tokens = tail.split(/\s+/).filter(Boolean);
+  const words: string[] = [];
+  let code = "";
+  for (const token of tokens) {
+    const raw = token.replace(/[(),.:;]/g, "");
+    if (isCodeLike(raw) && /^[A-Za-z0-9-]+$/.test(raw)) {
+      code = raw.toUpperCase();
+      break;
+    }
+    const w = cleanWord(token);
+    if (!w || NAME_STOP.has(norm(w)) || !/^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’-]*$/.test(w)) break;
+    words.push(w);
+    if (words.length >= 4) break;
+  }
+  while (words.length && CONNECTORS.has(norm(words[words.length - 1] ?? ""))) words.pop();
+  if (words.length === 0) return "";
+  const name = words
+    .map((w, i) => (i > 0 && CONNECTORS.has(norm(w)) ? norm(w) : titleCase(w)))
+    .join(" ");
+  if (name.length < 3) return "";
+  return code ? `${name} ${code}` : name;
+}
+
 /** Couleur : uniquement à partir de Opt4 et suivants (jamais Opt1-3 ni la
  *  description). On valide d'abord avec la liste, sinon on prend la couleur
  *  écrite telle quelle avec son code. */
