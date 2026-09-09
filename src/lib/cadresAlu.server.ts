@@ -907,7 +907,7 @@ export function matchCouleurInText(text: string, catalogue: CouleurCatalogue): s
 /* --- Détection directe : « Nom (P-536) », « NOM - #534 », « BENJAMIN MOORE HC-126 » --- */
 
 const CODE_RE =
-  /\(\s*([A-Za-z0-9][A-Za-z0-9-]{1,9})\s*\)|#\s*(\d{3,4})\b|\b([A-Za-z]{1,3}-\d{1,6}[A-Za-z0-9]*)\b/g;
+  /\(\s*([A-Za-z0-9][A-Za-z0-9-]{1,9})\s*\)|#\s*(\d{2,4})\b|\b([A-Za-z]{1,3}-\d{1,6}[A-Za-z0-9]*)\b/g;
 
 /** Code plausible de couleur (exclut les modèles de porte N600, les mesures, etc.). */
 function isCodeLike(code: string): boolean {
@@ -1107,12 +1107,30 @@ const INTERIEUR_PVC_RE =
 /** « Coupe-froid blanc/noir » : quincaillerie, jamais la couleur de la porte. */
 const COUPE_FROID_RE = /coupe[\s-]?froid(?:\s+[A-Za-zÀ-ÿ'’-]+){0,2}/gi;
 
+/** Références d'achat / de commande : « REF:ACHAT I-00315552 », « ACHAT: I-00315552 »,
+ *  « REF POUR COULEUR: BXN-00446 » — ce sont des numéros, jamais une couleur. */
+const REFERENCE_RE =
+  /\b(?:r[ée]f\.?|ref)\s*(?:pour\s+couleur)?\s*:?\s*(?:achat)?\s*:?\s*[A-Za-z]{0,3}-?\d[\dA-Za-z-]*/gi;
+const ACHAT_RE = /\bachat\s*:?\s*[A-Za-z]{0,3}-?\d[\dA-Za-z-]*/gi;
+
+/** Marque de peinture écrite avant le nom, ex. « Farrow & Ball - Stuffield Green ».
+ *  On garde uniquement le nom de la couleur. */
+const MARQUE_RE = /\b[A-Za-zÀ-ÿ.]{2,}\s*&\s*[A-Za-zÀ-ÿ.]{2,}\s*-\s*/gi;
+
 /** Retire les mentions qui ne décrivent pas la couleur de la porte. */
 function stripNonCouleur(text: string): string {
   if (!text) return "";
   INTERIEUR_PVC_RE.lastIndex = 0;
   COUPE_FROID_RE.lastIndex = 0;
-  return text.replace(INTERIEUR_PVC_RE, " ").replace(COUPE_FROID_RE, " ");
+  REFERENCE_RE.lastIndex = 0;
+  ACHAT_RE.lastIndex = 0;
+  MARQUE_RE.lastIndex = 0;
+  return text
+    .replace(INTERIEUR_PVC_RE, " ")
+    .replace(COUPE_FROID_RE, " ")
+    .replace(REFERENCE_RE, " ")
+    .replace(ACHAT_RE, " ")
+    .replace(MARQUE_RE, " ");
 }
 
 const RECOUVERT_COULEUR_RE =
