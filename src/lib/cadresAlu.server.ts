@@ -881,7 +881,18 @@ function matchCouleurInText(text: string, catalogue: CouleurCatalogue): string {
 /* --- Détection directe : « Nom (P-536) », « NOM - #534 », « BENJAMIN MOORE HC-126 » --- */
 
 const CODE_RE =
-  /\(\s*([A-Za-z]{1,3}-\d[A-Za-z0-9-]*)\s*\)|#\s*(\d{3,4})\b|\b([A-Za-z]{1,3}-\d{2,6}[A-Za-z0-9]*)\b/g;
+  /\(\s*([A-Za-z0-9][A-Za-z0-9-]{1,9})\s*\)|#\s*(\d{3,4})\b|\b([A-Za-z]{1,3}-\d{1,6}[A-Za-z0-9]*)\b/g;
+
+/** Code plausible de couleur (exclut les modèles de porte N600, les mesures, etc.). */
+function isCodeLike(code: string): boolean {
+  const c = code.toUpperCase();
+  if (!/\d/.test(c)) return false;
+  if (/^N\d{3}$/.test(c)) return false; // modèle de porte
+  if (/^\d+X\d+$/.test(c)) return false; // dimensions
+  if (/^\d{1,2}$/.test(c)) return false;
+  if (/^(STD|LC|PG|DP|CP)\b/.test(c)) return false;
+  return c.length >= 3;
+}
 
 /** Mots qui ne font jamais partie d'un nom de couleur (arrêtent la lecture). */
 const NAME_STOP = new Set([
