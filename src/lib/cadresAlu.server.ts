@@ -940,6 +940,27 @@ function nameBeforeCode(before: string): string {
     .join(" ");
 }
 
+/** Nom de couleur écrit juste après un code (ex. « OC-9 BALLET WHITE »). */
+function nameAfterCode(after: string): string {
+  const raw = after.split(/\s+/).filter(Boolean);
+  const picked: string[] = [];
+  for (const token of raw) {
+    const w = cleanWord(token);
+    if (!w) {
+      if (picked.length > 0) break;
+      continue;
+    }
+    const n = norm(w);
+    if (NAME_STOP.has(n)) break;
+    if (!/^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’-]*$/.test(w)) break;
+    picked.push(w);
+    if (picked.length >= 4) break;
+  }
+  while (picked.length && CONNECTORS.has(norm(picked[picked.length - 1] ?? ""))) picked.pop();
+  if (picked.length === 0) return "";
+  return picked.map((w, i) => (i > 0 && CONNECTORS.has(norm(w)) ? norm(w) : titleCase(w))).join(" ");
+}
+
 /** Couleur écrite littéralement avec son code dans une cellule. */
 function literalColorInText(text: string, catalogue: CouleurCatalogue): string {
   if (!text) return "";
@@ -948,9 +969,11 @@ function literalColorInText(text: string, catalogue: CouleurCatalogue): string {
   while ((m = CODE_RE.exec(text))) {
     const rawCode = (m[1] ?? m[3] ?? "").trim();
     const hashCode = (m[2] ?? "").trim();
+    if (rawCode && !isCodeLike(rawCode)) continue;
     const code = rawCode ? rawCode.toUpperCase() : hashCode ? `#${hashCode}` : "";
     if (!code) continue;
-    const name = nameBeforeCode(text.slice(0, m.index));
+    let name = nameBeforeCode(text.slice(0, m.index));
+    if (!name || name.length < 3) name = nameAfterCode(text.slice(m.index + m[0].length));
     if (!name || name.length < 3) continue;
     // Si la liste connaît ce nom, on garde son orthographe officielle.
     const key = normText(name).trim();
@@ -958,6 +981,27 @@ function literalColorInText(text: string, catalogue: CouleurCatalogue): string {
       (e) => e.key === key,
     );
     return `${known ? known.name : name} ${code}`;
+  }
+  return "";
+}
+
+/** Couleur écrite sans parenthèses dans une cellule dédiée à la couleur,
+ *  ex. « GENTEK ROUGE MAJESTUEUX 5C5 intérieur » ou « SICO 232 extérieur ». */
+function contextColorInText(text: string): string {
+  const t = text.trim();
+  if (!t) return "";
+  const isColorCell =
+    /(int[ée]rieur|ext[ée]rieur)\s*$/i.test(t) || /couleur\s+sp[ée]cial|-\s*special\s*-/i.test(t);
+  if (!isColorCell) return "";
+  const body = t.replace(/\s*(int[ée]rieur|ext[ée]rieur)\s*$/i, "");
+  const tokens = body.split(/\s+/).filter(Boolean);
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    const tok = (tokens[i] ?? "").replace(/[(),.:;]/g, "");
+    if (!isCodeLike(tok)) continue;
+    if (!/^[A-Za-z0-9-]+$/.test(tok)) continue;
+    const name = nameBeforeCode(tokens.slice(0, i).join(" "));
+    if (name && name.length >= 3) return `${name} ${tok.toUpperCase()}`;
+    return "";
   }
   return "";
 }
@@ -976,6 +1020,10 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
   }
   for (const { k } of optKeys) {
     const hit = literalColorInText(toStr(row[k]), catalogue);
+    if (hit) return hit;
+  }
+  for (const { k } of optKeys) {
+    const hit = contextColorInText(toStr(row[k]));
     if (hit) return hit;
   }
   return "";
