@@ -1107,6 +1107,12 @@ const INTERIEUR_PVC_RE =
 /** « Coupe-froid blanc/noir » : quincaillerie, jamais la couleur de la porte. */
 const COUPE_FROID_RE = /coupe[\s-]?froid(?:\s+[A-Za-zÀ-ÿ'’-]+){0,2}/gi;
 
+/** Références d'achat / de commande : « REF:ACHAT I-00315552 », « ACHAT: I-00315552 »,
+ *  « REF POUR COULEUR: BXN-00446 » — ce sont des numéros, jamais une couleur. */
+const REFERENCE_RE =
+  /\b(?:r[ée]f\.?|ref)\s*(?:pour\s+couleur)?\s*:?\s*(?:achat)?\s*:?\s*[A-Za-z]{0,3}-?\d[\dA-Za-z-]*/gi;
+const ACHAT_RE = /\bachat\s*:?\s*[A-Za-z]{0,3}-?\d[\dA-Za-z-]*/gi;
+
 /** Retire les mentions qui ne décrivent pas la couleur de la porte. */
 function stripNonCouleur(text: string): string {
   if (!text) return "";
