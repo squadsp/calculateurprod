@@ -1133,7 +1133,7 @@ function extractCouleur(row: Record<string, unknown>, catalogue: CouleurCatalogu
   // suit directement cette mention.
   const recouvertRe = /recouvert[e]?\s+alu(?:m(?:inium)?)?\s+de\s+couleur\s*:?\s*/i;
   for (const { k } of optKeys) {
-    const text = toStr(row[k]);
+    const text = cell(k);
     const m = text.match(recouvertRe);
     if (!m) continue;
     const tail = text.slice((m.index ?? 0) + m[0].length);
