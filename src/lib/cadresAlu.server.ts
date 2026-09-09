@@ -1032,6 +1032,32 @@ function contextColorInText(text: string): string {
   return "";
 }
 
+/** Lit « Nom [code] » au début d'un texte (après une mention de couleur). */
+function parseColorTail(tail: string): string {
+  const clean = (tail ?? "").replace(/\s*(int[ée]rieur|ext[ée]rieur)\s*$/i, "").trim();
+  const tokens = clean.split(/\s+/).filter(Boolean);
+  const words: string[] = [];
+  let code = "";
+  for (const token of tokens) {
+    const raw = token.replace(/[(),.:;]/g, "");
+    if (isCodeLike(raw) && /^[A-Za-z0-9-]+$/.test(raw)) {
+      code = raw.toUpperCase();
+      break;
+    }
+    const w = cleanWord(token);
+    if (!w || NAME_STOP.has(norm(w)) || !/^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’-]*$/.test(w)) break;
+    words.push(w);
+    if (words.length >= 4) break;
+  }
+  while (words.length && CONNECTORS.has(norm(words[words.length - 1] ?? ""))) words.pop();
+  if (words.length === 0) return "";
+  const name = words
+    .map((w, i) => (i > 0 && CONNECTORS.has(norm(w)) ? norm(w) : titleCase(w)))
+    .join(" ");
+  if (name.length < 3) return "";
+  return code ? `${name} ${code}` : name;
+}
+
 /** Repli après « Développement de couleur » : la couleur (et son code s'il
  *  existe) est écrite un peu plus loin, souvent après « -Special- » ou
  *  « Couleur spéciale ». La liste officielle reste vérifiée en premier. */
