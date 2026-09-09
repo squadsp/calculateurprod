@@ -546,7 +546,7 @@ function extractAstragale(allRowValues: string[], sensRow: string): string {
 
 /** Compare deux couleurs (nom + code) en ignorant accents, casse,
  *  ponctuation et préfixes de code (P-514 ≡ 514). */
-function sameColor(a: string, b: string): string extends never ? never : boolean {
+function sameColor(a: string, b: string): boolean {
   const key = (s: string) =>
     s
       .normalize("NFD")
@@ -572,7 +572,7 @@ function findDifferentColor(
 ): string {
   for (const v of values) {
     const hit = matchCouleurInText(v, catalogue);
-    if (hit && hit.toLowerCase() !== mainColor.toLowerCase()) return hit;
+    if (hit && !sameColor(hit, mainColor)) return hit;
   }
   return "";
 }
