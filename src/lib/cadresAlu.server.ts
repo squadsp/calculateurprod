@@ -880,7 +880,7 @@ function literalCode(entry: CatalogueEntry, text: string): string {
 /** Cherche dans un texte une couleur validée par la liste : le nom ET le code
  *  doivent être présents tels quels dans la ligne du MDB. Seule exception :
  *  « blanc » sans code reste « Blanc ». */
-function matchCouleurInText(text: string, catalogue: CouleurCatalogue): string {
+export function matchCouleurInText(text: string, catalogue: CouleurCatalogue): string {
   if (!text || !text.trim()) return "";
   const t = normText(text);
 
