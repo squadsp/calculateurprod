@@ -782,7 +782,7 @@ function findNonStandardMabMesure(allRowValues: string[]): string {
  * par la formule habituelle (hauteur du jambage).
  */
 function extractImposte(allRowValues: string[]): string {
-  const cell = allRowValues.find((v) => /\bimposte/i.test(v));
+  const cell = allRowValues.find((v) => /impost/i.test(v));
   if (!cell) return "";
   const whole = allRowValues.join(" | ");
   if (/modulaire/i.test(cell) || /imposte[^|]{0,60}modulaire|modulaire[^|]{0,60}imposte/i.test(whole))
