@@ -782,6 +782,7 @@ function buildAstragaleDimMab(
   const parts: string[] = [];
   const astragale = extractAstragale(allRowValues, sensRow);
   if (astragale) parts.push(astragale);
+  if (renverse) parts.push(renverse);
   const moulureTypes = new Set<string>();
   const wholeRow = allRowValues.join(" | ");
   const hasJBrickDescription = hasMoulureBriqueEnJ(wholeRow);
@@ -1322,6 +1323,7 @@ export function extractCadreAluRows(
       ? `${imposte}${baseHauteurJambage ? ` ${baseHauteurJambage}` : ""}`
       : baseHauteurJambage;
     const sens = extractSens(values);
+    const renverse = extractRenverse(allRowValues);
 
     const couleur = extractCouleur(r, catalogue);
     const row: CadreAluRow = {
@@ -1329,10 +1331,21 @@ export function extractCadreAluRows(
       id: extractId(toStr(r.Code)),
       sens,
       tete: extractTete(toStr(r.Dimension)),
-      jambageLargeur: extractJambageLargeur(aluCell, values),
+      jambageLargeur:
+        renverse && renverse !== "Renversé / Recouvrement INT+EXT"
+          ? ""
+          : extractJambageLargeur(aluCell, values),
       jambageEpaisseur: epaisseurJambage,
       jambageHauteur: hauteurJambage,
-      astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens, couleur, catalogue),
+      astragale: buildAstragaleDimMab(
+        values,
+        allRowValues,
+        epaisseurJambage,
+        sens,
+        couleur,
+        catalogue,
+        renverse,
+      ),
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
       souffle: extractSouffle(allRowValues),
