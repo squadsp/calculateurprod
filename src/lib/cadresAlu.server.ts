@@ -1348,23 +1348,27 @@ export function extractCadreAluRows(
     const epaisseurJambage = epaisseurs[0] || "";
     const allRowValuesForImposte = Object.values(r).map(toStr).filter(Boolean);
     const imposte = extractImposte(allRowValuesForImposte);
+    const imposteForme = extractImposteForme(allRowValuesForImposte);
     const baseHauteurJambage = extractPleineHauteur(values, dims.hauteur);
     const hauteurJambage = imposte
-      ? baseHauteurJambage
-        ? `${imposte}\n( ${baseHauteurJambage} )`
-        : imposte
+      ? [imposte, imposteForme, baseHauteurJambage ? `( ${baseHauteurJambage} )` : ""]
+          .filter(Boolean)
+          .join("\n")
       : baseHauteurJambage;
     const sens = extractSens(values);
     const renverse = extractRenverse(allRowValues);
+    const moulureBriqueSansRecouvrement = hasMoulureBriqueAluSansRecouvrement(allRowValues);
 
     const couleur = extractCouleur(r, catalogue);
     const largeurValue = extractJambageLargeur(aluCell, values);
     // Renversé seul → pas de mesure. Renversé + recouvrement INT+EXT → on garde la mesure.
-    const jambageLargeur = renverse
-      ? renverse.includes("INT+EXT") && largeurValue
-        ? `${renverse}\n( ${largeurValue} )`
-        : renverse
-      : largeurValue;
+    const jambageLargeur = moulureBriqueSansRecouvrement
+      ? ""
+      : renverse
+        ? renverse.includes("INT+EXT") && largeurValue
+          ? `${renverse}\n( ${largeurValue} )`
+          : renverse
+        : largeurValue;
     const row: CadreAluRow = {
       sequence,
       id: extractId(toStr(r.Code)),
