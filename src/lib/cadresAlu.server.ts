@@ -733,6 +733,21 @@ function findNonStandardMabMesure(allRowValues: string[]): string {
 
 
 
+/**
+ * Imposte : si la ligne mentionne une imposte, on remplace la mesure de hauteur
+ * de jambage par le type d'imposte (fenêtre ou modulaire).
+ */
+function extractImposte(allRowValues: string[]): string {
+  const cell = allRowValues.find((v) => /\bimposte/i.test(v));
+  if (!cell) return "";
+  const whole = allRowValues.join(" | ");
+  if (/modulaire/i.test(cell) || /imposte[^|]{0,60}modulaire|modulaire[^|]{0,60}imposte/i.test(whole))
+    return "Imposte modulaire";
+  if (/fen[êe]tre/i.test(cell) || /imposte[^|]{0,60}fen[êe]tre|fen[êe]tre[^|]{0,60}imposte/i.test(whole))
+    return "Imposte fenêtre";
+  return "Imposte";
+}
+
 /** Astragale / Moulure / Jardin / Modulaire / Alu int / head thickness note, combined in one column. */
 
 function buildAstragaleDimMab(
@@ -773,6 +788,10 @@ function buildAstragaleDimMab(
 
   if (values.some((v) => /jardin/i.test(v))) parts.push("Jardin");
   if (values.some((v) => /modulaire/i.test(v))) parts.push("Modulaire");
+  if (allRowValues.some((v) => /penture[s]?\s+suppl[ée]mentaire/i.test(v)))
+    parts.push("Penture supplémentaire");
+  if (allRowValues.some((v) => /machin(?:er|age|é|e)?\s+(?:la\s+)?g[âa]che/i.test(v)))
+    parts.push("Machiner gâche");
 
   const aluIntRe = /(?:recouvrement\s+)?int[ée]rieur\s+alu(?:m(?:inium)?)?\b/i;
   const aluIntCell = allRowValues.find((v) => aluIntRe.test(v));
@@ -1275,7 +1294,9 @@ export function extractCadreAluRows(
     const dims = parseDimension(toStr(r.Dimension));
     const epaisseurs = extractEpaisseurs(values);
     const epaisseurJambage = epaisseurs[0] || "";
-    const hauteurJambage = extractPleineHauteur(values, dims.hauteur);
+    const allRowValuesForImposte = Object.values(r).map(toStr).filter(Boolean);
+    const imposte = extractImposte(allRowValuesForImposte);
+    const hauteurJambage = imposte || extractPleineHauteur(values, dims.hauteur);
     const sens = extractSens(values);
 
     const couleur = extractCouleur(r, catalogue);
