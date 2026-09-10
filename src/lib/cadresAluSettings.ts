@@ -76,6 +76,7 @@ export function normalizeCadreAluSettings(raw: unknown): CadreAluSettings {
     aluKeywords: strList(p.aluKeywords, d.aluKeywords),
     excludeKeywords: strList(p.excludeKeywords, d.excludeKeywords),
     sortByDate: p.sortByDate === true,
+    flagVerifierManuellement: p.flagVerifierManuellement !== false,
     sortColumn: d.columns.some((c) => c.key === p.sortColumn) ? p.sortColumn : "sequence",
     sortDir: p.sortDir === "desc" ? "desc" : "asc",
     columns,
