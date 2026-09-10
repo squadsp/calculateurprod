@@ -777,12 +777,10 @@ function buildAstragaleDimMab(
   sensRow: string,
   couleur: string,
   catalogue: CouleurCatalogue,
-  renverse: string,
 ): string {
   const parts: string[] = [];
   const astragale = extractAstragale(allRowValues, sensRow);
   if (astragale) parts.push(astragale);
-  if (renverse) parts.push(renverse);
   const moulureTypes = new Set<string>();
   const wholeRow = allRowValues.join(" | ");
   const hasJBrickDescription = hasMoulureBriqueEnJ(wholeRow);
