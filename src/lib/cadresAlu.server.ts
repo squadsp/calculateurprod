@@ -1392,6 +1392,23 @@ export function extractCadreAluRows(
       enfigure: extractEnfigure(allRowValues),
       couleur,
     };
+    if (
+      settings.flagVerifierManuellement &&
+      allRowValues.some((v) =>
+        /voir\s+commande\s+info\s+suppl/.test(
+          v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(),
+        ),
+      )
+    ) {
+      row.aVerifier = true;
+      row.astragale = "À VÉRIFIER MANUELLEMENT !";
+      row.moustiquaire = "";
+      row.seuil = "";
+      row.souffle = "";
+      row.dummy = "";
+      row.enfigure = "";
+      row.couleur = "";
+    }
     kept.push(row);
     dates.set(row, toStr(r.Ligne1));
   }
