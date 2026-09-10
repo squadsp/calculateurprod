@@ -706,10 +706,10 @@ function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
  */
 function hasMoulureBriqueAluSansRecouvrement(allRowValues: string[]): boolean {
   const whole = allRowValues.join(" | ");
-  const hasMoulureBrique =
+  const moulureBriqueFound =
     allRowValues.some((v) => hasMoulureBrique(v ?? "")) ||
     /\bbrique\s+(?:en\s+)?aluminium\b/i.test(whole);
-  if (!hasMoulureBrique) return false;
+  if (!moulureBriqueFound) return false;
 
   const hasPinRecouvert =
     /\bpin\b[^|]{0,60}?recouvert[^|]{0,60}?alu/i.test(whole) ||
