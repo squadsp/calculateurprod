@@ -1577,7 +1577,16 @@ export async function buildCadreAluPdf(
       y = pageHeight - margin;
       drawHeader();
     }
-    if (idx % 2 === 1) {
+    const flagged = r.aVerifier === true;
+    if (flagged) {
+      page.drawRectangle({
+        x: margin,
+        y: y - height,
+        width: usableWidth,
+        height,
+        color: rgb(0.99, 0.88, 0.88),
+      });
+    } else if (idx % 2 === 1) {
       page.drawRectangle({
         x: margin,
         y: y - height,
@@ -1593,8 +1602,8 @@ export async function buildCadreAluPdf(
           x: x + 4,
           y: y - 4 - (li + 1) * lineHeight + 3,
           size: fontSize,
-          font,
-          color: rgb(0, 0, 0),
+          font: flagged ? bold : font,
+          color: flagged ? rgb(0.75, 0.1, 0.1) : rgb(0, 0, 0),
         });
       });
       x += widths[i];
