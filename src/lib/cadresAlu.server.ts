@@ -510,6 +510,25 @@ function extractSens(values: string[]): string {
 }
 
 /**
+ * Détecte le terme « Renversé ».
+ * - Si « Pin recouvert aluminium » ET « Recouvrement intérieur aluminium »
+ *   ET « Renversé » sont présents → "Renversé / Recouvrement INT+EXT" (on garde la mesure).
+ * - Sinon, si seul « Renversé » est présent → "Renversé" (la mesure largeur sera retirée).
+ */
+function extractRenverse(allRowValues: string[]): string {
+  const whole = allRowValues.join(" | ");
+  if (!/\brenvers[ée]e?s?\b/i.test(whole)) return "";
+
+  const hasPinRecouvert = /\bpin\b[^|]{0,60}?\brecouvert\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b/i.test(whole) ||
+    /\brecouvert\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b[^|]{0,60}?\bpin\b/i.test(whole);
+  const hasRecouvrementInt = /\brecouvrement\b[^|]{0,60}?\bint[ée]rieur\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b/i.test(whole) ||
+    /\bint[ée]rieur\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b[^|]{0,60}?\brecouvrement\b/i.test(whole);
+
+  if (hasPinRecouvert && hasRecouvrementInt) return "Renversé / Recouvrement INT+EXT";
+  return "Renversé";
+}
+
+/**
  * Astragale: look at every column of the row. Size (grosse/petite) can be
  * mentioned anywhere on the line, and the side is Fixe > Gauche/Droite.
  */
@@ -758,10 +777,12 @@ function buildAstragaleDimMab(
   sensRow: string,
   couleur: string,
   catalogue: CouleurCatalogue,
+  renverse: string,
 ): string {
   const parts: string[] = [];
   const astragale = extractAstragale(allRowValues, sensRow);
   if (astragale) parts.push(astragale);
+  if (renverse) parts.push(renverse);
   const moulureTypes = new Set<string>();
   const wholeRow = allRowValues.join(" | ");
   const hasJBrickDescription = hasMoulureBriqueEnJ(wholeRow);
@@ -1302,6 +1323,7 @@ export function extractCadreAluRows(
       ? `${imposte}${baseHauteurJambage ? ` ${baseHauteurJambage}` : ""}`
       : baseHauteurJambage;
     const sens = extractSens(values);
+    const renverse = extractRenverse(allRowValues);
 
     const couleur = extractCouleur(r, catalogue);
     const row: CadreAluRow = {
@@ -1309,10 +1331,21 @@ export function extractCadreAluRows(
       id: extractId(toStr(r.Code)),
       sens,
       tete: extractTete(toStr(r.Dimension)),
-      jambageLargeur: extractJambageLargeur(aluCell, values),
+      jambageLargeur:
+        renverse && renverse !== "Renversé / Recouvrement INT+EXT"
+          ? ""
+          : extractJambageLargeur(aluCell, values),
       jambageEpaisseur: epaisseurJambage,
       jambageHauteur: hauteurJambage,
-      astragale: buildAstragaleDimMab(values, allRowValues, epaisseurJambage, sens, couleur, catalogue),
+      astragale: buildAstragaleDimMab(
+        values,
+        allRowValues,
+        epaisseurJambage,
+        sens,
+        couleur,
+        catalogue,
+        renverse,
+      ),
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
       souffle: extractSouffle(allRowValues),
