@@ -1,6 +1,6 @@
 import type { CadreAluRow } from "@/lib/cadresAlu.types";
 
-export type CadreAluColumnKey = keyof CadreAluRow;
+export type CadreAluColumnKey = Exclude<keyof CadreAluRow, "aVerifier">;
 
 export type CadreAluColumn = {
   key: CadreAluColumnKey;
