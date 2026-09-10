@@ -1375,7 +1375,7 @@ export function extractCadreAluRows(
       sens,
       tete: extractTete(toStr(r.Dimension)),
       jambageLargeur,
-      jambageEpaisseur: epaisseurJambage,
+      jambageEpaisseur: moulureBriqueSansRecouvrement ? "" : epaisseurJambage,
       jambageHauteur: hauteurJambage,
       astragale: buildAstragaleDimMab(
         values,
