@@ -1327,8 +1327,9 @@ export function extractCadreAluRows(
 
     const couleur = extractCouleur(r, catalogue);
     const largeurValue = extractJambageLargeur(aluCell, values);
+    // Renversé seul → pas de mesure. Renversé + recouvrement INT+EXT → on garde la mesure.
     const jambageLargeur = renverse
-      ? largeurValue
+      ? renverse.includes("INT+EXT") && largeurValue
         ? `${renverse}\n( ${largeurValue} )`
         : renverse
       : largeurValue;
