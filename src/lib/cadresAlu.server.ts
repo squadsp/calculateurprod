@@ -734,20 +734,19 @@ function findNonStandardMabMesure(allRowValues: string[]): string {
 
 
 /**
- * Imposte : si la ligne mentionne une imposte, on garde la mesure associée
- * et on précise le type d'imposte (fenêtre ou modulaire).
+ * Imposte : retourne uniquement le label (fenêtre / modulaire / générique).
+ * La mesure associée dans la colonne Hauteur jambage reste celle calculée
+ * par la formule habituelle (hauteur du jambage).
  */
 function extractImposte(allRowValues: string[]): string {
   const cell = allRowValues.find((v) => /\bimposte/i.test(v));
   if (!cell) return "";
   const whole = allRowValues.join(" | ");
-  const mesure = matchMesure(cell) || matchMesure(whole);
-  const suffix = mesure ? ` ${normalizeFraction(mesure)}` : "";
   if (/modulaire/i.test(cell) || /imposte[^|]{0,60}modulaire|modulaire[^|]{0,60}imposte/i.test(whole))
-    return `Imposte modulaire${suffix}`;
+    return "Imposte modulaire";
   if (/fen[êe]tre/i.test(cell) || /imposte[^|]{0,60}fen[êe]tre|fen[êe]tre[^|]{0,60}imposte/i.test(whole))
-    return `Imposte fenêtre${suffix}`;
-  return `Imposte${suffix}`;
+    return "Imposte fenêtre";
+  return "Imposte";
 }
 
 /** Astragale / Moulure / Jardin / Modulaire / Alu int / head thickness note, combined in one column. */
@@ -1298,7 +1297,10 @@ export function extractCadreAluRows(
     const epaisseurJambage = epaisseurs[0] || "";
     const allRowValuesForImposte = Object.values(r).map(toStr).filter(Boolean);
     const imposte = extractImposte(allRowValuesForImposte);
-    const hauteurJambage = imposte || extractPleineHauteur(values, dims.hauteur);
+    const baseHauteurJambage = extractPleineHauteur(values, dims.hauteur);
+    const hauteurJambage = imposte
+      ? `${imposte}${baseHauteurJambage ? ` ${baseHauteurJambage}` : ""}`
+      : baseHauteurJambage;
     const sens = extractSens(values);
 
     const couleur = extractCouleur(r, catalogue);
