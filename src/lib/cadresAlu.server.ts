@@ -733,6 +733,21 @@ function findNonStandardMabMesure(allRowValues: string[]): string {
 
 
 
+/**
+ * Imposte : si la ligne mentionne une imposte, on remplace la mesure de hauteur
+ * de jambage par le type d'imposte (fenêtre ou modulaire).
+ */
+function extractImposte(allRowValues: string[]): string {
+  const cell = allRowValues.find((v) => /\bimposte/i.test(v));
+  if (!cell) return "";
+  const whole = allRowValues.join(" | ");
+  if (/modulaire/i.test(cell) || /imposte[^|]{0,60}modulaire|modulaire[^|]{0,60}imposte/i.test(whole))
+    return "Imposte modulaire";
+  if (/fen[êe]tre/i.test(cell) || /imposte[^|]{0,60}fen[êe]tre|fen[êe]tre[^|]{0,60}imposte/i.test(whole))
+    return "Imposte fenêtre";
+  return "Imposte";
+}
+
 /** Astragale / Moulure / Jardin / Modulaire / Alu int / head thickness note, combined in one column. */
 
 function buildAstragaleDimMab(
