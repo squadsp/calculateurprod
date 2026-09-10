@@ -782,7 +782,7 @@ function findNonStandardMabMesure(allRowValues: string[]): string {
  * par la formule habituelle (hauteur du jambage).
  */
 function extractImposte(allRowValues: string[]): string {
-  const cell = allRowValues.find((v) => /impost/i.test(v));
+  const cell = allRowValues.find((v) => /\bimposte/i.test(v));
   if (!cell) return "";
   const whole = allRowValues.join(" | ");
   if (/modulaire/i.test(cell) || /imposte[^|]{0,60}modulaire|modulaire[^|]{0,60}imposte/i.test(whole))
@@ -1328,27 +1328,6 @@ export function extractCadreAluRows(
   const kept: CadreAluRow[] = [];
   const dates = new Map<CadreAluRow, string>();
 
-  // Un item = Code complet + Sequence : même Code mais Sequence différente = deux items
-  // distincts; même Sequence mais Code différent = deux items distincts aussi.
-  const normSeq = (s: string) =>
-    s
-      .trim()
-      .toUpperCase()
-      .replace(/\s+/g, "")
-      .replace(/[^A-Z0-9]+/g, "-")
-      .replace(/-0+(\d)/g, "-$1");
-  const itemKey = (r: Record<string, unknown>) =>
-    `${toStr(r.Code).trim().replace(/\s+/g, " ").toUpperCase()}|${normSeq(toStr(r.Sequence))}`;
-
-  const valuesByCode = new Map<string, string[]>();
-  for (const r of rows) {
-    const code = itemKey(r);
-    if (!code) continue;
-    const list = valuesByCode.get(code) ?? [];
-    list.push(...Object.values(r).map(toStr).filter(Boolean));
-    valuesByCode.set(code, list);
-  }
-
   for (const r of rows) {
     const sequence = toStr(r.Sequence);
     if (settings.sequencePrefixes.length > 0 && !prefixRe.test(sequence)) continue;
@@ -1367,7 +1346,7 @@ export function extractCadreAluRows(
     const dims = parseDimension(toStr(r.Dimension));
     const epaisseurs = extractEpaisseurs(values);
     const epaisseurJambage = epaisseurs[0] || "";
-    const allRowValuesForImposte = valuesByCode.get(itemKey(r)) ?? allRowValues;
+    const allRowValuesForImposte = Object.values(r).map(toStr).filter(Boolean);
     const imposte = extractImposte(allRowValuesForImposte);
     const imposteForme = extractImposteForme(allRowValuesForImposte);
     const baseHauteurJambage = extractPleineHauteur(values, dims.hauteur);
