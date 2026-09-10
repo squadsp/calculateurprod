@@ -16,6 +16,8 @@ export type CadreAluSettings = {
   aluKeywords: string[];
   excludeKeywords: string[];
   sortByDate: boolean;
+  /** Marquer en rouge les lignes « Voir commande info suppl ». */
+  flagVerifierManuellement: boolean;
   sortColumn?: CadreAluColumnKey;
   sortDir?: "asc" | "desc";
   columns: CadreAluColumn[];
