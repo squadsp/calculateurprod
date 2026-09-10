@@ -30,6 +30,7 @@ export const DEFAULT_CADRE_ALU_SETTINGS: CadreAluSettings = {
   aluKeywords: ["alu", "alum", "aluminium", "aluminum"],
   excludeKeywords: ["MAB"],
   sortByDate: false,
+  flagVerifierManuellement: true,
   columns: [
     { key: "sequence", label: "SA-PA", visible: true, width: 5 },
     { key: "id", label: "ID", visible: true, width: 7 },
