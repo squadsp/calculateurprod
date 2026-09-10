@@ -13,4 +13,6 @@ export type CadreAluRow = {
   dummy: string;
   enfigure: string;
   couleur: string;
+  /** Ligne à vérifier manuellement (mention « Voir commande info suppl »). */
+  aVerifier?: boolean;
 };
