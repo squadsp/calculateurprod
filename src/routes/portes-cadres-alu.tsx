@@ -348,7 +348,7 @@ function CadresAluPage() {
                     {r.rows.map((row, i) => (
                       <tr key={`${row.id}-${row.sequence}-${i}`} className="border-t border-border">
                         {visibleColumns.map((c) => (
-                          <td key={c.key} className="px-2 py-1.5">
+                          <td key={c.key} className="px-2 py-1.5 whitespace-pre-line">
                             {row[c.key]}
                           </td>
                         ))}
