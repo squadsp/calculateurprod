@@ -1328,6 +1328,17 @@ export function extractCadreAluRows(
   const kept: CadreAluRow[] = [];
   const dates = new Map<CadreAluRow, string>();
 
+  // Une commande peut être répartie sur plusieurs lignes (même Code) : la mention
+  // « imposte » se trouve parfois sur une ligne voisine et non sur la ligne alu.
+  const valuesByCode = new Map<string, string[]>();
+  for (const r of rows) {
+    const code = toStr(r.Code);
+    if (!code) continue;
+    const list = valuesByCode.get(code) ?? [];
+    list.push(...Object.values(r).map(toStr).filter(Boolean));
+    valuesByCode.set(code, list);
+  }
+
   for (const r of rows) {
     const sequence = toStr(r.Sequence);
     if (settings.sequencePrefixes.length > 0 && !prefixRe.test(sequence)) continue;
