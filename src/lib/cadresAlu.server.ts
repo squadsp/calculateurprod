@@ -530,6 +530,28 @@ function extractRenverse(allRowValues: string[]): string {
 }
 
 /**
+ * Vrai si la ligne comporte une moulure à brique (ou une mention
+ * « brique aluminium ») sans recouvrement aluminium intérieur/extérieur.
+ * Dans ce cas, les colonnes Largeur jambage et Épaisseur jambage restent vides.
+ */
+function hasMoulureBriqueAluSansRecouvrement(allRowValues: string[]): boolean {
+  const whole = allRowValues.join(" | ");
+  const hasMoulureBrique =
+    allRowValues.some((v) => hasMoulureBrique(v ?? "")) ||
+    /\bbrique\s+(?:en\s+)?aluminium\b/i.test(whole);
+  if (!hasMoulureBrique) return false;
+
+  const hasPinRecouvert =
+    /\bpin\b[^|]{0,60}?recouvert[^|]{0,60}?alu/i.test(whole) ||
+    /recouvert[^|]{0,60}?alu[^|]{0,60}?\bpin\b/i.test(whole);
+  const hasRecouvrementInt =
+    /recouvrement[^|]{0,60}?int[ée]rieur[^|]{0,60}?alu/i.test(whole) ||
+    /int[ée]rieur[^|]{0,60}?alu[^|]{0,60}?recouvrement/i.test(whole);
+
+  return !(hasPinRecouvert || hasRecouvrementInt);
+}
+
+/**
  * Astragale: look at every column of the row. Size (grosse/petite) can be
  * mentioned anywhere on the line, and the side is Fixe > Gauche/Droite.
  */
