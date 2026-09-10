@@ -510,6 +510,25 @@ function extractSens(values: string[]): string {
 }
 
 /**
+ * Détecte le terme « Renversé ».
+ * - Si « Pin recouvert aluminium » ET « Recouvrement intérieur aluminium »
+ *   ET « Renversé » sont présents → "Renversé / Recouvrement INT+EXT" (on garde la mesure).
+ * - Sinon, si seul « Renversé » est présent → "Renversé" (la mesure largeur sera retirée).
+ */
+function extractRenverse(allRowValues: string[]): string {
+  const whole = allRowValues.join(" | ");
+  if (!/\brenvers[ée]e?s?\b/i.test(whole)) return "";
+
+  const hasPinRecouvert = /\bpin\b[^|]{0,60}?\brecouvert\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b/i.test(whole) ||
+    /\brecouvert\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b[^|]{0,60}?\bpin\b/i.test(whole);
+  const hasRecouvrementInt = /\brecouvrement\b[^|]{0,60}?\bint[ée]rieur\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b/i.test(whole) ||
+    /\bint[ée]rieur\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b[^|]{0,60}?\brecouvrement\b/i.test(whole);
+
+  if (hasPinRecouvert && hasRecouvrementInt) return "Renversé / Recouvrement INT+EXT";
+  return "Renversé";
+}
+
+/**
  * Astragale: look at every column of the row. Size (grosse/petite) can be
  * mentioned anywhere on the line, and the side is Fixe > Gauche/Droite.
  */
