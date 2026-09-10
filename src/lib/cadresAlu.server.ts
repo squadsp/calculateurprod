@@ -769,6 +769,14 @@ function extractImposte(allRowValues: string[]): string {
   return "Imposte";
 }
 
+/** Forme d'imposte : demi-lune / trapèze. */
+function extractImposteForme(allRowValues: string[]): string {
+  const whole = allRowValues.join(" | ");
+  if (/\bdemi[-\s]?lune\b/i.test(whole)) return "Demi lune";
+  if (/\btrap[eè]ze\b/i.test(whole)) return "Trapèze";
+  return "";
+}
+
 /** Astragale / Moulure / Jardin / Modulaire / Alu int / head thickness note, combined in one column. */
 
 function buildAstragaleDimMab(
