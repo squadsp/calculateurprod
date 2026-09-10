@@ -1,6 +1,6 @@
 import type { CadreAluRow } from "@/lib/cadresAlu.types";
 
-export type CadreAluColumnKey = keyof CadreAluRow;
+export type CadreAluColumnKey = Exclude<keyof CadreAluRow, "aVerifier">;
 
 export type CadreAluColumn = {
   key: CadreAluColumnKey;
@@ -16,6 +16,8 @@ export type CadreAluSettings = {
   aluKeywords: string[];
   excludeKeywords: string[];
   sortByDate: boolean;
+  /** Marquer en rouge les lignes « Voir commande info suppl ». */
+  flagVerifierManuellement: boolean;
   sortColumn?: CadreAluColumnKey;
   sortDir?: "asc" | "desc";
   columns: CadreAluColumn[];
@@ -28,6 +30,7 @@ export const DEFAULT_CADRE_ALU_SETTINGS: CadreAluSettings = {
   aluKeywords: ["alu", "alum", "aluminium", "aluminum"],
   excludeKeywords: ["MAB"],
   sortByDate: false,
+  flagVerifierManuellement: true,
   columns: [
     { key: "sequence", label: "SA-PA", visible: true, width: 5 },
     { key: "id", label: "ID", visible: true, width: 7 },
@@ -73,6 +76,7 @@ export function normalizeCadreAluSettings(raw: unknown): CadreAluSettings {
     aluKeywords: strList(p.aluKeywords, d.aluKeywords),
     excludeKeywords: strList(p.excludeKeywords, d.excludeKeywords),
     sortByDate: p.sortByDate === true,
+    flagVerifierManuellement: p.flagVerifierManuellement !== false,
     sortColumn: d.columns.some((c) => c.key === p.sortColumn) ? p.sortColumn : "sequence",
     sortDir: p.sortDir === "desc" ? "desc" : "asc",
     columns,
