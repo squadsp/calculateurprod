@@ -69,6 +69,22 @@ export function CadresAluSettings() {
           />
           Trier par date puis séquence (sinon par séquence seulement)
         </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={s.flagVerifierManuellement}
+            onChange={(e) => setS({ ...s, flagVerifierManuellement: e.target.checked })}
+          />
+          <span>
+            Signaler en rouge « À VÉRIFIER MANUELLEMENT ! » les lignes contenant « Voir commande
+            info suppl »
+            <span className="block text-xs text-muted-foreground">
+              Les colonnes à partir d'Astragale sont vidées pour laisser place au message.
+              Décochez pour désactiver ce traitement.
+            </span>
+          </span>
+        </label>
       </div>
 
       <KeywordList
