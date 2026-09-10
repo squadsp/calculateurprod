@@ -1330,11 +1330,16 @@ export function extractCadreAluRows(
 
   // Un item = Code complet + Sequence : même Code mais Sequence différente = deux items
   // distincts; même Sequence mais Code différent = deux items distincts aussi.
-  const itemKey = (r: Record<string, unknown>) =>
-    `${toStr(r.Code).trim().replace(/\s+/g, " ").toUpperCase()}|${toStr(r.Sequence)
+  const normSeq = (s: string) =>
+    s
       .trim()
-      .replace(/\s+/g, " ")
-      .toUpperCase()}`;
+      .toUpperCase()
+      .replace(/\s+/g, "")
+      .replace(/[^A-Z0-9]+/g, "-")
+      .replace(/-0+(\d)/g, "-$1");
+  const itemKey = (r: Record<string, unknown>) =>
+    `${toStr(r.Code).trim().replace(/\s+/g, " ").toUpperCase()}|${normSeq(toStr(r.Sequence))}`;
+
   const valuesByCode = new Map<string, string[]>();
   for (const r of rows) {
     const code = itemKey(r);
