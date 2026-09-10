@@ -529,6 +529,7 @@ function extractRenverse(allRowValues: string[]): string {
   return "Renversé";
 }
 
+
 /**
  * Astragale: look at every column of the row. Size (grosse/petite) can be
  * mentioned anywhere on the line, and the side is Fixe > Gauche/Droite.
@@ -698,6 +699,28 @@ function isMoulureBriqueNonStandard(allRowValues: string[]): boolean {
   return allRowValues.some((v) => scan(v ?? "")) || scan(allRowValues.join(" | "));
 }
 
+/**
+ * Vrai si la ligne comporte une moulure à brique (ou une mention
+ * « brique aluminium ») sans recouvrement aluminium intérieur/extérieur.
+ * Dans ce cas, les colonnes Largeur jambage et Épaisseur jambage restent vides.
+ */
+function hasMoulureBriqueAluSansRecouvrement(allRowValues: string[]): boolean {
+  const whole = allRowValues.join(" | ");
+  const moulureBriqueFound =
+    allRowValues.some((v) => hasMoulureBrique(v ?? "")) ||
+    /\bbrique\s+(?:en\s+)?aluminium\b/i.test(whole);
+  if (!moulureBriqueFound) return false;
+
+  const hasPinRecouvert =
+    /\bpin\b[^|]{0,60}?recouvert[^|]{0,60}?alu/i.test(whole) ||
+    /recouvert[^|]{0,60}?alu[^|]{0,60}?\bpin\b/i.test(whole);
+  const hasRecouvrementInt =
+    /recouvrement[^|]{0,60}?int[ée]rieur[^|]{0,60}?alu/i.test(whole) ||
+    /int[ée]rieur[^|]{0,60}?alu[^|]{0,60}?recouvrement/i.test(whole);
+
+  return !(hasPinRecouvert || hasRecouvrementInt);
+}
+
 /** Mesure « brute » : n'importe quel nombre/fraction, simple ou double. */
 const LOOSE_MEASURE_RE =
   /\d+(?:[.,]\d+)?(?:\s*\d+\s*\/\s*\d+)?(?:\s*(?:"|''|po|pouces?|mm|cm)\b)?(?:\s*(?:x|×|par)\s*\d+(?:[.,]\d+)?(?:\s*\d+\s*\/\s*\d+)?(?:\s*(?:"|''|po|pouces?|mm|cm)\b)?)?/i;
@@ -767,6 +790,14 @@ function extractImposte(allRowValues: string[]): string {
   if (/fen[êe]tre/i.test(cell) || /imposte[^|]{0,60}fen[êe]tre|fen[êe]tre[^|]{0,60}imposte/i.test(whole))
     return "Imposte fenêtre";
   return "Imposte";
+}
+
+/** Forme d'imposte : demi-lune / trapèze. */
+function extractImposteForme(allRowValues: string[]): string {
+  const whole = allRowValues.join(" | ");
+  if (/\bdemi[-\s]?lune\b/i.test(whole)) return "Demi lune";
+  if (/\btrap[eè]ze\b/i.test(whole)) return "Trapèze";
+  return "";
 }
 
 /** Astragale / Moulure / Jardin / Modulaire / Alu int / head thickness note, combined in one column. */
@@ -1317,30 +1348,34 @@ export function extractCadreAluRows(
     const epaisseurJambage = epaisseurs[0] || "";
     const allRowValuesForImposte = Object.values(r).map(toStr).filter(Boolean);
     const imposte = extractImposte(allRowValuesForImposte);
+    const imposteForme = extractImposteForme(allRowValuesForImposte);
     const baseHauteurJambage = extractPleineHauteur(values, dims.hauteur);
     const hauteurJambage = imposte
-      ? baseHauteurJambage
-        ? `${imposte}\n( ${baseHauteurJambage} )`
-        : imposte
+      ? [imposte, imposteForme, baseHauteurJambage ? `( ${baseHauteurJambage} )` : ""]
+          .filter(Boolean)
+          .join("\n")
       : baseHauteurJambage;
     const sens = extractSens(values);
     const renverse = extractRenverse(allRowValues);
+    const moulureBriqueSansRecouvrement = hasMoulureBriqueAluSansRecouvrement(allRowValues);
 
     const couleur = extractCouleur(r, catalogue);
     const largeurValue = extractJambageLargeur(aluCell, values);
     // Renversé seul → pas de mesure. Renversé + recouvrement INT+EXT → on garde la mesure.
-    const jambageLargeur = renverse
-      ? renverse.includes("INT+EXT") && largeurValue
-        ? `${renverse}\n( ${largeurValue} )`
-        : renverse
-      : largeurValue;
+    const jambageLargeur = moulureBriqueSansRecouvrement
+      ? ""
+      : renverse
+        ? renverse.includes("INT+EXT") && largeurValue
+          ? `${renverse}\n( ${largeurValue} )`
+          : renverse
+        : largeurValue;
     const row: CadreAluRow = {
       sequence,
       id: extractId(toStr(r.Code)),
       sens,
       tete: extractTete(toStr(r.Dimension)),
       jambageLargeur,
-      jambageEpaisseur: epaisseurJambage,
+      jambageEpaisseur: moulureBriqueSansRecouvrement ? "" : epaisseurJambage,
       jambageHauteur: hauteurJambage,
       astragale: buildAstragaleDimMab(
         values,
