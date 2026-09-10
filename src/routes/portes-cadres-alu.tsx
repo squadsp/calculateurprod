@@ -346,7 +346,12 @@ function CadresAluPage() {
                   </thead>
                   <tbody>
                     {r.rows.map((row, i) => (
-                      <tr key={`${row.id}-${row.sequence}-${i}`} className="border-t border-border">
+                      <tr
+                        key={`${row.id}-${row.sequence}-${i}`}
+                        className={`border-t border-border ${
+                          row.aVerifier ? "bg-destructive/10 text-destructive font-semibold" : ""
+                        }`}
+                      >
                         {visibleColumns.map((c) => (
                           <td key={c.key} className="px-2 py-1.5 whitespace-pre-line">
                             {row[c.key]}
