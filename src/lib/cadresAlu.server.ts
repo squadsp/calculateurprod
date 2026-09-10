@@ -1328,11 +1328,14 @@ export function extractCadreAluRows(
   const kept: CadreAluRow[] = [];
   const dates = new Map<CadreAluRow, string>();
 
-  // Une commande peut être répartie sur plusieurs lignes (même Code) : la mention
-  // « imposte » se trouve parfois sur une ligne voisine et non sur la ligne alu.
+  // Regroupement par ITEM complet (Code entier, ex. « 123-12345-1-1 ») — jamais par
+  // numéro de commande seul : « 123-12345-1-1 » et « 123-12345-2-1 » sont des items
+  // complètement différents et sont traités séparément.
+  const itemKey = (r: Record<string, unknown>) =>
+    toStr(r.Code).trim().replace(/\s+/g, " ").toUpperCase();
   const valuesByCode = new Map<string, string[]>();
   for (const r of rows) {
-    const code = toStr(r.Code);
+    const code = itemKey(r);
     if (!code) continue;
     const list = valuesByCode.get(code) ?? [];
     list.push(...Object.values(r).map(toStr).filter(Boolean));
@@ -1357,7 +1360,7 @@ export function extractCadreAluRows(
     const dims = parseDimension(toStr(r.Dimension));
     const epaisseurs = extractEpaisseurs(values);
     const epaisseurJambage = epaisseurs[0] || "";
-    const allRowValuesForImposte = valuesByCode.get(toStr(r.Code)) ?? allRowValues;
+    const allRowValuesForImposte = valuesByCode.get(itemKey(r)) ?? allRowValues;
     const imposte = extractImposte(allRowValuesForImposte);
     const imposteForme = extractImposteForme(allRowValuesForImposte);
     const baseHauteurJambage = extractPleineHauteur(values, dims.hauteur);
