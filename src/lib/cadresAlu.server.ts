@@ -782,7 +782,7 @@ function findNonStandardMabMesure(allRowValues: string[]): string {
  * par la formule habituelle (hauteur du jambage).
  */
 function extractImposte(allRowValues: string[]): string {
-  const cell = allRowValues.find((v) => /\bimposte/i.test(v));
+  const cell = allRowValues.find((v) => /impost/i.test(v));
   if (!cell) return "";
   const whole = allRowValues.join(" | ");
   if (/modulaire/i.test(cell) || /imposte[^|]{0,60}modulaire|modulaire[^|]{0,60}imposte/i.test(whole))
@@ -1328,6 +1328,17 @@ export function extractCadreAluRows(
   const kept: CadreAluRow[] = [];
   const dates = new Map<CadreAluRow, string>();
 
+  // Une commande peut être répartie sur plusieurs lignes (même Code) : la mention
+  // « imposte » se trouve parfois sur une ligne voisine et non sur la ligne alu.
+  const valuesByCode = new Map<string, string[]>();
+  for (const r of rows) {
+    const code = toStr(r.Code);
+    if (!code) continue;
+    const list = valuesByCode.get(code) ?? [];
+    list.push(...Object.values(r).map(toStr).filter(Boolean));
+    valuesByCode.set(code, list);
+  }
+
   for (const r of rows) {
     const sequence = toStr(r.Sequence);
     if (settings.sequencePrefixes.length > 0 && !prefixRe.test(sequence)) continue;
@@ -1346,7 +1357,7 @@ export function extractCadreAluRows(
     const dims = parseDimension(toStr(r.Dimension));
     const epaisseurs = extractEpaisseurs(values);
     const epaisseurJambage = epaisseurs[0] || "";
-    const allRowValuesForImposte = Object.values(r).map(toStr).filter(Boolean);
+    const allRowValuesForImposte = valuesByCode.get(toStr(r.Code)) ?? allRowValues;
     const imposte = extractImposte(allRowValuesForImposte);
     const imposteForme = extractImposteForme(allRowValuesForImposte);
     const baseHauteurJambage = extractPleineHauteur(values, dims.hauteur);
