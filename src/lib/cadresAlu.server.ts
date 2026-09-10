@@ -1360,7 +1360,7 @@ export function extractCadreAluRows(
     const dims = parseDimension(toStr(r.Dimension));
     const epaisseurs = extractEpaisseurs(values);
     const epaisseurJambage = epaisseurs[0] || "";
-    const allRowValuesForImposte = valuesByCode.get(toStr(r.Code)) ?? allRowValues;
+    const allRowValuesForImposte = valuesByCode.get(itemKey(r)) ?? allRowValues;
     const imposte = extractImposte(allRowValuesForImposte);
     const imposteForme = extractImposteForme(allRowValuesForImposte);
     const baseHauteurJambage = extractPleineHauteur(values, dims.hauteur);
