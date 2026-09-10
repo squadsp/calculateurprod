@@ -1328,11 +1328,13 @@ export function extractCadreAluRows(
   const kept: CadreAluRow[] = [];
   const dates = new Map<CadreAluRow, string>();
 
-  // Regroupement par ITEM complet (Code entier, ex. « 123-12345-1-1 ») — jamais par
-  // numéro de commande seul : « 123-12345-1-1 » et « 123-12345-2-1 » sont des items
-  // complètement différents et sont traités séparément.
+  // Un item = Code complet + Sequence : même Code mais Sequence différente = deux items
+  // distincts; même Sequence mais Code différent = deux items distincts aussi.
   const itemKey = (r: Record<string, unknown>) =>
-    toStr(r.Code).trim().replace(/\s+/g, " ").toUpperCase();
+    `${toStr(r.Code).trim().replace(/\s+/g, " ").toUpperCase()}|${toStr(r.Sequence)
+      .trim()
+      .replace(/\s+/g, " ")
+      .toUpperCase()}`;
   const valuesByCode = new Map<string, string[]>();
   for (const r of rows) {
     const code = itemKey(r);
