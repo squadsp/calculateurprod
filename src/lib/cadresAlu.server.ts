@@ -517,12 +517,13 @@ function extractSens(values: string[]): string {
  */
 function extractRenverse(allRowValues: string[]): string {
   const whole = allRowValues.join(" | ");
-  if (!/\brenvers[ée]e?s?\b/i.test(whole)) return "";
+  // Attention: \b ne fonctionne pas après un caractère accentué en JS.
+  if (!/(?:^|[^a-zA-Zà-ÿ])renvers(?:e|é|ée|és|ées|er)(?![a-zA-Zà-ÿ])/i.test(whole)) return "";
 
-  const hasPinRecouvert = /\bpin\b[^|]{0,60}?\brecouvert\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b/i.test(whole) ||
-    /\brecouvert\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b[^|]{0,60}?\bpin\b/i.test(whole);
-  const hasRecouvrementInt = /\brecouvrement\b[^|]{0,60}?\bint[ée]rieur\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b/i.test(whole) ||
-    /\bint[ée]rieur\b[^|]{0,60}?\balu(?:m(?:inium)?)?\b[^|]{0,60}?\brecouvrement\b/i.test(whole);
+  const hasPinRecouvert = /\bpin\b[^|]{0,60}?recouvert[^|]{0,60}?alu/i.test(whole) ||
+    /recouvert[^|]{0,60}?alu[^|]{0,60}?\bpin\b/i.test(whole);
+  const hasRecouvrementInt = /recouvrement[^|]{0,60}?int[ée]rieur[^|]{0,60}?alu/i.test(whole) ||
+    /int[ée]rieur[^|]{0,60}?alu[^|]{0,60}?recouvrement/i.test(whole);
 
   if (hasPinRecouvert && hasRecouvrementInt) return "Renversé / Recouvrement INT+EXT";
   return "Renversé";
