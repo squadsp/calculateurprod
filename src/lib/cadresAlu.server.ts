@@ -1279,7 +1279,9 @@ export function extractCadreAluRows(
     const dims = parseDimension(toStr(r.Dimension));
     const epaisseurs = extractEpaisseurs(values);
     const epaisseurJambage = epaisseurs[0] || "";
-    const hauteurJambage = extractPleineHauteur(values, dims.hauteur);
+    const allRowValuesForImposte = Object.values(r).map(toStr).filter(Boolean);
+    const imposte = extractImposte(allRowValuesForImposte);
+    const hauteurJambage = imposte || extractPleineHauteur(values, dims.hauteur);
     const sens = extractSens(values);
 
     const couleur = extractCouleur(r, catalogue);
