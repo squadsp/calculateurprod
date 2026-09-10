@@ -1472,20 +1472,25 @@ export async function buildCadreAluPdf(
 
 
   // Découpe un texte en plusieurs lignes qui tiennent dans la largeur donnée.
+  // Les sauts de ligne explicites (\n) sont conservés pour permettre le format
+  // étiquette + mesure entre parenthèses (ex. Renversé\n( 92 )).
   const wrap = (text: string, maxWidth: number): string[] => {
     if (!text) return [""];
     const lines: string[] = [];
-    let current = "";
-    for (const word of text.split(/\s+/)) {
-      const candidate = current ? `${current} ${word}` : word;
-      if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
-        current = candidate;
-      } else {
-        if (current) lines.push(current);
-        current = word;
+    const segments = text.split("\n");
+    for (const segment of segments) {
+      let current = "";
+      for (const word of segment.split(/\s+/).filter(Boolean)) {
+        const candidate = current ? `${current} ${word}` : word;
+        if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+          current = candidate;
+        } else {
+          if (current) lines.push(current);
+          current = word;
+        }
       }
+      if (current) lines.push(current);
     }
-    if (current) lines.push(current);
     return lines.length > 0 ? lines : [""];
   };
 
