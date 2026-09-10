@@ -1320,21 +1320,26 @@ export function extractCadreAluRows(
     const imposte = extractImposte(allRowValuesForImposte);
     const baseHauteurJambage = extractPleineHauteur(values, dims.hauteur);
     const hauteurJambage = imposte
-      ? `${imposte}${baseHauteurJambage ? ` ${baseHauteurJambage}` : ""}`
+      ? baseHauteurJambage
+        ? `${imposte}\n( ${baseHauteurJambage} )`
+        : imposte
       : baseHauteurJambage;
     const sens = extractSens(values);
     const renverse = extractRenverse(allRowValues);
 
     const couleur = extractCouleur(r, catalogue);
+    const largeurValue = extractJambageLargeur(aluCell, values);
+    const jambageLargeur = renverse
+      ? largeurValue
+        ? `${renverse}\n( ${largeurValue} )`
+        : renverse
+      : largeurValue;
     const row: CadreAluRow = {
       sequence,
       id: extractId(toStr(r.Code)),
       sens,
       tete: extractTete(toStr(r.Dimension)),
-      jambageLargeur:
-        renverse && renverse !== "Renversé / Recouvrement INT+EXT"
-          ? ""
-          : extractJambageLargeur(aluCell, values),
+      jambageLargeur,
       jambageEpaisseur: epaisseurJambage,
       jambageHauteur: hauteurJambage,
       astragale: buildAstragaleDimMab(
@@ -1344,7 +1349,6 @@ export function extractCadreAluRows(
         sens,
         couleur,
         catalogue,
-        renverse,
       ),
       moustiquaire: extractMoustiquaire(allRowValues),
       seuil: extractSeuil(allRowValues),
